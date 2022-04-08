@@ -1,0 +1,5 @@
+fastapi
+strawberry-graphql[fastapi]
+uvicorn
+uvicorn[standard]
+pymongo
