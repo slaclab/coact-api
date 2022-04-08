@@ -22,8 +22,9 @@ class User:
     LOG = logging.getLogger(__name__)
     
     _id: MongoId
-    userid: str
-    UID: int
+    uid: str
+    uid_number: int
+    eppns: typing.List[str]
 
 @strawberry.type
 class Role:
@@ -57,6 +58,7 @@ class Facility:
     
     _id: MongoId
     name: str
+    description: str
     
     @strawberry.field
     def resources(self, info) -> typing.List[Resource]:
@@ -70,11 +72,17 @@ class Repo:
     
     _id: MongoId
     name: str
-    facilities: typing.List[str]
-    leader: str
-    group: str
-    GID: int
+    description: str
     
+    facility: str
+
+    group: str
+    gid: int
+    
+    principal: str
+    leaders: typing.List[str]
+    users: typing.List[str]
+        
     @strawberry.field
     def facilityObjs(self, info) -> typing.List[Facility]:
         facilities = list(get_db(info,"facilities").find({"name": {"$in": self.facilities}}))
@@ -88,7 +96,6 @@ class Repo:
         repo = get_db(info,"repos").find_one({"_id": self._id })
         self.LOG.debug("Roles: " + str(repo.get("roles", {})))
         return [ Role(**{ "_id": None, "name": k, "privileges": [], "players": v }) for k,v in repo.get("roles", {}).items() ]
-
 
 @strawberry.type
 class Qos:
