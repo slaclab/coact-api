@@ -5,13 +5,13 @@ import strawberry
 from strawberry.types import Info
 
 from models import Facility, Resource, Role, Repo, Qos, Job
+from db import get_db
 
 import logging
 
 
 authn = Authnz()
 
-COLLECTION = "iris"
 
 @strawberry.type
 class Query:
@@ -22,11 +22,11 @@ class Query:
     @authn.authentication_required
     @authn.authorization_required("read")
     def roles(self, info: Info) -> typing.List[Role]:
-        roles = info.context.db[COLLECTION]["roles"].find()
+        roles = get_db(info, "roles").find()
         return [ Role(**x) for x in roles ]
     
     def role(self, name: str, info: Info) -> Role:
-        therole = info.context.db[COLLECTION]["roles"].find_one({"name": name})
+        therole = get_db(info, "roles").find_one({"name": name})
         if therole:
             return Role(**therole)
         return None
@@ -34,7 +34,7 @@ class Query:
     @strawberry.field
     @authn.authentication_required
     def facilities(self, info: Info) -> typing.List[Facility]:
-        facilities = list(info.context.db[COLLECTION]["facilities"].find())
+        facilities = list( get_db(info,"facilities").find())
         for facility in facilities:
             del facility["resources"]
         return [ Facility(**x) for x in facilities ]
@@ -50,7 +50,7 @@ class Query:
     @authn.authentication_required
     @authn.authorization_required("read")
     def repos(self, info: Info) -> typing.List[Repo]:
-        repos = list(info.context.db[COLLECTION]["repos"].find({}))
+        repos = list( get_db(info, "repos").find({}))
         for repo in repos:
             del repo["roles"]
         return [Repo(**x) for x in repos]
@@ -61,7 +61,7 @@ class Query:
     @authn.authorization_required("read")
     def repo(self, name: str, info: Info) -> Repo:
         self.LOG.debug(f"Looking for repo {name}")
-        therepo = info.context.db[COLLECTION]["repos"].find_one({"name": name})
+        therepo = get_db(info,"repos").find_one({"name": name})
         if therepo:
             del therepo["roles"]
             return Repo(**therepo)
@@ -71,7 +71,7 @@ class Query:
     @authn.authentication_required
     @authn.authorization_required("read")
     def qos(self, info: Info) -> typing.List[Qos]:
-        qoses = list(info.context.db[COLLECTION]["qos"].find({}))
+        qoses = list(get_db(info,"qos").find({}))
         return [Qos(**x) for x in qoses]
 
 @strawberry.type
@@ -82,5 +82,5 @@ class Mutation:
     @strawberry.mutation
     def importJobs(self, jobs: typing.List[Job], info: Info) -> str:
         jbs = [dict(j.__dict__.items()) for j in jobs]
-        info.context.db[COLLECTION]["jobs"].insert_many(jbs)
+        get_db(info,"jobs").insert_many(jbs)
         return "Done"

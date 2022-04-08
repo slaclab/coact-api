@@ -6,12 +6,14 @@ from typing import NewType
 from datetime import datetime
 from bson import ObjectId
 
+from db import get_db
+
 import logging
 
 MongoId = strawberry.scalar(
     NewType("MongoId", object),
-    serialize=lambda v: str(v),
-    parse_value=lambda v: ObjectId(v),
+    serialize = lambda v: str(v),
+    parse_value = lambda v: ObjectId(v),
 )
 
 @strawberry.type
@@ -36,7 +38,7 @@ class Role:
     
     @strawberry.field
     def playerObjs(self, info) -> typing.List[User]:
-        return [ User(**x) for x in list(info.context.irisclient["irisbanking"]["users"].find({"userid": {"$in": self.players}})) ]
+        return [ User(**x) for x in list( get_db(info,"users").find({"userid": {"$in": self.players}})) ]
 
 @strawberry.type
 class Resource:
@@ -58,7 +60,7 @@ class Facility:
     
     @strawberry.field
     def resources(self, info) -> typing.List[Resource]:
-        fac = info.context.irisclient["irisbanking"]["facilities"].find_one({"_id": self._id })
+        fac = get_db(info,"facilities").find_one({"_id": self._id })
         return [ Resource(**{"name": k, "type": v["type"], "partitions": v.get("partitions", []), "root": v.get("root", None)}) for k,v in fac.get("resources", {}).items() ]
 
 @strawberry.type
@@ -75,16 +77,16 @@ class Repo:
     
     @strawberry.field
     def facilityObjs(self, info) -> typing.List[Facility]:
-        facilities = list(info.context.irisclient["irisbanking"]["facilities"].find({"name": {"$in": self.facilities}}))
-        print(facilities)
+        facilities = list(get_db(info,"facilities").find({"name": {"$in": self.facilities}}))
+        self.LOG.debug(facilities)
         for facility in facilities:
             del facility["resources"]
         return [ Facility(**x) for x in facilities ]
     
     @strawberry.field
     def roleObjs(self, info) -> typing.List[Role]:
-        repo = info.context.irisclient["irisbanking"]["repos"].find_one({"_id": self._id })
-        print("Roles: " + str(repo.get("roles", {})))
+        repo = get_db(info,"repos").find_one({"_id": self._id })
+        self.LOG.debug("Roles: " + str(repo.get("roles", {})))
         return [ Role(**{ "_id": None, "name": k, "privileges": [], "players": v }) for k,v in repo.get("roles", {}).items() ]
 
 
