@@ -1,6 +1,7 @@
 from os import environ
 
 from functools import wraps
+from typing import List
 
 from fastapi import FastAPI, Depends, Request, WebSocket, BackgroundTasks
 from strawberry.fastapi import BaseContext, GraphQLRouter
@@ -29,8 +30,12 @@ class CustomContext(BaseContext):
     
     LOG = logging.getLogger(__name__)
     
+    user: str = None
+    roles: List[str] = []
+    privileges: List[str] = []
+    
     def __init__(self, *args, **kwargs):
-        self.LOG.debug("In CustomContext __init__")
+        self.LOG.debug(f"In CustomContext.__init__ {args} {kwargs}")
         self.user = None
         self.roles = []
         self.privileges = []
@@ -38,20 +43,20 @@ class CustomContext(BaseContext):
         self.db = mongo
         
     def __str__(self):
-        return f"User: {self.user} Roles: {self.roles} Privileges: {self.privileges}"
+        return f"CustomContext User: {self.user} Roles: {self.roles} Privileges: {self.privileges}"
         
     def authn(self):
         self.user = self.request.headers.get("REMOTE-USER", self.request.headers.get("remote_user", None))
+        if not self.user:
+            self.user = environ.get("USER")
         self.roles = [ "Admin" ]
         self.privileges = [ "read" ]
-        self.LOG.debug(self)
+        self.LOG.debug( f"context authn {self}")
 
 def custom_context_dependency() -> CustomContext:
-    LOG.debug("In custom_context_dependency")
     return CustomContext()
 
 async def get_context(custom_context: CustomContext = Depends(custom_context_dependency),):
-    LOG.debug("In get_context")
     return custom_context
 
 schema = Schema(query=Query, mutation=Mutation, config=StrawberryConfig(auto_camel_case=True))

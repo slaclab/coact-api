@@ -1,5 +1,10 @@
+from strawberry.permission import BasePermission
 
+from strawberry.types import Info
 from functools import wraps
+from typing import Any
+
+from models import get_db
 
 import logging
 
@@ -39,3 +44,22 @@ class Authnz():
             return wrapped_function(*args, **kwargs)
         return function_interceptor
 
+
+class IsAuthenticated(BasePermission):
+    LOG = logging.getLogger(__name__)
+    message = "User is not authenticated"
+    def has_permission(self, source: Any, info: Info, **kwargs) -> bool:
+        info.context.authn()
+        self.LOG.debug(f"attempting permissions with {type(self).__name__} for user {info.context.user} at path {info.path.key} for privilege {kwargs} for repo {info.context.repo}")
+        if info.context.user:
+            db = get_db( info.context.db, "repos" )
+            search = { "username": info.context.user }
+            cursor = db.find( search )
+            # why doesn't this find any relevant documents from db?
+            self.LOG.debug(f"  searching {db} for {search} -> {db.count_documents(search)}")
+            for u in cursor:
+                self.LOG.debug(f"  found user {u}")
+            return True
+        return False
+        
+        
