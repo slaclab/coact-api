@@ -3,3 +3,4 @@ strawberry-graphql[fastapi]
 uvicorn
 uvicorn[standard]
 pymongo
+pydantic

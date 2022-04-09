@@ -54,7 +54,7 @@ async def get_context(custom_context: CustomContext = Depends(custom_context_dep
     LOG.debug("In get_context")
     return custom_context
 
-schema = Schema(query=Query, mutation=Mutation, config=StrawberryConfig(auto_camel_case=False))
+schema = Schema(query=Query, mutation=Mutation, config=StrawberryConfig(auto_camel_case=True))
 graphql_app = GraphQLRouter(
   schema,
   context_getter=get_context,
