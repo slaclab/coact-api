@@ -4,8 +4,9 @@ from typing import List, Optional
 import strawberry
 from strawberry.types import Info
 
-from models import get_db, to_dict, create_thing, \
+from models import get_db, to_dict, create_thing, update_thing, \
         User, UserInput, find_users, \
+        AccessGroup, AccessGroupInput, find_access_groups, \
         Repo, RepoInput, find_repos, \
         Facility, FacilityInput, find_facilities, \
         Resource, Role, Qos, Job 
@@ -61,9 +62,19 @@ class Query:
 
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def access_groups(self, info: Info, filter: Optional[AccessGroupInput]) -> List[AccessGroup]:
+        return find_access_groups( info, filter, exclude_fields=[] )
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def access_group(self, name: str, info: Info, filter: Optional[AccessGroupInput]) -> AccessGroup:
+        access_groups = find_access_groups( info, filter )
+        assert_one( access_groups, 'access_group', filter)
+        return access_groups[0]
+
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def repos(self, info: Info, filter: Optional[RepoInput]) -> List[Repo]:
         return find_repos( info, filter, exclude_fields=['roles'] )
-    
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def repo(self, name: str, info: Info) -> Repo:
@@ -101,6 +112,15 @@ class Mutation:
     def facilityCreate(self, data: FacilityInput, info: Info) -> Facility:
         return create_thing( 'facilities', info, data, required_fields=[ 'name' ], find_existing={ 'name': data.name } )
 
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def accessGroupCreate(self, data: AccessGroupInput, info: Info) -> AccessGroup:
+        return create_thing( 'access_groups', info, data, required_fields=[ 'gid_number', 'name' ], find_existing={ 'gid_number': data.gid_number } )
+
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def accessGroupUpdate(self, data: AccessGroupInput, info: Info) -> AccessGroup:
+        return update_thing( 'access_groups', info, data, required_fields=[ 'Id', ], find_existing={ '_id': data._id } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def repoCreate(self, data: RepoInput, info: Info) -> Repo:

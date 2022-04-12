@@ -29,6 +29,9 @@ MongoId = strawberry.scalar(
 # used to map into pymongo as it doesn't like strawberry UNSET objects
 def to_dict( obj ):
     d = {}
+    if isinstance(obj,dict):
+        return obj
+
     for k,v in obj.__dict__.items():
         # LOG.warn(f"type {k} is {v}")
         if v:
@@ -94,14 +97,27 @@ class Facility( FacilityInput ):
         return [ Resource(**{"name": k, "type": v["type"], "partitions": v.get("partitions", []), "root": v.get("root", None)}) for k,v in fac.get("resources", {}).items() ]
 
 
+@strawberry.input
+class AccessGroupInput:
+    _id: Optional[MongoId] = UNSET
+    state: Optional[str] = UNSET
+    gid_number: Optional[int] = UNSET
+    name: Optional[str] = UNSET
+
+@strawberry.type
+class AccessGroup( AccessGroupInput ):
+    pass
 
 @strawberry.input
 class RepoInput:
 
     _id: Optional[MongoId] = UNSET    
+
+    state: Optional[str] = UNSET
     name: Optional[str] = UNSET
     facility: Optional[str] = UNSET
-    gid: Optional[int] = UNSET
+    #gid_number: Optional[int] = UNSET
+    access_groups: Optional[List[str]] = UNSET
     
     principal: Optional[str] = UNSET
     leaders: Optional[List[str]] = UNSET
@@ -178,6 +194,7 @@ class Job:
 # class mapping of the 'thing' to the class
 KLASSES = {
     'users': User, 
+    'access_groups': AccessGroup,
     'repos': Repo, 
     'facilities': Facility,
 }
@@ -202,6 +219,9 @@ def find_users( info: Info, filter: Optional[UserInput], exclude_fields: Optiona
 
 def find_facilities( info: Info, filter: Optional[FacilityInput], exclude_fields: Optional[List[str]] = ['resources',] ) -> List[Facility]:
     return find_thing( 'facilities', info, filter, exclude_fields=exclude_fields )
+
+def find_access_groups( info: Info, filter: Optional[AccessGroupInput], exclude_fields: Optional[List[str]] = [] ) -> List[AccessGroup]:
+    return find_thing( 'access_groups', info, filter, exclude_fields=exclude_fields )
 
 def find_repos( info: Info, filter: Optional[RepoInput], exclude_fields: Optional[List[str]] = ['roles',] ) -> List[Repo]:
     return find_thing( 'repos', info, filter, exclude_fields=exclude_fields )
@@ -232,3 +252,21 @@ def create_thing( thing, info, data, required_fields=[], find_existing={ 'key': 
     v['_id'] = x.inserted_id
     inserted = klass( **v )
     return inserted
+
+
+def update_thing( thing, info, data, required_fields=[ 'Id', ], find_existing={} ):
+    klass = KLASSES[thing]
+    things = find_thing( thing, info, find_existing ) 
+    if len(things) == 0:
+        raise Exception(f"{thing} not found with {find_existing}")
+    elif len(things) > 1:
+        raise Exception(f"too many {thing} matched with {find_existing}")
+    new = to_dict(things[0])
+    for k,v in vars(data).items():
+        if v:
+            new[k] = v
+    db = get_db(info, thing)
+    db.update_one( { '_id': new['_id'] }, { "$set": new } )
+    item = klass( **new )
+    return item
+    
