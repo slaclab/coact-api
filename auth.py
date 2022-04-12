@@ -52,7 +52,7 @@ class IsAuthenticated(BasePermission):
         info.context.authn()
         self.LOG.debug(f"attempting permissions with {type(self).__name__} for user {info.context.user} at path {info.path.key} for privilege {kwargs} for repo {info.context.repo}")
         if info.context.user:
-            db = get_db( info.context.db, "repos" )
+            db = get_db( info, "users" )
             search = { "username": info.context.user }
             cursor = db.find( search )
             # why doesn't this find any relevant documents from db?
