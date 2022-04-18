@@ -1,0 +1,333 @@
+// Roles have privileges and players.
+db.getSiblingDB("iris").roles.createIndex({"name": 1}, unique=true)
+
+db.getSiblingDB("iris").roles.insertOne({ "name" : "user", "privileges" : [ "read" ], "players" : [ ] })
+db.getSiblingDB("iris").roles.insertOne({ "name" : "leader", "privileges" : [ "read", "write", "manage_roles" ], "players" : [ ] })
+db.getSiblingDB("iris").roles.insertOne({ "name" : "leader_proxy", "privileges" : [ "read", "write", "manage_roles" ], "players" : [ ] })
+// Make sure to add all privileges to the admin role
+db.getSiblingDB("iris").roles.insertOne({ "name" : "Admin", "privileges" : [ "read", "write", "manage_roles", "manage_facilities" ], "players" : [ "ytl", "mshankar", "wilko"] })
+
+db.getSiblingDB("iris").resource_types.createIndex({"type": 1}, unique=true)
+db.getSiblingDB("iris").resource_types.insertOne({"type": "compute", "units": "node_hours"})
+db.getSiblingDB("iris").resource_types.insertOne({"type": "storage", "units": "GB"})
+db.getSiblingDB("iris").resource_types.insertOne({"type": "inodes", "units": "inodes"})
+
+db.getSiblingDB("iris").facilities.createIndex({"name": 1}, unique=true)
+// Facilities have compute classes and storage classes associated with them.
+db.getSiblingDB("iris").facilities.insertOne({
+  "name" : "LCLS",
+  "resources": {
+    "CPU": {
+      "type": "compute",
+      "partitions": [ "psanaq", "psfehq", "psfehprioq", "psfehhiprioq" ]
+    },
+    "GPU": {
+      "type": "compute",
+      "partitions": [ "psanagpuq" ]
+    },
+    "data": {
+      "type": "storage",
+      "root": "/sdf/data/lcls"
+    },
+    "scratch": {
+      "type": "storage",
+      "root": "/scratch/lcls"
+    }
+  }
+})
+db.getSiblingDB("iris").facilities.insertOne({
+  "name" : "CryoEM",
+  "resources": {
+    "CPU": {
+      "type": "compute",
+      "partitions": [ "CryoCPU" ]
+    },
+    "GPU": {
+      "type": "compute",
+      "partitions": [ "CryoGPU" ]
+    },
+    "data": {
+      "type": "storage",
+      "root": "/sdf/data/cryo"
+    },
+    "scratch": {
+      "type": "storage",
+      "root": "/scratch/cryo"
+    }
+  }
+})
+db.getSiblingDB("iris").facilities.insertOne({
+  "name" : "SUNCAT",
+  "resources": {
+    "CPU": {
+      "type": "compute",
+      "partitions": [ "SctCPU" ]
+    },
+    "GPU": {
+      "type": "compute",
+      "partitions": [ "SctGPU" ]
+    },
+    "data": {
+      "type": "storage",
+      "root": "/sdf/data/sct"
+    },
+    "scratch": {
+      "type": "storage",
+      "root": "/scratch/sct"
+    }
+  }
+})
+
+db.getSiblingDB("iris").compute_capacity.createIndex({"facility": 1, "resource": 1, "year": -1}, unique=true)
+
+// Capacity for LCLS for 2022; resource is the name of the resource
+db.getSiblingDB("iris").compute_capacity.insertOne({
+  "facility": "LCLS",
+  "resource": "CPU",
+  "year": 2022,
+  "compute": 3000000
+})
+db.getSiblingDB("iris").compute_capacity.insertOne({
+  "facility": "LCLS",
+  "resource": "GPU",
+  "year": 2022,
+  "compute": 30000
+})
+db.getSiblingDB("iris").storage_capacity.insertOne({
+  "facility": "LCLS",
+  "resource": "data",
+  "year": 2022,
+  "storage": 3000,
+  "inodes": 1000000
+})
+db.getSiblingDB("iris").storage_capacity.insertOne({
+  "facility": "LCLS",
+  "resource": "scratch",
+  "year": 2022,
+  "storage": 3000,
+  "inodes": 1000000
+})
+// Capacity for Cryo for 2022
+db.getSiblingDB("iris").compute_capacity.insertOne({
+  "facility": "CryoEM",
+  "resource": "CPU",
+  "year": 2022,
+  "compute": 3000000
+})
+db.getSiblingDB("iris").compute_capacity.insertOne({
+  "facility": "CryoEM",
+  "resource": "GPU",
+  "year": 2022,
+  "compute": 30000
+})
+db.getSiblingDB("iris").storage_capacity.insertOne({
+  "facility": "CryoEM",
+  "resource": "data",
+  "year": 2022,
+  "storage": 3000,
+  "inodes": 1000000
+})
+db.getSiblingDB("iris").storage_capacity.insertOne({
+  "facility": "CryoEM",
+  "resource": "scratch",
+  "year": 2022,
+  "storage": 3000,
+  "inodes": 1000000
+})
+// Capacity for SUNCAT for 2022
+db.getSiblingDB("iris").compute_capacity.insertOne({
+  "facility": "SUNCAT",
+  "resource": "CPU",
+  "year": 2022,
+  "compute": 3000000
+})
+db.getSiblingDB("iris").compute_capacity.insertOne({
+  "facility": "SUNCAT",
+  "resource": "GPU",
+  "year": 2022,
+  "compute": 30000
+})
+db.getSiblingDB("iris").storage_capacity.insertOne({
+  "facility": "SUNCAT",
+  "resource": "data",
+  "year": 2022,
+  "storage": 3000,
+  "inodes": 1000000
+})
+db.getSiblingDB("iris").storage_capacity.insertOne({
+  "facility": "SUNCAT",
+  "resource": "scratch",
+  "year": 2022,
+  "storage": 3000,
+  "inodes": 1000000
+})
+
+
+
+
+db.getSiblingDB("iris").repos.createIndex({"name": 1}, unique=true)
+db.getSiblingDB("iris").repos.createIndex({"leader": 1}) // For performance
+db.getSiblingDB("iris").repos.createIndex({"roles.user": 1}) // For performance
+db.getSiblingDB("iris").repos.createIndex({"group": 1}, unique=true)
+db.getSiblingDB("iris").repos.createIndex({"GID": 1}, unique=true)
+// Repos have a PI and can belong to multiple facilities
+db.getSiblingDB("iris").repos.insertOne({
+  "name": "cxi12345",
+  "facilities": [ "LCLS" ],
+  "leader": "aquila",
+  "roles": {
+    "user": [ "aquila", "mcbrowne", "snelson", "tmalla", "yanwen", "mshankar"  ], // Everyone is a user; including the PI and those with PI_Proxy or any other role. This lets us create an index on roles.user
+    "leader_proxy": [ "snelson" ]
+  },
+  "group": "cxi12345",
+  "GID": 12345
+})
+
+db.getSiblingDB("iris").qos.createIndex({"name": 1, "repo": 1}, unique=true)
+db.getSiblingDB("iris").qos.createIndex({"qos": 1, "partition": 1}) // For performance
+
+// For every repo, we have at least one QOS.
+// The lookup is going from a SLURM job detail to the repo.
+// We use the account name (which should be the same as the repo); if that fails, we use (qos, partition) to determine the repo
+db.getSiblingDB("iris").qos.insertOne({
+  "name": "normal",
+  "repo": "cxi12345",
+  "qos": "LCLS-cxi12345-normal",
+  "partition": "psanaq"
+})
+
+db.getSiblingDB("iris").repos.insertOne({
+  "name": "20191205-CS14",
+  "facilities": [ "CryoEM" ],
+  "leader": "ytl",
+  "roles": { "user": [ "ytl" ] },
+  "group": "20191205-CS14",
+  "GID": 12346
+})
+db.getSiblingDB("iris").qos.insertOne({
+  "name": "normal",
+  "repo": "20191205-CS14",
+  "qos": "LCLS-20191205-CS14-normal",
+  "partition": "CryoGPU"
+})
+
+
+db.getSiblingDB("iris").repos.insertOne({
+  "name": "CoffeeWorld",
+  "facilities": [ "LCLS", "SUNCAT" ],
+  "leader": "coffee",
+  "roles": { "user": [ "coffee" ] },
+  "group": "CoffeeWorld",
+  "GID": 12347
+})
+// CoffeeWorld belongs to multiple partitions; so it has a QOS defined for each partition.
+db.getSiblingDB("iris").qos.insertOne({
+  "name": "LCLS-normal",
+  "repo": "CoffeeWorld",
+  "qos": "LCLS-CoffeeWorld-normal",
+  "partition": "psanagpuq"
+})
+db.getSiblingDB("iris").qos.insertOne({
+  "name": "Suncat-normal",
+  "repo": "CoffeeWorld",
+  "qos": "Suncat-CoffeeWorld-normal",
+  "partition": "SctGPU"
+})
+
+
+db.getSiblingDB("iris").compute_allocations.createIndex({"repo": 1, "facility": 1, "resource": 1, "year": -1}, unique=true)
+
+db.getSiblingDB("iris").compute_allocations.insertOne({
+  "facility": "LCLS",
+  "resource": "CPU",
+  "repo": "cxi12345",
+  "year": 2022,
+  "compute": 3000
+})
+
+db.getSiblingDB("iris").storage_allocations.createIndex({"repo": 1, "facility": 1, "resource": 1, "year": -1}, unique=true)
+
+db.getSiblingDB("iris").storage_allocations.insertOne({
+  "facility": "LCLS",
+  "resource": "data",
+  "repo": "cxi12345",
+  "year": 2022,
+  "storage": 5544,
+  "inodes": 4455
+})
+
+db.getSiblingDB("iris").storage_allocations.insertOne({
+  "facility": "LCLS",
+  "resource": "scratch",
+  "repo": "cxi12345",
+  "year": 2022,
+  "storage": 6655,
+  "inodes": 5566
+})
+
+// Of course, user has other information like full name, email etc. Maybe some of that comes from inCommon?
+db.getSiblingDB("iris").users.createIndex({"userid": 1}, unique=true)
+db.getSiblingDB("iris").users.createIndex({"UID": 1}, unique=true)
+db.getSiblingDB("iris").users.insertOne({ "userid": "aquila", "UID": 123 })
+db.getSiblingDB("iris").users.insertOne({ "userid": "mcbrowne", "UID": 124 })
+db.getSiblingDB("iris").users.insertOne({ "userid": "snelson", "UID": 125 })
+db.getSiblingDB("iris").users.insertOne({ "userid": "tmalla", "UID": 126 })
+db.getSiblingDB("iris").users.insertOne({ "userid": "yanwen", "UID": 127 })
+db.getSiblingDB("iris").users.insertOne({ "userid": "mshankar", "UID": 128 })
+db.getSiblingDB("iris").users.insertOne({ "userid": "ytl", "UID": 129 })
+db.getSiblingDB("iris").users.insertOne({ "userid": "wilko", "UID": 130 })
+
+db.getSiblingDB("iris").user_allocations.createIndex({"repo": 1, "userid": 1, "facility": 1, "resource": 1, "year": -1}, unique=true)
+
+
+// This is all backend stuff from now on..
+db.getSiblingDB("iris").cluster.createIndex({"name": 1}, unique=true)
+db.getSiblingDB("iris").cluster.insertOne({
+  "name": "psana1501",
+  "node_cpu_count": 16,
+  "node_cpu_count_divisor": 16,
+  "charge_factor": 0.8
+})
+db.getSiblingDB("iris").cluster.insertOne({
+  "name": "psana1502",
+  "node_cpu_count": 16,
+  "node_cpu_count_divisor": 16,
+  "charge_factor": 0.75
+})
+
+db.getSiblingDB("iris").partitions.createIndex({"name": 1}, unique=true)
+db.getSiblingDB("iris").partitions.insertOne({ "name": "psanaq", "charge_factor": 1.0 })
+db.getSiblingDB("iris").partitions.insertOne({ "name": "psanagpuq", "charge_factor": 1.0 })
+db.getSiblingDB("iris").partitions.insertOne({ "name": "CryoCPU", "charge_factor": 1.0 })
+db.getSiblingDB("iris").partitions.insertOne({ "name": "CryoGPU", "charge_factor": 1.0 })
+db.getSiblingDB("iris").partitions.insertOne({ "name": "SctCPU", "charge_factor": 1.0 })
+db.getSiblingDB("iris").partitions.insertOne({ "name": "SctGPU", "charge_factor": 1.0 })
+
+
+// Jobs have lots of information from SLURM in addition to the final mapping into repo, year and resource name.
+db.getSiblingDB("iris").jobs.createIndex({"job_id": 1, "start_ts": 1, "compute_id": 1}, unique=true)
+db.getSiblingDB("iris").jobs.createIndex({"repo": 1, "year": -1, "resource": 1}) // Performance index
+
+db.getSiblingDB("iris").diskusage.createIndex({"facility": 1, "resource": 1, "year": -1, "repo": 1, "date": 1}, unique=true)
+for(i=0;i<75;i++) {
+  db.getSiblingDB("iris").diskusage.insertOne({
+    "facility": "LCLS",
+    "resource": "data",
+    "year": 2022,
+    "repo": "cxi12345",
+    "folder": "/reg/data/ana01/cxi/cxi12345",
+    "storage": 56320,
+    "inodes": 3456,
+    "date": new Date(1640995200000 + i*86400*1000)
+  })
+  db.getSiblingDB("iris").diskusage.insertOne({
+    "facility": "LCLS",
+    "resource": "scratch",
+    "year": 2022,
+    "repo": "cxi12345",
+    "folder": "/reg/scratch/ana01/cxi/cxi12345",
+    "storage": 56320,
+    "inodes": 100000000,
+    "date": new Date(1640995200000 + i*86400*1000)
+  })
+}

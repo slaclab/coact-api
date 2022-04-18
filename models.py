@@ -13,11 +13,8 @@ import logging
 
 LOG = logging.getLogger(__name__)
 
-
 # the database name for all data
 DB_NAME = "iris"
-
-
 
 MongoId = strawberry.scalar(
     NewType("MongoId", object),
@@ -52,7 +49,7 @@ class UserInput:
     username: Optional[str] = UNSET
     uid_number: Optional[int] = UNSET
     eppns: Optional[List[str]] = UNSET
-    
+
 @strawberry.type
 class User(UserInput):
     pass
@@ -61,25 +58,63 @@ class User(UserInput):
 
 @strawberry.type
 class Role:
-    
+
     _id: MongoId
     name: str
     privileges: List[str]
     players: List[str]
     playerObjs: List[User]
-    
+
     @strawberry.field
     def playerObjs(self, info) -> List[User]:
         return [ User(**x) for x in list( get_db(info,"users").find({"uid": {"$in": self.players}})) ]
 
+
+@strawberry.type
+class PartitionInput:
+    _id: Optional[MongoId] = UNSET
+    name: Optional[str] = UNSET
+    charge_factor: Optional[float] = UNSET
+
+@strawberry.type
+class Partition(PartitionInput):
+    pass
+
+@strawberry.type
+class ComputeCapacityInput:
+    _id: Optional[MongoId] = UNSET
+    year: Optional[int] = UNSET
+    compute: Optional[float] = UNSET
+
+@strawberry.type
+class ComputeCapacity(ComputeCapacityInput):
+    pass
+
+@strawberry.type
+class StorageCapacityInput:
+    _id: Optional[MongoId] = UNSET
+    year: Optional[int] = UNSET
+    storage: Optional[float] = UNSET
+    inodes: Optional[float] = UNSET
+
+@strawberry.type
+class StorageCapacity(StorageCapacityInput):
+    pass
+
 @strawberry.type
 class Resource:
-    
     name: str
     type: str
+    facility_name: str
     partitions: List[str]
     root: str
+    @strawberry.field
+    def partitionObjs(self, info) -> List[Partition]:
+        return [ Partition(**x) for x in  get_db(info,"partitions").find({"name": {"$in": self.partitions } } ) ]
 
+    def get_compute_capacities(self, info: Info ):
+        return [ ComputeCapacity(**{"year": x["year"], "compute": x["compute"]}) for x in  get_db(info,"compute_capacity").find({"facility": self.facility_name,  "resource": self.name }) ]
+    computeCapacities: List[ComputeCapacity] = strawberry.field(resolver=get_compute_capacities)
 
 @strawberry.input
 class FacilityInput:
@@ -87,15 +122,53 @@ class FacilityInput:
     name: Optional[str] = UNSET
     description: Optional[str] = UNSET
 
-
 @strawberry.type
 class Facility( FacilityInput ):
-    
+
     @strawberry.field
     def resources(self, info) -> List[Resource]:
         fac = get_db(info,"facilities").find_one({"_id": self._id })
-        return [ Resource(**{"name": k, "type": v["type"], "partitions": v.get("partitions", []), "root": v.get("root", None)}) for k,v in fac.get("resources", {}).items() ]
+        return [ Resource(**{"name": k, "facility_name": self.name, "type": v["type"], "partitions": v.get("partitions", []), "root": v.get("root", None)}) for k,v in fac.get("resources", {}).items() ]
 
+
+@strawberry.type
+class ComputeAllocationInput:
+    _id: Optional[MongoId] = UNSET
+    facility: Optional[str] = UNSET
+    resource: Optional[str] = UNSET
+    repo: Optional[str] = UNSET
+    year: Optional[int] = UNSET
+    compute: Optional[float] = UNSET
+
+@strawberry.type
+class ComputeAllocation(ComputeAllocationInput):
+    pass
+
+@strawberry.type
+class StorageAllocationInput:
+    _id: Optional[MongoId] = UNSET
+    facility: Optional[str] = UNSET
+    resource: Optional[str] = UNSET
+    repo: Optional[str] = UNSET
+    year: Optional[int] = UNSET
+    storage: Optional[float] = UNSET
+    inodes: Optional[float] = UNSET
+
+@strawberry.type
+class StorageAllocation(StorageAllocationInput):
+    pass
+
+@strawberry.type
+class ClusterInput:
+    _id: Optional[MongoId] = UNSET
+    name: Optional[str] = UNSET
+    node_cpu_count: Optional[int] = UNSET
+    node_cpu_count_divisor: Optional[int] = UNSET
+    charge_factor: Optional[float] = UNSET
+
+@strawberry.type
+class Cluster(ClusterInput):
+    pass
 
 @strawberry.input
 class AccessGroupInput:
@@ -111,14 +184,14 @@ class AccessGroup( AccessGroupInput ):
 @strawberry.input
 class RepoInput:
 
-    _id: Optional[MongoId] = UNSET    
+    _id: Optional[MongoId] = UNSET
 
     state: Optional[str] = UNSET
     name: Optional[str] = UNSET
     facility: Optional[str] = UNSET
     #gid_number: Optional[int] = UNSET
     access_groups: Optional[List[str]] = UNSET
-    
+
     principal: Optional[str] = UNSET
     leaders: Optional[List[str]] = UNSET
     users: Optional[List[str]] = UNSET
@@ -129,7 +202,7 @@ class RepoInput:
 
 @strawberry.type
 class Repo( RepoInput ):
-    
+
     @strawberry.field
     def facilityObjs(self, info) -> List[Facility]:
         facilities = list(get_db(info,"facilities").find({"name": {"$in": self.facilities}}))
@@ -137,7 +210,7 @@ class Repo( RepoInput ):
         for facility in facilities:
             del facility["resources"]
         return [ Facility(**x) for x in facilities ]
-    
+
     @strawberry.field
     def roleObjs(self, info) -> List[Role]:
         repo = get_db(info,"repos").find_one({"_id": self._id })
@@ -148,16 +221,19 @@ class Repo( RepoInput ):
 
 @strawberry.type
 class Qos:
-    
+
     _id: MongoId
     name: str
     repo: str
     qos: str
     partition: str
 
+
+
+
 @strawberry.input
 class Job:
-    
+
     job_id: str
     user_name: str
     uid: int
@@ -187,15 +263,30 @@ class Job:
     year: int
     facility: str
     resource: str
-    
 
+
+@strawberry.type
+class StorageUsageInput:
+    _id: Optional[MongoId] = UNSET
+    facility: Optional[str] = UNSET
+    resource: Optional[str] = UNSET
+    repo: Optional[str] = UNSET
+    year: Optional[int] = UNSET
+    folder: Optional[int] = UNSET
+    storage: Optional[float] = UNSET
+    inodes: Optional[float] = UNSET
+    report_date: Optional[datetime] = UNSET
+
+@strawberry.type
+class StorageUsage(StorageUsageInput):
+    pass
 
 
 # class mapping of the 'thing' to the class
 KLASSES = {
-    'users': User, 
+    'users': User,
     'access_groups': AccessGroup,
-    'repos': Repo, 
+    'repos': Repo,
     'facilities': Facility,
 }
 
@@ -256,7 +347,7 @@ def create_thing( thing, info, data, required_fields=[], find_existing={ 'key': 
 
 def update_thing( thing, info, data, required_fields=[ 'Id', ], find_existing={} ):
     klass = KLASSES[thing]
-    things = find_thing( thing, info, find_existing ) 
+    things = find_thing( thing, info, find_existing )
     if len(things) == 0:
         raise Exception(f"{thing} not found with {find_existing}")
     elif len(things) > 1:
@@ -269,4 +360,3 @@ def update_thing( thing, info, data, required_fields=[ 'Id', ], find_existing={}
     db.update_one( { '_id': new['_id'] }, { "$set": new } )
     item = klass( **new )
     return item
-    
