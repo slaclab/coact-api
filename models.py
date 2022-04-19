@@ -111,10 +111,18 @@ class Resource:
     @strawberry.field
     def partitionObjs(self, info) -> List[Partition]:
         return [ Partition(**x) for x in  get_db(info,"partitions").find({"name": {"$in": self.partitions } } ) ]
-
-    def get_compute_capacities(self, info: Info ):
-        return [ ComputeCapacity(**{"year": x["year"], "compute": x["compute"]}) for x in  get_db(info,"compute_capacity").find({"facility": self.facility_name,  "resource": self.name }) ]
-    computeCapacities: List[ComputeCapacity] = strawberry.field(resolver=get_compute_capacities)
+    @strawberry.field
+    def computeCapacities(self, info, year: int = 0) ->List[ComputeCapacity]:
+        cc_filter = { "facility": self.facility_name,  "resource": self.name }
+        if year:
+            cc_filter["year"] = year
+        return [ ComputeCapacity(**{"year": x["year"], "compute": x["compute"]}) for x in  get_db(info,"compute_capacity").find(cc_filter) ]
+    @strawberry.field
+    def storageCapacities(self, info, year: int = 0) ->List[StorageCapacity]:
+        sc_filter = { "facility": self.facility_name,  "resource": self.name }
+        if year:
+            sc_filter["year"] = year
+        return [ StorageCapacity(**{"year": x["year"], "storage": x["storage"], "inodes": x["inodes"]}) for x in  get_db(info,"storage_capacity").find(sc_filter) ]
 
 @strawberry.input
 class FacilityInput:
