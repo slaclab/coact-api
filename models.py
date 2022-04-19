@@ -123,32 +123,19 @@ class Facility( FacilityInput ):
         fac = get_db(info,"facilities").find_one({"_id": self._id })
         return [ Resource(**{"name": k, "facility_name": self.name, "type": v["type"], "partitions": v.get("partitions", []), "root": v.get("root", None)}) for k,v in fac.get("resources", {}).items() ]
 
-
 @strawberry.type
-class ComputeAllocationInput:
+class AllocationInput:
     _id: Optional[MongoId] = UNSET
     facility: Optional[str] = UNSET
     resource: Optional[str] = UNSET
     repo: Optional[str] = UNSET
     year: Optional[int] = UNSET
     compute: Optional[float] = UNSET
-
-@strawberry.type
-class ComputeAllocation(ComputeAllocationInput):
-    pass
-
-@strawberry.type
-class StorageAllocationInput:
-    _id: Optional[MongoId] = UNSET
-    facility: Optional[str] = UNSET
-    resource: Optional[str] = UNSET
-    repo: Optional[str] = UNSET
-    year: Optional[int] = UNSET
     storage: Optional[float] = UNSET
     inodes: Optional[float] = UNSET
 
 @strawberry.type
-class StorageAllocation(StorageAllocationInput):
+class Allocation(AllocationInput):
     pass
 
 @strawberry.type
@@ -192,7 +179,6 @@ class RepoInput:
     group: Optional[str] = UNSET
     description: Optional[str] = UNSET
 
-
 @strawberry.type
 class Repo( RepoInput ):
 
@@ -210,7 +196,12 @@ class Repo( RepoInput ):
         LOG.debug("Roles: " + str(repo.get("roles", {})))
         return [ Role(**{ "_id": None, "name": k, "privileges": [], "players": v }) for k,v in repo.get("roles", {}).items() ]
 
-
+    @strawberry.field
+    def allocations(self, info, year: int = 0) ->List[Allocation]:
+        rc_filter = { "facility": self.facility, "repo": self.name }
+        if year:
+            rc_filter["year"] = year
+        return [ Allocation(**{k:x.get(k, 0) for k in ["year", "compute", "storage", "inodes", "resource", "facility"] }) for x in  get_db(info,"allocations").find(rc_filter) ]
 
 @strawberry.type
 class Qos:

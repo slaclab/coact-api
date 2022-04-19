@@ -170,14 +170,11 @@ db.getSiblingDB("iris").repos.createIndex({"GID": 1}, unique=true)
 // Repos have a PI and can belong to multiple facilities
 db.getSiblingDB("iris").repos.insertOne({
   "name": "cxi12345",
-  "facilities": [ "LCLS" ],
-  "leader": "aquila",
-  "roles": {
-    "user": [ "aquila", "mcbrowne", "snelson", "tmalla", "yanwen", "mshankar"  ], // Everyone is a user; including the PI and those with PI_Proxy or any other role. This lets us create an index on roles.user
-    "leader_proxy": [ "snelson" ]
-  },
-  "group": "cxi12345",
-  "GID": 12345
+  "facility": "LCLS",
+  "principal": "aquila",
+  "leaders": [ "snelson" ],
+  "users": [ "aquila", "mcbrowne", "snelson", "tmalla", "yanwen", "mshankar" ],
+  "group": "cxi12345"
 })
 
 db.getSiblingDB("iris").qos.createIndex({"name": 1, "repo": 1}, unique=true)
@@ -195,11 +192,11 @@ db.getSiblingDB("iris").qos.insertOne({
 
 db.getSiblingDB("iris").repos.insertOne({
   "name": "20191205-CS14",
-  "facilities": [ "CryoEM" ],
-  "leader": "ytl",
-  "roles": { "user": [ "ytl" ] },
-  "group": "20191205-CS14",
-  "GID": 12346
+  "facility": "CryoEM",
+  "principal": "ytl",
+  "leaders": [],
+  "users": [ "ytl" ],
+  "group": "20191205-CS14"
 })
 db.getSiblingDB("iris").qos.insertOne({
   "name": "normal",
@@ -211,11 +208,11 @@ db.getSiblingDB("iris").qos.insertOne({
 
 db.getSiblingDB("iris").repos.insertOne({
   "name": "CoffeeWorld",
-  "facilities": [ "LCLS", "SUNCAT" ],
-  "leader": "coffee",
-  "roles": { "user": [ "coffee" ] },
-  "group": "CoffeeWorld",
-  "GID": 12347
+  "facility": "LCLS",
+  "principal": "coffee",
+  "leaders": [],
+  "users": [ "coffee" ],
+  "group": "CoffeeWorld"
 })
 // CoffeeWorld belongs to multiple partitions; so it has a QOS defined for each partition.
 db.getSiblingDB("iris").qos.insertOne({
@@ -232,9 +229,9 @@ db.getSiblingDB("iris").qos.insertOne({
 })
 
 
-db.getSiblingDB("iris").compute_allocations.createIndex({"repo": 1, "facility": 1, "resource": 1, "year": -1}, unique=true)
+db.getSiblingDB("iris").allocations.createIndex({"repo": 1, "facility": 1, "resource": 1, "year": -1}, unique=true)
 
-db.getSiblingDB("iris").compute_allocations.insertOne({
+db.getSiblingDB("iris").allocations.insertOne({
   "facility": "LCLS",
   "resource": "CPU",
   "repo": "cxi12345",
@@ -242,9 +239,9 @@ db.getSiblingDB("iris").compute_allocations.insertOne({
   "compute": 3000
 })
 
-db.getSiblingDB("iris").storage_allocations.createIndex({"repo": 1, "facility": 1, "resource": 1, "year": -1}, unique=true)
+db.getSiblingDB("iris").allocations.createIndex({"repo": 1, "facility": 1, "resource": 1, "year": -1}, unique=true)
 
-db.getSiblingDB("iris").storage_allocations.insertOne({
+db.getSiblingDB("iris").allocations.insertOne({
   "facility": "LCLS",
   "resource": "data",
   "repo": "cxi12345",
@@ -253,7 +250,7 @@ db.getSiblingDB("iris").storage_allocations.insertOne({
   "inodes": 4455
 })
 
-db.getSiblingDB("iris").storage_allocations.insertOne({
+db.getSiblingDB("iris").allocations.insertOne({
   "facility": "LCLS",
   "resource": "scratch",
   "repo": "cxi12345",
