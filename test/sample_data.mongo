@@ -78,29 +78,29 @@ db.getSiblingDB("iris").facilities.insertOne({
   }
 })
 
-db.getSiblingDB("iris").compute_capacity.createIndex({"facility": 1, "resource": 1, "year": -1}, unique=true)
+db.getSiblingDB("iris").resource_capacity.createIndex({"facility": 1, "resource": 1, "year": -1}, unique=true)
 
 // Capacity for LCLS for 2022; resource is the name of the resource
-db.getSiblingDB("iris").compute_capacity.insertOne({
+db.getSiblingDB("iris").resource_capacity.insertOne({
   "facility": "LCLS",
   "resource": "CPU",
   "year": 2022,
   "compute": 3000000
 })
-db.getSiblingDB("iris").compute_capacity.insertOne({
+db.getSiblingDB("iris").resource_capacity.insertOne({
   "facility": "LCLS",
   "resource": "GPU",
   "year": 2022,
   "compute": 30000
 })
-db.getSiblingDB("iris").storage_capacity.insertOne({
+db.getSiblingDB("iris").resource_capacity.insertOne({
   "facility": "LCLS",
   "resource": "data",
   "year": 2022,
   "storage": 3000,
   "inodes": 1000000
 })
-db.getSiblingDB("iris").storage_capacity.insertOne({
+db.getSiblingDB("iris").resource_capacity.insertOne({
   "facility": "LCLS",
   "resource": "scratch",
   "year": 2022,
@@ -108,26 +108,26 @@ db.getSiblingDB("iris").storage_capacity.insertOne({
   "inodes": 1000000
 })
 // Capacity for Cryo for 2022
-db.getSiblingDB("iris").compute_capacity.insertOne({
+db.getSiblingDB("iris").resource_capacity.insertOne({
   "facility": "CryoEM",
   "resource": "CPU",
   "year": 2022,
   "compute": 3000000
 })
-db.getSiblingDB("iris").compute_capacity.insertOne({
+db.getSiblingDB("iris").resource_capacity.insertOne({
   "facility": "CryoEM",
   "resource": "GPU",
   "year": 2022,
   "compute": 30000
 })
-db.getSiblingDB("iris").storage_capacity.insertOne({
+db.getSiblingDB("iris").resource_capacity.insertOne({
   "facility": "CryoEM",
   "resource": "data",
   "year": 2022,
   "storage": 3000,
   "inodes": 1000000
 })
-db.getSiblingDB("iris").storage_capacity.insertOne({
+db.getSiblingDB("iris").resource_capacity.insertOne({
   "facility": "CryoEM",
   "resource": "scratch",
   "year": 2022,
@@ -135,35 +135,32 @@ db.getSiblingDB("iris").storage_capacity.insertOne({
   "inodes": 1000000
 })
 // Capacity for SUNCAT for 2022
-db.getSiblingDB("iris").compute_capacity.insertOne({
+db.getSiblingDB("iris").resource_capacity.insertOne({
   "facility": "SUNCAT",
   "resource": "CPU",
   "year": 2022,
   "compute": 3000000
 })
-db.getSiblingDB("iris").compute_capacity.insertOne({
+db.getSiblingDB("iris").resource_capacity.insertOne({
   "facility": "SUNCAT",
   "resource": "GPU",
   "year": 2022,
   "compute": 30000
 })
-db.getSiblingDB("iris").storage_capacity.insertOne({
+db.getSiblingDB("iris").resource_capacity.insertOne({
   "facility": "SUNCAT",
   "resource": "data",
   "year": 2022,
   "storage": 3000,
   "inodes": 1000000
 })
-db.getSiblingDB("iris").storage_capacity.insertOne({
+db.getSiblingDB("iris").resource_capacity.insertOne({
   "facility": "SUNCAT",
   "resource": "scratch",
   "year": 2022,
   "storage": 3000,
   "inodes": 1000000
 })
-
-
-
 
 db.getSiblingDB("iris").repos.createIndex({"name": 1}, unique=true)
 db.getSiblingDB("iris").repos.createIndex({"leader": 1}) // For performance

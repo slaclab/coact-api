@@ -81,24 +81,15 @@ class Partition(PartitionInput):
     pass
 
 @strawberry.type
-class ComputeCapacityInput:
+class ResourceCapacityInput:
     _id: Optional[MongoId] = UNSET
     year: Optional[int] = UNSET
     compute: Optional[float] = UNSET
-
-@strawberry.type
-class ComputeCapacity(ComputeCapacityInput):
-    pass
-
-@strawberry.type
-class StorageCapacityInput:
-    _id: Optional[MongoId] = UNSET
-    year: Optional[int] = UNSET
     storage: Optional[float] = UNSET
     inodes: Optional[float] = UNSET
 
 @strawberry.type
-class StorageCapacity(StorageCapacityInput):
+class ResourceCapacity(ResourceCapacityInput):
     pass
 
 @strawberry.type
@@ -112,17 +103,11 @@ class Resource:
     def partitionObjs(self, info) -> List[Partition]:
         return [ Partition(**x) for x in  get_db(info,"partitions").find({"name": {"$in": self.partitions } } ) ]
     @strawberry.field
-    def computeCapacities(self, info, year: int = 0) ->List[ComputeCapacity]:
-        cc_filter = { "facility": self.facility_name,  "resource": self.name }
+    def capacities(self, info, year: int = 0) ->List[ResourceCapacity]:
+        rc_filter = { "facility": self.facility_name,  "resource": self.name }
         if year:
-            cc_filter["year"] = year
-        return [ ComputeCapacity(**{"year": x["year"], "compute": x["compute"]}) for x in  get_db(info,"compute_capacity").find(cc_filter) ]
-    @strawberry.field
-    def storageCapacities(self, info, year: int = 0) ->List[StorageCapacity]:
-        sc_filter = { "facility": self.facility_name,  "resource": self.name }
-        if year:
-            sc_filter["year"] = year
-        return [ StorageCapacity(**{"year": x["year"], "storage": x["storage"], "inodes": x["inodes"]}) for x in  get_db(info,"storage_capacity").find(sc_filter) ]
+            rc_filter["year"] = year
+        return [ ResourceCapacity(**{k:x.get(k, 0) for k in ["year", "compute", "storage", "inodes"] }) for x in  get_db(info,"resource_capacity").find(rc_filter) ]
 
 @strawberry.input
 class FacilityInput:
