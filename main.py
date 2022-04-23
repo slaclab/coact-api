@@ -4,6 +4,7 @@ from functools import wraps
 from typing import List
 
 from fastapi import FastAPI, Depends, Request, WebSocket, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
 from strawberry.fastapi import BaseContext, GraphQLRouter
 from strawberry import Schema
 from strawberry.schema.config import StrawberryConfig
@@ -27,13 +28,13 @@ mongo = MongoClient(host=MONGODB_URL, tz_aware=True)
 
 
 class CustomContext(BaseContext):
-    
+
     LOG = logging.getLogger(__name__)
-    
+
     user: str = None
     roles: List[str] = []
     privileges: List[str] = []
-    
+
     def __init__(self, *args, **kwargs):
         self.LOG.debug(f"In CustomContext.__init__ {args} {kwargs}")
         self.user = None
@@ -41,10 +42,10 @@ class CustomContext(BaseContext):
         self.privileges = []
         self.repo = None
         self.db = mongo
-        
+
     def __str__(self):
         return f"CustomContext User: {self.user} Roles: {self.roles} Privileges: {self.privileges}"
-        
+
     def authn(self):
         self.user = self.request.headers.get("REMOTE-USER", self.request.headers.get("remote_user", None))
         if not self.user:
@@ -66,4 +67,15 @@ graphql_app = GraphQLRouter(
 )
 
 app = FastAPI()
+origins = [
+    "*",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(graphql_app, prefix="/graphql")
