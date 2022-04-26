@@ -222,21 +222,21 @@ class Repo( RepoInput ):
         return [ Role(**{ "_id": None, "name": k, "privileges": [], "players": v }) for k,v in repo.get("roles", {}).items() ]
 
     @strawberry.field
-    def allocations(self, info, year: int = 0) ->List[Allocation]:
-        rc_filter = { "facility": self.facility, "repo": self.name }
+    def allocations(self, info, resource: str, year: int) ->List[Allocation]:
+        rc_filter = { "facility": self.facility, "resouce": resource, "repo": self.name}
         if year:
             rc_filter["year"] = year
         return [ Allocation(**{k:x.get(k, 0) for k in ["year", "compute", "storage", "inodes", "resource", "facility"] }) for x in  get_db(info,"allocations").find(rc_filter) ]
 
     @strawberry.field
-    def userAllocations(self, info, year: int = 0) ->List[UserAllocation]:
-        rc_filter = { "facility": self.facility, "repo": self.name }
+    def userAllocations(self, info, resource: str, year: int) ->List[UserAllocation]:
+        rc_filter = { "facility": self.facility, "resouce": resource, "repo": self.name }
         if year:
             rc_filter["year"] = year
         return [ UserAllocation(**{k:x.get(k, 0) for k in ["year", "compute", "storage", "inodes", "resource", "facility", "username"] }) for x in  get_db(info,"user_allocations").find(rc_filter) ]
 
     @strawberry.field
-    def usage(self, info, resource: str, year: int = 0) ->List[Usage]:
+    def usage(self, info, resource: str, year: int) ->List[Usage]:
         LOG.debug("Getting the usage statistics for resource %s for year %s in facility %s for repo %s", resource, year, self.facility, self.name)
         results = get_db(info,"jobs").aggregate([
             { "$match": { "facility": self.facility, "resource": resource, "year": year, "repo": self.name }},
@@ -263,7 +263,7 @@ class Repo( RepoInput ):
         return [ Usage(**x) for x in  usage ]
 
     @strawberry.field
-    def perDayUsage(self, info, resource: str, year: int = 0) ->List[PerDayUsage]:
+    def perDayUsage(self, info, resource: str, year: int) ->List[PerDayUsage]:
         LOG.debug("Getting the per day usage statistics for resource %s for year %s in facility %s for repo %s", resource, year, self.facility, self.name)
         results = get_db(info,"jobs").aggregate([
             { "$match": { "facility": self.facility, "resource": resource, "year": year, "repo": self.name }},
@@ -291,7 +291,7 @@ class Repo( RepoInput ):
         return [ PerDayUsage(**x) for x in  usage ]
 
     @strawberry.field
-    def perUserUsage(self, info, resource: str, year: int = 0) ->List[PerUserUsage]:
+    def perUserUsage(self, info, resource: str, year: int) ->List[PerUserUsage]:
         LOG.debug("Getting the per user usage statistics for resource %s for year %s in facility %s for repo %s", resource, year, self.facility, self.name)
         results = get_db(info,"jobs").aggregate([
             { "$match": { "facility": self.facility, "resource": resource, "year": year, "repo": self.name }},
