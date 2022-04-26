@@ -161,7 +161,7 @@ class PerDayUsage(Usage):
 
 @strawberry.type
 class PerUserUsage(Usage):
-    username: Optional[str] = UNSET
+    userName: Optional[str] = UNSET
 
 @strawberry.type
 class ClusterInput:
@@ -279,6 +279,34 @@ class Repo( RepoInput ):
         usage = list(results)
         LOG.debug(usage)
         return [ PerDayUsage(**x) for x in  usage ]
+
+    @strawberry.field
+    def perUserUsage(self, info, year: int = 0) ->List[PerUserUsage]:
+        LOG.debug("Getting the per user usage statistics for %s in facility %s for repo %s", year, self.facility, self.name)
+        results = get_db(info,"jobs").aggregate([
+            { "$match": { "facility": self.facility, "year": year, "repo": self.name }},
+            { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year", "userName": "$userName"},
+                "totalNerscSecs": { "$sum": "$nerscSecs" },
+                "totalRawSecs": { "$sum": "$rawSecs" },
+                "totalMachineSecs": { "$sum": "$machineSecs" },
+                "averageChargeFactor": { "$avg": "$chargeFactor" }
+            }},
+            { "$project": {
+                "_id": 0,
+                "repo": "$_id.repo",
+                "resource": "$_id.resource",
+                "facility": "$_id.facility",
+                "year": "$_id.year",
+                "userName": "$_id.userName",
+                "totalNerscSecs": 1,
+                "totalRawSecs": 1,
+                "totalMachineSecs": 1,
+                "averageChargeFactor": 1
+            }}
+        ])
+        usage = list(results)
+        LOG.debug(usage)
+        return [ PerUserUsage(**x) for x in  usage ]
 
 @strawberry.type
 class Qos:
