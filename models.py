@@ -137,6 +137,27 @@ class AllocationInput:
 class Allocation(AllocationInput):
     pass
 
+
+@strawberry.type
+class UsageInput:
+    facility: Optional[str] = UNSET
+    resource: Optional[str] = UNSET
+    repo: Optional[str] = UNSET
+    year: Optional[int] = UNSET
+    compute: Optional[float] = UNSET
+    storage: Optional[float] = UNSET
+    inodes: Optional[float] = UNSET
+    total_nersc_secs: Optional[float] = UNSET
+    total_raw_secs: Optional[float] = UNSET
+    total_machine_secs: Optional[float] = UNSET
+    average_charge_factor: Optional[float] = UNSET
+    total_storage: Optional[float] = UNSET
+    total_inodes: Optional[float] = UNSET
+
+@strawberry.type
+class Usage(UsageInput):
+    pass
+
 @strawberry.type
 class ClusterInput:
     _id: Optional[MongoId] = UNSET
@@ -198,6 +219,30 @@ class Repo( RepoInput ):
         if year:
             rc_filter["year"] = year
         return [ Allocation(**{k:x.get(k, 0) for k in ["year", "compute", "storage", "inodes", "resource", "facility"] }) for x in  get_db(info,"allocations").find(rc_filter) ]
+
+    @strawberry.field
+    def usage(self, info, year: int = 0) ->List[Usage]:
+        results = get_db(info,"jobs").aggregate([
+            { "$match": { "facility": self.facility, "year": year, "repo": self.name }},
+            { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year"},
+                "total_nersc_secs": { "$sum": "$nersc_secs" },
+                "total_raw_secs": { "$sum": "$raw_secs" },
+                "total_machine_secs": { "$sum": "$machine_secs" },
+                "average_charge_factor": { "$avg": "$charge_factor" }
+            }},
+            { "$project": {
+                "_id": 0,
+                "repo": "$_id.repo",
+                "resource": "$_id.resource",
+                "facility": "$_id.facility",
+                "year": "$_id.year",
+                "total_nersc_secs": 1,
+                "total_raw_secs": 1,
+                "total_machine_secs": 1,
+                "average_charge_factor": 1
+            }}
+        ])
+        return [ Usage(**x) for x in  results ]
 
 @strawberry.type
 class Qos:
