@@ -190,6 +190,27 @@ db.getSiblingDB("iris").qos.insertOne({
   "partition": "psanaq"
 })
 
+db.getSiblingDB("iris").qos.insertOne({
+  "name": "hihi",
+  "repo": "cxi12345",
+  "qos": "LCLS-cxi12345-hihi",
+  "partition": "psfehhiprioq"
+})
+
+db.getSiblingDB("iris").qos.insertOne({
+  "name": "hprio",
+  "repo": "cxi12345",
+  "qos": "LCLS-cxi12345-hprio",
+  "partition": "psfehprioq"
+})
+
+db.getSiblingDB("iris").qos.insertOne({
+  "name": "feh",
+  "repo": "cxi12345",
+  "qos": "LCLS-cxi12345-feh",
+  "partition": "psfehq"
+})
+
 db.getSiblingDB("iris").repos.insertOne({
   "name": "20191205-CS14",
   "facility": "CryoEM",
@@ -292,6 +313,9 @@ db.getSiblingDB("iris").cluster.insertOne({
 db.getSiblingDB("iris").partitions.createIndex({"name": 1}, unique=true)
 db.getSiblingDB("iris").partitions.insertOne({ "name": "psanaq", "charge_factor": 1.0 })
 db.getSiblingDB("iris").partitions.insertOne({ "name": "psanagpuq", "charge_factor": 1.0 })
+db.getSiblingDB("iris").partitions.insertOne({ "name": "psfehq", "charge_factor": 1.0 })
+db.getSiblingDB("iris").partitions.insertOne({ "name": "psfehprioq", "charge_factor": 1.0 })
+db.getSiblingDB("iris").partitions.insertOne({ "name": "psfehhiprioq", "charge_factor": 1.0 })
 db.getSiblingDB("iris").partitions.insertOne({ "name": "CryoCPU", "charge_factor": 1.0 })
 db.getSiblingDB("iris").partitions.insertOne({ "name": "CryoGPU", "charge_factor": 1.0 })
 db.getSiblingDB("iris").partitions.insertOne({ "name": "SctCPU", "charge_factor": 1.0 })
