@@ -117,7 +117,6 @@ class FacilityInput:
 
 @strawberry.type
 class Facility( FacilityInput ):
-
     @strawberry.field
     def resources(self, info) -> List[Resource]:
         fac = get_db(info,"facilities").find_one({"_id": self._id })
@@ -163,7 +162,6 @@ class AccessGroup( AccessGroupInput ):
 
 @strawberry.input
 class RepoInput:
-
     _id: Optional[MongoId] = UNSET
 
     state: Optional[str] = UNSET
@@ -181,14 +179,12 @@ class RepoInput:
 
 @strawberry.type
 class Repo( RepoInput ):
-
     @strawberry.field
-    def facilityObjs(self, info) -> List[Facility]:
-        facilities = list(get_db(info,"facilities").find({"name": {"$in": self.facilities}}))
-        LOG.debug(facilities)
-        for facility in facilities:
-            del facility["resources"]
-        return [ Facility(**x) for x in facilities ]
+    def facilityObj(self, info) -> Facility:
+        facilityObj = get_db(info,"facilities").find_one({"name": self.facility})
+        del facilityObj["resources"]
+        ret = Facility(**facilityObj)
+        return ret
 
     @strawberry.field
     def roleObjs(self, info) -> List[Role]:
