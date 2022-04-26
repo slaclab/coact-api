@@ -323,7 +323,7 @@ db.getSiblingDB("iris").partitions.insertOne({ "name": "SctGPU", "charge_factor"
 
 
 // Jobs have lots of information from SLURM in addition to the final mapping into repo, year and resource name.
-db.getSiblingDB("iris").jobs.createIndex({"job_id": 1, "start_ts": 1, "compute_id": 1}, unique=true)
+db.getSiblingDB("iris").jobs.createIndex({"jobId": 1, "startTs": 1, "computeId": 1}, unique=true)
 db.getSiblingDB("iris").jobs.createIndex({"repo": 1, "year": -1, "resource": 1}) // Performance index
 
 db.getSiblingDB("iris").diskusage.createIndex({"facility": 1, "resource": 1, "year": -1, "repo": 1, "date": 1}, unique=true)

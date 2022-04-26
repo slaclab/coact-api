@@ -144,15 +144,12 @@ class UsageInput:
     resource: Optional[str] = UNSET
     repo: Optional[str] = UNSET
     year: Optional[int] = UNSET
-    compute: Optional[float] = UNSET
-    storage: Optional[float] = UNSET
-    inodes: Optional[float] = UNSET
-    total_nersc_secs: Optional[float] = UNSET
-    total_raw_secs: Optional[float] = UNSET
-    total_machine_secs: Optional[float] = UNSET
-    average_charge_factor: Optional[float] = UNSET
-    total_storage: Optional[float] = UNSET
-    total_inodes: Optional[float] = UNSET
+    totalNerscSecs: Optional[float] = UNSET
+    totalRawSecs: Optional[float] = UNSET
+    totalMachineSecs: Optional[float] = UNSET
+    averageChargeFactor: Optional[float] = UNSET
+    totalStorage: Optional[float] = UNSET
+    totalInodes: Optional[float] = UNSET
 
 @strawberry.type
 class Usage(UsageInput):
@@ -222,13 +219,14 @@ class Repo( RepoInput ):
 
     @strawberry.field
     def usage(self, info, year: int = 0) ->List[Usage]:
+        LOG.debug("Getting the usage statistics for %s in facility %s for repo %s", year, self.facility, self.name)
         results = get_db(info,"jobs").aggregate([
             { "$match": { "facility": self.facility, "year": year, "repo": self.name }},
             { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year"},
-                "total_nersc_secs": { "$sum": "$nersc_secs" },
-                "total_raw_secs": { "$sum": "$raw_secs" },
-                "total_machine_secs": { "$sum": "$machine_secs" },
-                "average_charge_factor": { "$avg": "$charge_factor" }
+                "totalNerscSecs": { "$sum": "$nerscSecs" },
+                "totalRawSecs": { "$sum": "$rawSecs" },
+                "totalMachineSecs": { "$sum": "$machineSecs" },
+                "averageChargeFactor": { "$avg": "$chargeFactor" }
             }},
             { "$project": {
                 "_id": 0,
@@ -236,13 +234,15 @@ class Repo( RepoInput ):
                 "resource": "$_id.resource",
                 "facility": "$_id.facility",
                 "year": "$_id.year",
-                "total_nersc_secs": 1,
-                "total_raw_secs": 1,
-                "total_machine_secs": 1,
-                "average_charge_factor": 1
+                "totalNerscSecs": 1,
+                "totalRawSecs": 1,
+                "totalMachineSecs": 1,
+                "averageChargeFactor": 1
             }}
         ])
-        return [ Usage(**x) for x in  results ]
+        usage = list(results)
+        LOG.debug(usage)
+        return [ Usage(**x) for x in  usage ]
 
 @strawberry.type
 class Qos:
@@ -259,31 +259,31 @@ class Qos:
 @strawberry.input
 class Job:
 
-    job_id: str
-    user_name: str
+    jobId: str
+    userName: str
     uid: int
-    account_name: str
-    partition_name: str
+    accountName: str
+    partitionName: str
     qos: str
-    start_ts: datetime
-    end_ts: datetime
+    startTs: datetime
+    endTs: datetime
     ncpus: int
-    alloc_nodes: int
-    alloc_tres: str
+    allocNodes: int
+    allocTres: str
     nodelist: str
     reservation: str
-    reservation_id: str
+    reservationId: str
     submitter: str
-    submit_ts: datetime
-    host_name: str
-    official_import: bool
-    compute_id: str
-    elapsed_secs: float
-    wait_time: float
-    charge_factor: float
-    raw_secs: float
-    nersc_secs: float
-    machine_secs: float
+    submitTs: datetime
+    hostName: str
+    officialImport: bool
+    computeId: str
+    elapsedSecs: float
+    waitTime: float
+    chargeFactor: float
+    rawSecs: float
+    nerscSecs: float
+    machineSecs: float
     repo: str
     year: int
     facility: str
