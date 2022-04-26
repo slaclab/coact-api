@@ -223,14 +223,14 @@ class Repo( RepoInput ):
 
     @strawberry.field
     def allocations(self, info, resource: str, year: int) ->List[Allocation]:
-        rc_filter = { "facility": self.facility, "resouce": resource, "repo": self.name}
+        rc_filter = { "facility": self.facility, "resource": resource, "repo": self.name}
         if year:
             rc_filter["year"] = year
         return [ Allocation(**{k:x.get(k, 0) for k in ["year", "compute", "storage", "inodes", "resource", "facility"] }) for x in  get_db(info,"allocations").find(rc_filter) ]
 
     @strawberry.field
     def userAllocations(self, info, resource: str, year: int) ->List[UserAllocation]:
-        rc_filter = { "facility": self.facility, "resouce": resource, "repo": self.name }
+        rc_filter = { "facility": self.facility, "resource": resource, "repo": self.name }
         if year:
             rc_filter["year"] = year
         return [ UserAllocation(**{k:x.get(k, 0) for k in ["year", "compute", "storage", "inodes", "resource", "facility", "username"] }) for x in  get_db(info,"user_allocations").find(rc_filter) ]
