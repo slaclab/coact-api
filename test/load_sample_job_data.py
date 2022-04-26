@@ -79,54 +79,54 @@ if __name__ == '__main__':
     for job in jobs:
         # Fix up everything with a "_ts"
         for k, v in job.items():
-            if k.endswith("_ts"):
+            if k.endswith("Ts"):
                 job[k] = dateparser.parse(v)
-        job["year"] = job["start_ts"].year
+        job["year"] = job["startTs"].year
 
         # Map job to repo.
         # First, try to get as much information as we can from the partition name.
-        facility = partition2facility[job["partition_name"]]
+        facility = partition2facility[job["partitionName"]]
         job["facility"] = facility["facility"]
         job["resource"] = facility["resource"]
 
-        acc_name = job.get("account_name", None)
+        acc_name = job.get("accountName", None)
         if acc_name and acc_name in repo_names:
             job["repo"] = acc_name
-            logger.info(f"Mapping {job['job_id']} to {job['repo']} based on account name")
+            logger.info(f"Mapping {job['jobId']} to {job['repo']} based on account name")
             continue
 
         facrepos = facility2repos.get(facility["facility"], set())
-        logger.debug("Repos from facliity %s for job %s are %s", facility["facility"], job["job_id"], facrepos)
-        usrrepos = user2repos.get(job["user_name"], set())
-        logger.debug("Repos from user %s for job %s are %s", job["user_name"], job["job_id"], usrrepos)
+        logger.debug("Repos from facliity %s for job %s are %s", facility["facility"], job["jobId"], facrepos)
+        usrrepos = user2repos.get(job["userName"], set())
+        logger.debug("Repos from user %s for job %s are %s", job["userName"], job["jobId"], usrrepos)
 
         # See if we have any common repos from the facility side and from the user side.
         common_repos = facrepos & usrrepos
         if not common_repos:
-            raise Exception(f"We should have at least a few common repos for {job['job_id']} From facility {facrepos} and from user {usrrepos}")
+            raise Exception(f"We should have at least a few common repos for {job['jobId']} From facility {facrepos} and from user {usrrepos}")
 
         if len(common_repos) == 1:
             logger.debug("We have only one common repo from the facility and from the user side")
             job["repo"] = list(common_repos)[0]
-            logger.info(f"Mapping {job['job_id']} to {job['repo']} based on facility and user repos")
+            logger.info(f"Mapping {job['jobId']} to {job['repo']} based on facility and user repos")
             continue
 
         # We have more than one repo from the facility and the user side.
         # Use the qos partition index to map now.
-        qosrepos = qos2repos.get((job["partition_name"], job["qos"]), set())
+        qosrepos = qos2repos.get((job["partitionName"], job["qos"]), set())
         common_repos = facrepos & usrrepos & qosrepos
         if not common_repos:
-            raise Exception(f"We should have at least a few common repos for {job['job_id']} From facility {facrepos} and from user {usrrepos} From QOS {qosrepos}")
+            raise Exception(f"We should have at least a few common repos for {job['jobId']} From facility {facrepos} and from user {usrrepos} From QOS {qosrepos}")
 
         if len(common_repos) == 1:
             job["repo"] = list(common_repos)[0]
-            logger.info(f"Mapping {job['job_id']} to {job['repo']} based on facility, user and qos repos")
+            logger.info(f"Mapping {job['jobId']} to {job['repo']} based on facility, user and qos repos")
             continue
 
-        logger.warn(f"Breaking the tie arbitrarily for {job['job_id']} as we have too many repos")
+        logger.warn(f"Breaking the tie arbitrarily for {job['jobId']} as we have too many repos")
         job["repo"] = list(common_repos)[0]
 
-        raise Exception(f"Cannot map job to repo %s {job['job_id']}")
+        raise Exception(f"Cannot map job to repo %s {job['jobId']}")
 
     def encodeJobVal(v):
         if isinstance(v, datetime):
