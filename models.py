@@ -167,8 +167,16 @@ class PerDayUsage(Usage):
     dayOfYear: Optional[int] = UNSET
 
 @strawberry.type
+class PerDateUsage(Usage):
+    date: Optional[datetime] = UNSET
+
+@strawberry.type
 class PerUserUsage(Usage):
     username: Optional[str] = UNSET
+
+@strawberry.type
+class PerFolderUsage(Usage):
+    folder: Optional[str] = UNSET
 
 @strawberry.type
 class ClusterInput:
@@ -321,6 +329,82 @@ class Repo( RepoInput ):
         usage = list(results)
         LOG.debug(usage)
         return [ PerUserUsage(**x) for x in  usage ]
+
+    @strawberry.field
+    def storageUsage(self, info, resource: str, year: int) ->List[Usage]:
+        LOG.debug("Getting the storage usage statistics for resource %s for year %s in facility %s for repo %s", resource, year, self.facility, self.name)
+        results = get_db(info,"diskusage").aggregate([
+            { "$match": { "facility": self.facility, "resource": resource, "year": year, "repo": self.name }},
+            { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year", "date": "$date"},
+                "totalStorage": { "$sum": "$storage" },
+                "totalInodes": { "$sum": "$inodes" }
+            }},
+            {"$sort": {"_id.date": -1}},
+            {"$limit": 1},
+            { "$project": {
+                "_id": 0,
+                "repo": "$_id.repo",
+                "resource": "$_id.resource",
+                "facility": "$_id.facility",
+                "year": "$_id.year",
+                "totalStorage": 1,
+                "totalInodes": 1
+            }}
+        ])
+        usage = list(results)
+        LOG.debug(usage)
+        return [ Usage(**x) for x in  usage ]
+
+    @strawberry.field
+    def perDayStorageUsage(self, info, resource: str, year: int) ->List[PerDateUsage]:
+        LOG.debug("Getting the per day storage usage statistics for resource %s for year %s in facility %s for repo %s", resource, year, self.facility, self.name)
+        results = get_db(info,"diskusage").aggregate([
+            { "$match": { "facility": self.facility, "resource": resource, "year": year, "repo": self.name }},
+            { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year", "date": "$date"},
+                "totalStorage": { "$sum": "$storage" },
+                "totalInodes": { "$sum": "$inodes" }
+            }},
+            { "$project": {
+                "_id": 0,
+                "repo": "$_id.repo",
+                "type": "$_id.type",
+                "year": "$_id.year",
+                "date": "$_id.date",
+                "totalStorage": 1,
+                "totalInodes": 1
+            }},
+            { "$sort": { "dayOfYear": 1 }}
+        ])
+        usage = list(results)
+        LOG.debug(usage)
+        return [ PerDateUsage(**x) for x in  usage ]
+
+    @strawberry.field
+    def perFolderStorageUsage(self, info, resource: str, year: int) ->List[PerFolderUsage]:
+        LOG.debug("Getting the per folder storage usage statistics for resource %s for year %s in facility %s for repo %s", resource, year, self.facility, self.name)
+        results = get_db(info,"diskusage").aggregate([
+            { "$match": { "facility": self.facility, "resource": resource, "year": year, "repo": self.name }},
+            { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year", "date": "$date", "folder": "$folder" },
+                "totalStorage": { "$sum": "$storage" },
+                "totalInodes": { "$sum": "$inodes" }
+            }},
+            {"$sort": {"_id.date": -1}},
+            {"$limit": 1},
+            { "$project": {
+                "_id": 0,
+                "repo": "$_id.repo",
+                "type": "$_id.type",
+                "pool": "$_id.pool",
+                "year": "$_id.year",
+                "folder": "$_id.folder",
+                "totalStorage": 1,
+                "totalInodes": 1
+            }},
+            { "$sort": { "date": 1 }}
+        ])
+        usage = list(results)
+        LOG.debug(usage)
+        return [ PerFolderUsage(**x) for x in  usage ]
 
 @strawberry.type
 class Qos:
