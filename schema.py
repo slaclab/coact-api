@@ -3,13 +3,15 @@ from auth import Authnz, IsAuthenticated
 from typing import List, Optional
 import strawberry
 from strawberry.types import Info
+from strawberry.arguments import UNSET
 
 from models import get_db, to_dict, create_thing, update_thing, \
         User, UserInput, find_users, \
         AccessGroup, AccessGroupInput, find_access_groups, \
         Repo, RepoInput, find_repos, \
         Facility, FacilityInput, find_facilities, \
-        Resource, Role, Qos, Job 
+        Resource, Role, Qos, Job, \
+        UserAllocationInput, UserAllocation
 
 import logging
 
@@ -24,24 +26,24 @@ def assert_one( items, thing, filter ):
 
 @strawberry.type
 class Query:
-    
+
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def users(self, info: Info, filter: Optional[UserInput] ) -> List[User]:
         users = find_users( info, filter )
         return users
-        
+
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def user(self, info: Info, filter: Optional[UserInput] ) -> User:
         users = find_users( info, filter )
         assert_one( users, 'user', filter)
         return users[0]
 
-    
+
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def roles(self, info: Info) -> List[Role]:
         roles = get_db(info, "roles").find()
         return [ Role(**x) for x in roles ]
-    
+
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def role(self, name: str, info: Info) -> Role:
         therole = get_db(info, "roles").find_one({"name": name})
@@ -49,11 +51,11 @@ class Query:
             return Role(**therole)
         return None
 
-    
+
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def facilities(self, info: Info, filter: Optional[FacilityInput]) -> List[Facility]:
         return find_facilities( info, filter, exclude_fields=['resources',] )
-        
+
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def facility(self, name: str, info: Info, filter: Optional[FacilityInput]) -> Facility:
         facilities = find_facilities( info, filter )
@@ -81,8 +83,8 @@ class Query:
         repos = find_repos( info, filter, exclude_fields=['roles',])
         assert_one( repos, 'repo', filter)
         return repo[0]
-        
-        
+
+
     @strawberry.field
     def qos(self, info: Info) -> List[Qos]:
         qoses = list(get_db(info,"qos").find({}))
@@ -126,6 +128,17 @@ class Mutation:
     def repoCreate(self, data: RepoInput, info: Info) -> Repo:
         return create_thing( 'repos', info, data, required_fields=[ 'name' ], find_existing={ 'name': data.name } )
 
+    @strawberry.mutation( permission_classes=[ IsAuthenticated ] )
+    def updateUserAllocation(self, data: List[UserAllocationInput], info: Info) -> str:
+        uas = [dict(j.__dict__.items()) for j in data]
+        for ua in uas:
+            nua = {}
+            for k, v in ua.items():
+                if not isinstance(v, type(UNSET)):
+                    nua[k] = v
+            LOG.info(nua)
+            get_db(info,"user_allocations").replace_one({k: v for k,v in nua.items() if k in ["facility", "repo", "resource", "year", "username"]}, nua, upsert=True)
+        return "Done"
 
     @strawberry.mutation
     def importJobs(self, jobs: List[Job], info: Info) -> str:

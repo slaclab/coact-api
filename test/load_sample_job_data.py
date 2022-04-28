@@ -97,8 +97,8 @@ if __name__ == '__main__':
 
         facrepos = facility2repos.get(facility["facility"], set())
         logger.debug("Repos from facliity %s for job %s are %s", facility["facility"], job["jobId"], facrepos)
-        usrrepos = user2repos.get(job["userName"], set())
-        logger.debug("Repos from user %s for job %s are %s", job["userName"], job["jobId"], usrrepos)
+        usrrepos = user2repos.get(job["username"], set())
+        logger.debug("Repos from user %s for job %s are %s", job["username"], job["jobId"], usrrepos)
 
         # See if we have any common repos from the facility side and from the user side.
         common_repos = facrepos & usrrepos

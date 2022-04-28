@@ -166,7 +166,6 @@ db.getSiblingDB("iris").repos.createIndex({"name": 1}, unique=true)
 db.getSiblingDB("iris").repos.createIndex({"leader": 1}) // For performance
 db.getSiblingDB("iris").repos.createIndex({"roles.user": 1}) // For performance
 db.getSiblingDB("iris").repos.createIndex({"group": 1}, unique=true)
-db.getSiblingDB("iris").repos.createIndex({"GID": 1}, unique=true)
 // Repos have a PI and can belong to multiple facilities
 db.getSiblingDB("iris").repos.insertOne({
   "name": "cxi12345",
@@ -283,14 +282,14 @@ db.getSiblingDB("iris").allocations.insertOne({
 // Of course, user has other information like full name, email etc. Maybe some of that comes from inCommon?
 db.getSiblingDB("iris").users.createIndex({"username": 1}, unique=true)
 db.getSiblingDB("iris").users.createIndex({"uid_number": 1}, unique=true)
-db.getSiblingDB("iris").users.insertOne({ "username": "aquila", "UID": 123 })
-db.getSiblingDB("iris").users.insertOne({ "username": "mcbrowne", "UID": 124 })
-db.getSiblingDB("iris").users.insertOne({ "username": "snelson", "UID": 125 })
-db.getSiblingDB("iris").users.insertOne({ "username": "tmalla", "UID": 126 })
-db.getSiblingDB("iris").users.insertOne({ "username": "yanwen", "UID": 127 })
-db.getSiblingDB("iris").users.insertOne({ "username": "mshankar", "UID": 128 })
-db.getSiblingDB("iris").users.insertOne({ "username": "ytl", "UID": 129 })
-db.getSiblingDB("iris").users.insertOne({ "username": "wilko", "UID": 130 })
+db.getSiblingDB("iris").users.insertOne({ "username": "aquila", "uid_number": 123 })
+db.getSiblingDB("iris").users.insertOne({ "username": "mcbrowne", "uid_number": 124 })
+db.getSiblingDB("iris").users.insertOne({ "username": "snelson", "uid_number": 125 })
+db.getSiblingDB("iris").users.insertOne({ "username": "tmalla", "uid_number": 126 })
+db.getSiblingDB("iris").users.insertOne({ "username": "yanwen", "uid_number": 127 })
+db.getSiblingDB("iris").users.insertOne({ "username": "mshankar", "uid_number": 128 })
+db.getSiblingDB("iris").users.insertOne({ "username": "ytl", "uid_number": 129 })
+db.getSiblingDB("iris").users.insertOne({ "username": "wilko", "uid_number": 130 })
 
 db.getSiblingDB("iris").user_allocations.createIndex({"repo": 1, "username": 1, "facility": 1, "resource": 1, "year": -1}, unique=true)
 

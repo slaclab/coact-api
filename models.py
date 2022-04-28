@@ -122,7 +122,7 @@ class Facility( FacilityInput ):
         fac = get_db(info,"facilities").find_one({"_id": self._id })
         return [ Resource(**{"name": k, "facility_name": self.name, "type": v["type"], "partitions": v.get("partitions", []), "root": v.get("root", None)}) for k,v in fac.get("resources", {}).items() ]
 
-@strawberry.type
+@strawberry.input
 class AllocationInput:
     _id: Optional[MongoId] = UNSET
     facility: Optional[str] = UNSET
@@ -137,9 +137,13 @@ class AllocationInput:
 class Allocation(AllocationInput):
     pass
 
+@strawberry.input
+class UserAllocationInput(AllocationInput):
+    username: Optional[str] = UNSET
+
 @strawberry.type
-class UserAllocation(Allocation):
-    userName: Optional[str] = UNSET
+class UserAllocation(UserAllocationInput):
+    pass
 
 @strawberry.type
 class UsageInput:
@@ -164,7 +168,7 @@ class PerDayUsage(Usage):
 
 @strawberry.type
 class PerUserUsage(Usage):
-    userName: Optional[str] = UNSET
+    username: Optional[str] = UNSET
 
 @strawberry.type
 class ClusterInput:
@@ -226,14 +230,14 @@ class Repo( RepoInput ):
         rc_filter = { "facility": self.facility, "resource": resource, "repo": self.name}
         if year:
             rc_filter["year"] = year
-        return [ Allocation(**{k:x.get(k, 0) for k in ["year", "compute", "storage", "inodes", "resource", "facility"] }) for x in  get_db(info,"allocations").find(rc_filter) ]
+        return [ Allocation(**{k:x.get(k, 0) for k in ["repo", "year", "compute", "storage", "inodes", "resource", "facility"] }) for x in  get_db(info,"allocations").find(rc_filter) ]
 
     @strawberry.field
     def userAllocations(self, info, resource: str, year: int) ->List[UserAllocation]:
         rc_filter = { "facility": self.facility, "resource": resource, "repo": self.name }
         if year:
             rc_filter["year"] = year
-        return [ UserAllocation(**{k:x.get(k, 0) for k in ["year", "compute", "storage", "inodes", "resource", "facility", "username"] }) for x in  get_db(info,"user_allocations").find(rc_filter) ]
+        return [ UserAllocation(**{k:x.get(k, 0) for k in ["repo", "year", "compute", "storage", "inodes", "resource", "facility", "username"] }) for x in  get_db(info,"user_allocations").find(rc_filter) ]
 
     @strawberry.field
     def usage(self, info, resource: str, year: int) ->List[Usage]:
@@ -295,7 +299,7 @@ class Repo( RepoInput ):
         LOG.debug("Getting the per user usage statistics for resource %s for year %s in facility %s for repo %s", resource, year, self.facility, self.name)
         results = get_db(info,"jobs").aggregate([
             { "$match": { "facility": self.facility, "resource": resource, "year": year, "repo": self.name }},
-            { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year", "userName": "$userName"},
+            { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year", "username": "$username"},
                 "totalNerscSecs": { "$sum": "$nerscSecs" },
                 "totalRawSecs": { "$sum": "$rawSecs" },
                 "totalMachineSecs": { "$sum": "$machineSecs" },
@@ -307,7 +311,7 @@ class Repo( RepoInput ):
                 "resource": "$_id.resource",
                 "facility": "$_id.facility",
                 "year": "$_id.year",
-                "userName": "$_id.userName",
+                "username": "$_id.username",
                 "totalNerscSecs": 1,
                 "totalRawSecs": 1,
                 "totalMachineSecs": 1,
@@ -332,9 +336,8 @@ class Qos:
 
 @strawberry.input
 class Job:
-
     jobId: str
-    userName: str
+    username: str
     uid: int
     accountName: str
     partitionName: str
