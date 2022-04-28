@@ -131,13 +131,10 @@ class Mutation:
     @strawberry.mutation( permission_classes=[ IsAuthenticated ] )
     def updateUserAllocation(self, data: List[UserAllocationInput], info: Info) -> str:
         uas = [dict(j.__dict__.items()) for j in data]
+        keys = ["facility", "repo", "resource", "year", "username"]
         for ua in uas:
-            nua = {}
-            for k, v in ua.items():
-                if not isinstance(v, type(UNSET)):
-                    nua[k] = v
-            LOG.info(nua)
-            get_db(info,"user_allocations").replace_one({k: v for k,v in nua.items() if k in ["facility", "repo", "resource", "year", "username"]}, nua, upsert=True)
+            nua = {k: v for k,v in ua.items() if not isinstance(v, type(UNSET))}
+            get_db(info,"user_allocations").replace_one({k: v for k,v in nua.items() if k in keys}, nua, upsert=True)
         return "Done"
 
     @strawberry.mutation
