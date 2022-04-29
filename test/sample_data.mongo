@@ -281,15 +281,15 @@ db.getSiblingDB("iris").allocations.insertOne({
 
 // Of course, user has other information like full name, email etc. Maybe some of that comes from inCommon?
 db.getSiblingDB("iris").users.createIndex({"username": 1}, unique=true)
-db.getSiblingDB("iris").users.createIndex({"uid_number": 1}, unique=true)
-db.getSiblingDB("iris").users.insertOne({ "username": "aquila", "uid_number": 123 })
-db.getSiblingDB("iris").users.insertOne({ "username": "mcbrowne", "uid_number": 124 })
-db.getSiblingDB("iris").users.insertOne({ "username": "snelson", "uid_number": 125 })
-db.getSiblingDB("iris").users.insertOne({ "username": "tmalla", "uid_number": 126 })
-db.getSiblingDB("iris").users.insertOne({ "username": "yanwen", "uid_number": 127 })
-db.getSiblingDB("iris").users.insertOne({ "username": "mshankar", "uid_number": 128 })
-db.getSiblingDB("iris").users.insertOne({ "username": "ytl", "uid_number": 129 })
-db.getSiblingDB("iris").users.insertOne({ "username": "wilko", "uid_number": 130 })
+db.getSiblingDB("iris").users.createIndex({"uidnumber": 1}, unique=true)
+db.getSiblingDB("iris").users.insertOne({ "username": "aquila", "uidnumber": 123 })
+db.getSiblingDB("iris").users.insertOne({ "username": "mcbrowne", "uidnumber": 124 })
+db.getSiblingDB("iris").users.insertOne({ "username": "snelson", "uidnumber": 125 })
+db.getSiblingDB("iris").users.insertOne({ "username": "tmalla", "uidnumber": 126 })
+db.getSiblingDB("iris").users.insertOne({ "username": "yanwen", "uidnumber": 127 })
+db.getSiblingDB("iris").users.insertOne({ "username": "mshankar", "uidnumber": 128 })
+db.getSiblingDB("iris").users.insertOne({ "username": "ytl", "uidnumber": 129 })
+db.getSiblingDB("iris").users.insertOne({ "username": "wilko", "uidnumber": 130 })
 
 db.getSiblingDB("iris").user_allocations.createIndex({"repo": 1, "username": 1, "facility": 1, "resource": 1, "year": -1}, unique=true)
 

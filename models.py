@@ -47,7 +47,7 @@ def get_db( info: Info, collection: str ):
 class UserInput:
     _id: Optional[MongoId] = UNSET
     username: Optional[str] = UNSET
-    uid_number: Optional[int] = UNSET
+    uidnumber: Optional[int] = UNSET
     eppns: Optional[List[str]] = UNSET
 
 @strawberry.type
