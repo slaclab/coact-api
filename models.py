@@ -1,3 +1,4 @@
+import dataclasses
 from typing import List, Optional
 import strawberry
 from strawberry.types import Info
@@ -48,17 +49,14 @@ class UserInput:
     _id: Optional[MongoId] = UNSET
     username: Optional[str] = UNSET
     uidnumber: Optional[int] = UNSET
-    eppns: Optional[List[str]] = UNSET
+    eppns: Optional[List[str]] = dataclasses.field(default_factory=list)
 
 @strawberry.type
 class User(UserInput):
     pass
 
-
-
 @strawberry.type
 class Role:
-
     _id: MongoId
     name: str
     privileges: List[str]
@@ -228,10 +226,9 @@ class Repo( RepoInput ):
         return ret
 
     @strawberry.field
-    def roleObjs(self, info) -> List[Role]:
-        repo = get_db(info,"repos").find_one({"_id": self._id })
-        LOG.debug("Roles: " + str(repo.get("roles", {})))
-        return [ Role(**{ "_id": None, "name": k, "privileges": [], "players": v }) for k,v in repo.get("roles", {}).items() ]
+    def allUsers(self, info) -> List[User]:
+        allusernames = list(set(self.users).union(set(self.leaders).union(set(list(self.principal)))))
+        return [ User(**x) for x in  get_db(info,"users").find({"username": {"$in": allusernames}}) ]
 
     @strawberry.field
     def allocations(self, info, resource: str, year: int) ->List[Allocation]:
