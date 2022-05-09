@@ -137,3 +137,16 @@ pyvenv.cfg
 # mongo
 mongodb/
 mongod.log
+
+compiler_compat/
+conda-meta/
+condabin/
+etc/fish/
+etc/profile.d/
+include/
+man/
+pkgs/
+sbin/
+share/
+shell/
+ssl/
