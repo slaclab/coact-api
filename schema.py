@@ -5,7 +5,7 @@ import strawberry
 from strawberry.types import Info
 from strawberry.arguments import UNSET
 
-from models import get_db, to_dict, create_thing, update_thing, \
+from models import get_db, to_dict, create_thing, update_thing, find_thing, \
         User, UserInput, find_users, \
         AccessGroup, AccessGroupInput, find_access_groups, \
         Repo, RepoInput, find_repos, \
@@ -68,7 +68,7 @@ class Query:
         return find_access_groups( info, filter, exclude_fields=[] )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def access_group(self, name: str, info: Info, filter: Optional[AccessGroupInput]) -> AccessGroup:
+    def access_group(self, info: Info, filter: Optional[AccessGroupInput]) -> AccessGroup:
         access_groups = find_access_groups( info, filter )
         assert_one( access_groups, 'access_group', filter)
         return access_groups[0]
@@ -79,12 +79,26 @@ class Query:
         return find_repos( info, filter, exclude_fields=['roles'] )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def repo(self, name: str, info: Info) -> Repo:
+    def repo(self, filter: Optional[RepoInput], info: Info) -> Repo:
         repos = find_repos( info, filter, exclude_fields=['roles',])
         assert_one( repos, 'repo', filter)
-        return repo[0]
+        return repos[0]
+        
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def reposWithUser( self, info: Info, username: str ) -> List[Repo]:
+        repos = find_thing( 'repos', info, { "users": username } )
+        return repos
 
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def reposWithLeader( self, info: Info, username: str ) -> List[Repo]:
+        repos = find_thing( 'repos', info, { "leaders": username } )
+        return repos
 
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def reposWithPrincipal( self, info: Info, username: str ) -> List[Repo]:
+        repos = find_thing( 'repos', info, { "principal": username } )
+        return repos
+        
     @strawberry.field
     def qos(self, info: Info) -> List[Qos]:
         qoses = list(get_db(info,"qos").find({}))
@@ -100,10 +114,9 @@ class Mutation:
     def userCreate(self, data: UserInput, info: Info) -> User:
         return create_thing( 'users', info, data, required_fields=[ 'username', 'uid_number', 'eppns' ], find_existing={ 'name': data.username } )
 
-
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def userUpdate(self, data: UserInput, info: Info) -> User:
-        pass
+        return update_thing( 'users', info, data, required_fields=[ 'Id' ], find_existing={ '_id': data._id } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def userUpdateEppn(self, eppns: List[str], info: Info) -> User:
@@ -126,7 +139,11 @@ class Mutation:
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def repoCreate(self, data: RepoInput, info: Info) -> Repo:
-        return create_thing( 'repos', info, data, required_fields=[ 'name' ], find_existing={ 'name': data.name } )
+        return create_thing( 'repos', info, data, required_fields=[ 'name', 'facility' ], find_existing={ 'name': data.name, 'facility': data.facility } )
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def repoUpdate(self, data: RepoInput, info: Info) -> Repo:
+        return update_thing( 'repos', info, data, required_fields=[ 'Id' ], find_existing={ '_id': data._id } )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated ] )
     def updateUserAllocation(self, data: List[UserAllocationInput], info: Info) -> str:

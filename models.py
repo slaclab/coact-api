@@ -30,8 +30,8 @@ def to_dict( obj ):
         return obj
 
     for k,v in obj.__dict__.items():
-        # LOG.warn(f"type {k} is {v}")
-        if v:
+        #LOG.warn(f"field {k} is {v} ({type(v)})")
+        if v or isinstance(v, list):
             d[k] = v
     return d
 
