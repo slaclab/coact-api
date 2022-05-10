@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coact
+  labels:
+    app: coact
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: coact
+  template:
+    metadata:
+      labels:
+        app: coact
+    spec:
+      containers:
+      - name: coact
+        image: slaclab/coact:latest
+        env:
+        - name: MONGODB_URL
+          value: mongodb://mongo-rs0-0.mongo-rs0:27017,mongo-rs0-1.mongo-rs0:27017,mongo-rs0.mongo-rs0:27017/?replicationSet=rs0
+        ports:
+        - containerPort: 8000
+        volumeMounts:
+        - name: code
+          mountPath: /app2/
+      volumes:
+      - name: code
+        persistentVolumeClaim:
+          claimName: code
+
+

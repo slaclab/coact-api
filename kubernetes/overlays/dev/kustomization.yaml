@@ -1,0 +1,30 @@
+namespace: coact
+
+resources:
+- endpoints.yaml
+- deployment.yaml
+- mongo.yaml
+- code-pvc.yaml
+
+secretGenerator:
+- name: mongo
+  literals:
+  - MONGODB_BACKUP_USER=backup
+  - MONGODB_CLUSTER_ADMIN_USER=clusterAdmin
+  - MONGODB_CLUSTER_MONITOR_USER=clusterMonitor
+  - MONGODB_USER_ADMIN_USER=userAdmin
+  - PMM_SERVER_USER=admin
+  files:
+  - MONGODB_BACKUP_PASSWORD=etc/.secrets/MONGODB_BACKUP_PASSWORD
+  - MONGODB_CLUSTER_ADMIN_PASSWORD=etc/.secrets/MONGODB_CLUSTER_ADMIN_PASSWORD
+  - MONGODB_CLUSTER_MONITOR_PASSWORD=etc/.secrets/MONGODB_CLUSTER_MONITOR_PASSWORD
+  - MONGODB_USER_ADMIN_PASSWORD=etc/.secrets/MONGODB_USER_ADMIN_PASSWORD
+  - PMM_SERVER_PASSWORD=etc/.secrets/PMM_SERVER_PASSWORD
+- name: s3-backup
+  files:
+  - AWS_ACCESS_KEY_ID=etc/.secrets/S3_ACCESS_KEY
+  - AWS_SECRET_ACCESS_KEY=etc/.secrets/S3_SECRET_KEY
+
+generatorOptions:
+  disableNameSuffixHash: true
+

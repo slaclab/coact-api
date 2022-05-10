@@ -1,0 +1,33 @@
+apiVersion: psmdb.percona.com/v1-11-0
+kind: PerconaServerMongoDB
+metadata:
+  name: mongo
+spec:
+  crVersion: 1.11.0
+  image: percona/percona-server-mongodb:4.4.10-11
+  allowUnsafeConfigurations: true
+  updateStrategy: SmartUpdate
+  upgradeOptions:
+    apply: 4.4-recommended
+    schedule: "0 2 * * *"
+  secrets:
+    users: mongo
+  replsets:
+  - name: rs0
+    size: 3
+    volumeSpec:
+      persistentVolumeClaim:
+        resources:
+          requests:
+            storage: 100Gi
+  sharding:
+    enabled: false
+#    configsvrReplSet:
+#      size: 3
+#      volumeSpec:
+#        persistentVolumeClaim:
+#          resources:
+#            requests:
+#              storage: 3Gi
+    mongos:
+      size: 3
