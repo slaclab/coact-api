@@ -45,6 +45,17 @@ def get_db( info: Info, collection: str ):
 # we generally just set everything to be option so that we can create a form like experience with graphql. we impose some of the required fields in some utility functions like create_thing(). not a great use of the graphql spec, but allows to to limit the amount of code we have to write
 
 @strawberry.input
+class EppnInput:
+    eppn: Optional[str] = UNSET
+    fullname: Optional[str] = UNSET
+    email: Optional[str] = UNSET
+    organization: Optional[str] = UNSET
+
+@strawberry.type
+class Eppn(EppnInput):
+    pass
+
+@strawberry.input
 class UserInput:
     _id: Optional[MongoId] = UNSET
     username: Optional[str] = UNSET
@@ -53,7 +64,17 @@ class UserInput:
 
 @strawberry.type
 class User(UserInput):
-    pass
+    # eppnObjs is most likely a call to some external service to get the details of an eppn
+    # For now we assume everyone is a SLAC person.
+    @strawberry.field
+    def eppnObjs(self, info) -> List[Eppn]:
+        ret = [ Eppn(**{ "eppn": self.username, "fullname": self.username, "email": self.username+"@slac.stanford.edu", "organization": "slac.stanford.edu"})]
+        for x in self.eppns:
+            if '@' not in x:
+                ret.append(Eppn(**{ "eppn": x, "fullname": x, "email": x+"@slac.stanford.edu", "organization": "slac.stanford.edu" }))
+            else:
+                ret.append(Eppn(**{ "eppn": x.split("@")[0], "fullname": x, "email": x, "organization": x.split("@")[1] }))
+        return ret
 
 @strawberry.type
 class Role:

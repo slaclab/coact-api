@@ -83,7 +83,7 @@ class Query:
         repos = find_repos( info, filter, exclude_fields=['roles',])
         assert_one( repos, 'repo', filter)
         return repos[0]
-        
+
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def reposWithUser( self, info: Info, username: str ) -> List[Repo]:
         repos = find_thing( 'repos', info, { "users": username } )
@@ -98,7 +98,7 @@ class Query:
     def reposWithPrincipal( self, info: Info, username: str ) -> List[Repo]:
         repos = find_thing( 'repos', info, { "principal": username } )
         return repos
-        
+
     @strawberry.field
     def qos(self, info: Info) -> List[Qos]:
         qoses = list(get_db(info,"qos").find({}))
@@ -152,6 +152,16 @@ class Mutation:
         for ua in uas:
             nua = {k: v for k,v in ua.items() if not isinstance(v, type(UNSET))}
             get_db(info,"user_allocations").replace_one({k: v for k,v in nua.items() if k in keys}, nua, upsert=True)
+        return "Done"
+
+    @strawberry.mutation( permission_classes=[ IsAuthenticated ] )
+    def toggleUserRole(self, reponame: str, username: str, info: Info) -> str:
+        get_db(info,"repos").update_one({"name": reponame}, [{ "$set":
+            { "leaders": { "$cond": [
+                { "$in": [ username, "$leaders" ] },
+                { "$setDifference": [ "$leaders", [ username ] ] },
+                { "$concatArrays": [ "$leaders", [ username ] ] }
+                ]}}}])
         return "Done"
 
     @strawberry.mutation
