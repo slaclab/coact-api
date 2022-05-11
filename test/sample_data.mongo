@@ -173,7 +173,8 @@ db.getSiblingDB("iris").repos.insertOne({
   "principal": "aquila",
   "leaders": [ "snelson" ],
   "users": [ "aquila", "mcbrowne", "snelson", "tmalla", "yanwen", "mshankar" ],
-  "group": "cxi12345"
+  "group": "cxi12345",
+  "access_groups": [ "cxi12345-g1", "cxi12345-g2"]
 })
 
 db.getSiblingDB("iris").qos.createIndex({"name": 1, "repo": 1}, unique=true)
@@ -290,6 +291,12 @@ db.getSiblingDB("iris").users.insertOne({ "username": "yanwen", "uidnumber": 127
 db.getSiblingDB("iris").users.insertOne({ "username": "mshankar", "uidnumber": 128, "eppns": [ "muralis@stanford.edu" ] })
 db.getSiblingDB("iris").users.insertOne({ "username": "ytl", "uidnumber": 129 })
 db.getSiblingDB("iris").users.insertOne({ "username": "wilko", "uidnumber": 130 })
+
+
+db.getSiblingDB("iris").access_groups.createIndex({"name": 1}, unique=true)
+db.getSiblingDB("iris").access_groups.createIndex({"gid_number": 1}, unique=true)
+db.getSiblingDB("iris").access_groups.insertOne({"name": "cxi12345-g1", "gid_number": 123, "members": [ "mshankar", "wilko", "ytl" ]})
+db.getSiblingDB("iris").access_groups.insertOne({"name": "cxi12345-g2", "gid_number": 124, "members": [ "mcbrowne", "yanwen"]})
 
 db.getSiblingDB("iris").user_allocations.createIndex({"repo": 1, "username": 1, "facility": 1, "resource": 1, "year": -1}, unique=true)
 

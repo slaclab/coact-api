@@ -164,6 +164,16 @@ class Mutation:
                 ]}}}])
         return "Done"
 
+    @strawberry.mutation( permission_classes=[ IsAuthenticated ] )
+    def toggleGroupMembership(self, groupname: str, username: str, info: Info) -> str:
+        get_db(info,"access_groups").update_one({"name": groupname}, [{ "$set":
+            { "members": { "$cond": [
+                { "$in": [ username, "$members" ] },
+                { "$setDifference": [ "$members", [ username ] ] },
+                { "$concatArrays": [ "$members", [ username ] ] }
+                ]}}}])
+        return "Done"
+
     @strawberry.mutation
     def importJobs(self, jobs: List[Job], info: Info) -> str:
         jbs = [dict(j.__dict__.items()) for j in jobs]

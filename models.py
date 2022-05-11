@@ -215,10 +215,15 @@ class AccessGroupInput:
     state: Optional[str] = UNSET
     gid_number: Optional[int] = UNSET
     name: Optional[str] = UNSET
+    members: Optional[List[str]] = UNSET
 
 @strawberry.type
 class AccessGroup( AccessGroupInput ):
-    pass
+    @strawberry.field
+    def memberObjs(self, info) ->List[User]:
+        if self.members is UNSET:
+            return []
+        return find_users(info, {"username": {"$in": self.members}})
 
 @strawberry.input
 class RepoInput:
@@ -250,6 +255,12 @@ class Repo( RepoInput ):
     def allUsers(self, info) -> List[User]:
         allusernames = list(set(self.users).union(set(self.leaders).union(set(list(self.principal)))))
         return [ User(**x) for x in  get_db(info,"users").find({"username": {"$in": allusernames}}) ]
+
+    @strawberry.field
+    def accessGroupObjs(self, info) ->List[AccessGroup]:
+        if self.access_groups is UNSET:
+            return []
+        return find_access_groups(info, {"name": {"$in": self.access_groups}})
 
     @strawberry.field
     def allocations(self, info, resource: str, year: int) ->List[Allocation]:
