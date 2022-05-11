@@ -20,14 +20,50 @@ spec:
         env:
         - name: MONGODB_URL
           value: mongodb://mongo-rs0-0.mongo-rs0:27017,mongo-rs0-1.mongo-rs0:27017,mongo-rs0.mongo-rs0:27017/?replicationSet=rs0
+        - name: MONGODB_USER
+          valueFrom:
+            secretKeyRef:
+              name: mongo
+              key: MONGODB_USER_ADMIN_USER
+        - name: MONGODB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongo
+              key: MONGODB_USER_ADMIN_PASSWORD
+        - name: USERNAME_FIELD
+          value: x-vouch-idp-claims-name
         ports:
         - containerPort: 8000
         volumeMounts:
         - name: code
-          mountPath: /app2/
+          mountPath: /app/
+#      - name: git
+#        image: alpine/git
+#        command:
+#        - /bin/sh
+#        - "-ec"
+#        - "while :; do echo >/dev/null; sleep 60 ; done"
+#        volumeMounts:
+#        - name: code
+#          mountPath: /app2/
+      - name: sshd
+        image: panubo/sshd
+        env:
+        - name: SSH_ENABLE_ROOT
+          value: 'true'
+        volumeMounts:
+        - name: ssh-keys
+          mountPath: /root/.ssh/authorized_keys
+          subPath: authorized_keys
+        - name: code
+          mountPath: /app/
       volumes:
       - name: code
         persistentVolumeClaim:
           claimName: code
+      - name: ssh-keys
+        secret:
+          secretName: ssh-keys
+
 
 
