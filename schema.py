@@ -112,7 +112,7 @@ class Mutation:
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def userCreate(self, data: UserInput, info: Info) -> User:
-        return create_thing( 'users', info, data, required_fields=[ 'username', 'uid_number', 'eppns' ], find_existing={ 'name': data.username } )
+        return create_thing( 'users', info, data, required_fields=[ 'username', 'uidnumber', 'eppns' ], find_existing={ 'name': data.username } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def userUpdate(self, data: UserInput, info: Info) -> User:

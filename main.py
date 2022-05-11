@@ -24,8 +24,13 @@ authn = Authnz()
 MONGODB_URL=environ.get("MONGODB_URL", "mongodb://127.0.0.1:27017/")
 if not MONGODB_URL:
     print("Please use the enivironment variable MONGODB_URL to configure the database connection.")
-mongo = MongoClient(host=MONGODB_URL, tz_aware=True)
+mongo = MongoClient(
+        host=MONGODB_URL, tz_aware=True, connect=True,
+        username=environ.get("MONGODB_USER", None), 
+        password=environ.get("MONGODB_PASSWORD", None) )
+LOG.info("connected to %s" % (mongo,))
 
+USER_FIELD_IN_HEADER = environ.get('USERNAME_FIELD','REMOTE_USER')
 
 class CustomContext(BaseContext):
 
@@ -47,7 +52,7 @@ class CustomContext(BaseContext):
         return f"CustomContext User: {self.user} Roles: {self.roles} Privileges: {self.privileges}"
 
     def authn(self):
-        self.user = self.request.headers.get("REMOTE-USER", self.request.headers.get("remote_user", None))
+        self.user = self.request.headers.get(USER_FIELD_IN_HEADER, None)
         if not self.user:
             self.user = environ.get("USER")
         self.roles = [ "Admin" ]
