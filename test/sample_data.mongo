@@ -283,6 +283,7 @@ db.getSiblingDB("iris").allocations.insertOne({
 // Of course, user has other information like full name, email etc. Maybe some of that comes from inCommon?
 db.getSiblingDB("iris").users.createIndex({"username": 1}, unique=true)
 db.getSiblingDB("iris").users.createIndex({"uidnumber": 1}, unique=true)
+db.getSiblingDB("iris").users.createIndex({"eppns": 1}, {unique: true, partialFilterExpression: { eppns: { $type: "array" }}})
 db.getSiblingDB("iris").users.insertOne({ "username": "aquila", "uidnumber": 123 })
 db.getSiblingDB("iris").users.insertOne({ "username": "mcbrowne", "uidnumber": 124 })
 db.getSiblingDB("iris").users.insertOne({ "username": "snelson", "uidnumber": 125 })

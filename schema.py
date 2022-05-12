@@ -1,4 +1,4 @@
-from auth import Authnz, IsAuthenticated, IsRepoPrincipal, IsRepoLeader, IsRepoPrincipalOrLeader, IsAdmin
+from auth import Authnz, IsAuthenticated
 
 from typing import List, Optional
 import strawberry
@@ -97,11 +97,11 @@ class Query:
 @strawberry.type
 class Mutation:
 
-    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def userCreate(self, data: UserInput, info: Info) -> User:
         return create_thing( 'users', info, data, required_fields=[ 'username', 'uidnumber', 'eppns' ], find_existing={ 'name': data.username } )
 
-    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def userUpdate(self, data: UserInput, info: Info) -> User:
         return update_thing( 'users', info, data, required_fields=[ 'Id' ], find_existing={ '_id': data._id } )
 
@@ -128,7 +128,7 @@ class Mutation:
     def repoCreate(self, data: RepoInput, info: Info) -> Repo:
         return create_thing( 'repos', info, data, required_fields=[ 'name', 'facility' ], find_existing={ 'name': data.name, 'facility': data.facility } )
 
-    @strawberry.field( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def repoUpdate(self, data: RepoInput, info: Info) -> Repo:
         return update_thing( 'repos', info, data, required_fields=[ 'Id' ], find_existing={ '_id': data._id } )
 
@@ -139,6 +139,23 @@ class Mutation:
         for ua in uas:
             nua = {k: v for k,v in ua.items() if not isinstance(v, type(UNSET))}
             get_db(info,"user_allocations").replace_one({k: v for k,v in nua.items() if k in keys}, nua, upsert=True)
+        return "Done"
+
+    @strawberry.mutation( permission_classes=[ IsAuthenticated ] )
+    def addUserToRepo(self, reponame: str, username: str, info: Info) -> str:
+        get_db(info,"repos").update_one({"name": reponame}, { "$addToSet": {"users": username}})
+        return "Done"
+
+    @strawberry.mutation( permission_classes=[ IsAuthenticated ] )
+    def removeUserFromRepo(self, reponame: str, username: str, info: Info) -> str:
+        repos = find_repos( info, {"name": reponame}, exclude_fields=['roles',])
+        assert_one( repos, 'repo', filter)
+        therepo = repos[0]
+        if username not in therepo.users:
+            return username + " is not a user in repo " + reponame
+        if username == therepo.principal:
+            return username + " is a PI in repo " + reponame + ". Cannot be removed from the repo"
+        get_db(info,"repos").update_one({"name": reponame}, { "$pull": {"leaders": username, "users": username}})
         return "Done"
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated ] )
