@@ -81,19 +81,6 @@ class User(UserInput):
         return ret
 
 @strawberry.type
-class Role:
-    _id: MongoId
-    name: str
-    privileges: List[str]
-    players: List[str]
-    playerObjs: List[User]
-
-    @strawberry.field
-    def playerObjs(self, info) -> List[User]:
-        return [ User(**x) for x in list( get_db(info,"users").find({"uid": {"$in": self.players}})) ]
-
-
-@strawberry.type
 class PartitionInput:
     _id: Optional[MongoId] = UNSET
     name: Optional[str] = UNSET
@@ -533,7 +520,7 @@ def find_facilities( info: Info, filter: Optional[FacilityInput], exclude_fields
 def find_access_groups( info: Info, filter: Optional[AccessGroupInput], exclude_fields: Optional[List[str]] = [] ) -> List[AccessGroup]:
     return find_thing( 'access_groups', info, filter, exclude_fields=exclude_fields )
 
-def find_repos( info: Info, filter: Optional[RepoInput], exclude_fields: Optional[List[str]] = ['roles',] ) -> List[Repo]:
+def find_repos( info: Info, filter: Optional[RepoInput], exclude_fields: Optional[List[str]] = [] ) -> List[Repo]:
     return find_thing( 'repos', info, filter, exclude_fields=exclude_fields )
 
 

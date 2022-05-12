@@ -10,7 +10,7 @@ from models import get_db, to_dict, create_thing, update_thing, find_thing, \
         AccessGroup, AccessGroupInput, find_access_groups, \
         Repo, RepoInput, find_repos, \
         Facility, FacilityInput, find_facilities, \
-        Resource, Role, Qos, Job, \
+        Resource, Qos, Job, \
         UserAllocationInput, UserAllocation
 
 import logging
