@@ -60,7 +60,7 @@ class UserInput:
     _id: Optional[MongoId] = UNSET
     username: Optional[str] = UNSET
     uidnumber: Optional[int] = UNSET
-    eppns: Optional[List[str]] = dataclasses.field(default_factory=list)
+    eppns: Optional[List[str]] = UNSET
 
 @strawberry.type
 class User(UserInput):
@@ -69,6 +69,8 @@ class User(UserInput):
     @strawberry.field
     def eppnObjs(self, info) -> List[Eppn]:
         ret = [ Eppn(**{ "eppn": self.username, "fullname": self.username, "email": self.username+"@slac.stanford.edu", "organization": "slac.stanford.edu"})]
+        if self.eppns is UNSET:
+            return []
         for x in self.eppns:
             if '@' not in x:
                 ret.append(Eppn(**{ "eppn": x, "fullname": x, "email": x+"@slac.stanford.edu", "organization": "slac.stanford.edu" }))
