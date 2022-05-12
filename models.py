@@ -34,6 +34,8 @@ def to_dict( obj ):
         #LOG.warn(f"field {k} is {v} ({type(v)})")
         if v or isinstance(v, list):
             d[k] = v
+            if isinstance(v,list) and len(v) == 0:
+                del d[k]
     return d
 
 def get_db( info: Info, collection: str ):
