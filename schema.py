@@ -1,4 +1,4 @@
-from auth import Authnz, IsAuthenticated
+from auth import Authnz, IsAuthenticated, IsRepoPrincipal, IsRepoLeader, IsRepoPrincipalOrLeader
 
 from typing import List, Optional
 import strawberry
@@ -141,7 +141,7 @@ class Mutation:
     def repoCreate(self, data: RepoInput, info: Info) -> Repo:
         return create_thing( 'repos', info, data, required_fields=[ 'name', 'facility' ], find_existing={ 'name': data.name, 'facility': data.facility } )
 
-    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def repoUpdate(self, data: RepoInput, info: Info) -> Repo:
         return update_thing( 'repos', info, data, required_fields=[ 'Id' ], find_existing={ '_id': data._id } )
 

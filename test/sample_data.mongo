@@ -167,6 +167,23 @@ db.getSiblingDB("iris").repos.insertOne({
   "group": "cxi12345"
 })
 
+db.getSiblingDB("iris").repos.insertOne({
+  "name": "20191205-CS14",
+  "facility": "CryoEM",
+  "principal": "ytl",
+  "leaders": [],
+  "users": [ "ytl" ],
+  "group": "20191205-CS14"
+})
+db.getSiblingDB("iris").repos.insertOne({
+  "name": "20191205-CA104",
+  "facility": "CryoEM",
+  "principal": "mshankar",
+  "leaders": [ "ytl" ],
+  "users": [ ],
+  "group": "20191205-CA014"
+})
+
 db.getSiblingDB("iris").qos.createIndex({"name": 1, "repo": 1}, unique=true)
 db.getSiblingDB("iris").qos.createIndex({"qos": 1, "partition": 1}) // For performance
 
@@ -201,14 +218,6 @@ db.getSiblingDB("iris").qos.insertOne({
   "partition": "psfehq"
 })
 
-db.getSiblingDB("iris").repos.insertOne({
-  "name": "20191205-CS14",
-  "facility": "CryoEM",
-  "principal": "ytl",
-  "leaders": [],
-  "users": [ "ytl" ],
-  "group": "20191205-CS14"
-})
 db.getSiblingDB("iris").qos.insertOne({
   "name": "normal",
   "repo": "20191205-CS14",

@@ -37,11 +37,8 @@ class CustomContext(BaseContext):
     LOG = logging.getLogger(__name__)
 
     user: str = None
-    roles: List[str] = []
-    privileges: List[str] = []
 
     def __init__(self, *args, **kwargs):
-        self.LOG.debug(f"In CustomContext.__init__ {args} {kwargs}")
         self.user = None
         self.roles = []
         self.privileges = []
@@ -52,12 +49,12 @@ class CustomContext(BaseContext):
         return f"CustomContext User: {self.user} Roles: {self.roles} Privileges: {self.privileges}"
 
     def authn(self):
+        # use USER_FIELD_IN_HEADER as source of truth of who is requesting this call
         self.user = self.request.headers.get(USER_FIELD_IN_HEADER, None)
         if not self.user:
             self.user = environ.get("USER")
-        self.roles = [ "Admin" ]
-        self.privileges = [ "read" ]
-        self.LOG.debug( f"context authn {self}")
+
+        return self.user
 
 def custom_context_dependency() -> CustomContext:
     return CustomContext()
