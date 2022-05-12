@@ -1,4 +1,5 @@
 from os import environ
+import re
 
 from functools import wraps
 from typing import List
@@ -37,12 +38,9 @@ class CustomContext(BaseContext):
     LOG = logging.getLogger(__name__)
 
     user: str = None
+    is_admin: bool = False
 
     def __init__(self, *args, **kwargs):
-        self.user = None
-        self.roles = []
-        self.privileges = []
-        self.repo = None
         self.db = mongo
 
     def __str__(self):
@@ -53,7 +51,10 @@ class CustomContext(BaseContext):
         self.user = self.request.headers.get(USER_FIELD_IN_HEADER, None)
         if not self.user:
             self.user = environ.get("USER")
-
+        admins = re.sub( "\s", "", environ.get("ADMIN_USERNAMES",'')).split(',')
+        if self.user in admins:
+            self.is_admin = True
+            self.LOG.warn(f"admin user {self.user} identified")
         return self.user
 
 def custom_context_dependency() -> CustomContext:

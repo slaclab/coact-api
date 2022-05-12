@@ -1,4 +1,4 @@
-from auth import Authnz, IsAuthenticated, IsRepoPrincipal, IsRepoLeader, IsRepoPrincipalOrLeader
+from auth import Authnz, IsAuthenticated, IsRepoPrincipal, IsRepoLeader, IsRepoPrincipalOrLeader, IsAdmin
 
 from typing import List, Optional
 import strawberry
@@ -110,11 +110,11 @@ class Query:
 @strawberry.type
 class Mutation:
 
-    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def userCreate(self, data: UserInput, info: Info) -> User:
         return create_thing( 'users', info, data, required_fields=[ 'username', 'uidnumber', 'eppns' ], find_existing={ 'name': data.username } )
 
-    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def userUpdate(self, data: UserInput, info: Info) -> User:
         return update_thing( 'users', info, data, required_fields=[ 'Id' ], find_existing={ '_id': data._id } )
 

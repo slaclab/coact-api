@@ -137,3 +137,13 @@ class IsRepoPrincipalOrLeader(BasePermission):
                 self.LOG.debug(f"  user {user} permitted to modify repo {repo}")
                 return True
         return False
+
+class IsAdmin(BasePermission):
+    LOG = logging.getLogger(__name__)
+    message = "User is not an admin"
+    def has_permission(self, source: Any, info: Info, **kwargs) -> bool:
+        user = info.context.authn()
+        if info.context.is_admin:
+            return True
+        return False
+
