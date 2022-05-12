@@ -1,2 +1,2 @@
-
-db.createUser({ user: "coact", roles: [ { db: "iris", role: "readWrite" } ], mechanisms: [ "SCRAM-SHA-1" ] });
+use admin;
+db.createUser({ user: "coact", roles: [ { db: "iris", role: "readWrite" } ], pwd: passwordPrompt() });
