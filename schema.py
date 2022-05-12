@@ -40,19 +40,6 @@ class Query:
 
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def roles(self, info: Info) -> List[Role]:
-        roles = get_db(info, "roles").find()
-        return [ Role(**x) for x in roles ]
-
-    @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def role(self, name: str, info: Info) -> Role:
-        therole = get_db(info, "roles").find_one({"name": name})
-        if therole:
-            return Role(**therole)
-        return None
-
-
-    @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def facilities(self, info: Info, filter: Optional[FacilityInput]) -> List[Facility]:
         return find_facilities( info, filter, exclude_fields=['resources',] )
 
@@ -76,11 +63,11 @@ class Query:
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def repos(self, info: Info, filter: Optional[RepoInput]) -> List[Repo]:
-        return find_repos( info, filter, exclude_fields=['roles'] )
+        return find_repos( info, filter )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def repo(self, filter: Optional[RepoInput], info: Info) -> Repo:
-        repos = find_repos( info, filter, exclude_fields=['roles',])
+        repos = find_repos( info, filter )
         assert_one( repos, 'repo', filter)
         return repos[0]
 
@@ -123,21 +110,21 @@ class Mutation:
         pass
 
 
-    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def facilityCreate(self, data: FacilityInput, info: Info) -> Facility:
         return create_thing( 'facilities', info, data, required_fields=[ 'name' ], find_existing={ 'name': data.name } )
 
 
-    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def accessGroupCreate(self, data: AccessGroupInput, info: Info) -> AccessGroup:
         return create_thing( 'access_groups', info, data, required_fields=[ 'gid_number', 'name' ], find_existing={ 'gid_number': data.gid_number } )
 
 
-    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def accessGroupUpdate(self, data: AccessGroupInput, info: Info) -> AccessGroup:
         return update_thing( 'access_groups', info, data, required_fields=[ 'Id', ], find_existing={ '_id': data._id } )
 
-    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def repoCreate(self, data: RepoInput, info: Info) -> Repo:
         return create_thing( 'repos', info, data, required_fields=[ 'name', 'facility' ], find_existing={ 'name': data.name, 'facility': data.facility } )
 
