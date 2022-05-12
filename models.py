@@ -47,15 +47,38 @@ def get_db( info: Info, collection: str ):
 # we generally just set everything to be option so that we can create a form like experience with graphql. we impose some of the required fields in some utility functions like create_thing(). not a great use of the graphql spec, but allows to to limit the amount of code we have to write
 
 @strawberry.input
+class EppnInput:
+    eppn: Optional[str] = UNSET
+    fullname: Optional[str] = UNSET
+    email: Optional[str] = UNSET
+    organization: Optional[str] = UNSET
+
+@strawberry.type
+class Eppn(EppnInput):
+    pass
+
+@strawberry.input
 class UserInput:
     _id: Optional[MongoId] = UNSET
     username: Optional[str] = UNSET
     uidnumber: Optional[int] = UNSET
-    eppns: Optional[List[str]] = dataclasses.field(default_factory=list)
+    eppns: Optional[List[str]] = UNSET
 
 @strawberry.type
 class User(UserInput):
-    pass
+    # eppnObjs is most likely a call to some external service to get the details of an eppn
+    # For now we assume everyone is a SLAC person.
+    @strawberry.field
+    def eppnObjs(self, info) -> List[Eppn]:
+        ret = [ Eppn(**{ "eppn": self.username, "fullname": self.username, "email": self.username+"@slac.stanford.edu", "organization": "slac.stanford.edu"})]
+        if self.eppns is UNSET:
+            return []
+        for x in self.eppns:
+            if '@' not in x:
+                ret.append(Eppn(**{ "eppn": x, "fullname": x, "email": x+"@slac.stanford.edu", "organization": "slac.stanford.edu" }))
+            else:
+                ret.append(Eppn(**{ "eppn": x.split("@")[0], "fullname": x, "email": x, "organization": x.split("@")[1] }))
+        return ret
 
 @strawberry.type
 class Role:
@@ -196,10 +219,15 @@ class AccessGroupInput:
     state: Optional[str] = UNSET
     gid_number: Optional[int] = UNSET
     name: Optional[str] = UNSET
+    members: Optional[List[str]] = UNSET
 
 @strawberry.type
 class AccessGroup( AccessGroupInput ):
-    pass
+    @strawberry.field
+    def memberObjs(self, info) ->List[User]:
+        if self.members is UNSET:
+            return []
+        return find_users(info, {"username": {"$in": self.members}})
 
 @strawberry.input
 class RepoInput:
@@ -231,6 +259,12 @@ class Repo( RepoInput ):
     def allUsers(self, info) -> List[User]:
         allusernames = list(set(self.users).union(set(self.leaders).union(set(list(self.principal)))))
         return [ User(**x) for x in  get_db(info,"users").find({"username": {"$in": allusernames}}) ]
+
+    @strawberry.field
+    def accessGroupObjs(self, info) ->List[AccessGroup]:
+        if self.access_groups is UNSET:
+            return []
+        return find_access_groups(info, {"name": {"$in": self.access_groups}})
 
     @strawberry.field
     def allocations(self, info, resource: str, year: int) ->List[Allocation]:
