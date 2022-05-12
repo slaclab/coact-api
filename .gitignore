@@ -150,3 +150,6 @@ sbin/
 share/
 shell/
 ssl/
+
+# vi
+.*.swp
