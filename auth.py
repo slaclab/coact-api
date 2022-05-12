@@ -125,8 +125,12 @@ class IsRepoPrincipalOrLeader(BasePermission):
     message = "User is not principal or leader of repo"
     def has_permission(self, source: Any, info: Info, **kwargs) -> bool:
         user = info.context.authn()
-        repo = kwargs['data']['name']
-        self.LOG.debug(f"attempting {type(self).__name__} permissions for user {info.context.user} at path {info.path.key} for repo {repo} with {kwargs}")
+        repo = None
+        if 'repo' in kwargs:
+            repo = kwargs['repo']['name']
+        else:
+            repo = kwargs['data']['name']
+        self.LOG.debug(f"attempting {type(self).__name__} permissions for user {user} at path {info.path.key} for repo {repo} with {kwargs}")
         if user and repo:
             repos = getReposForUser( info, user, repo )
             if not len(repos) == 1:

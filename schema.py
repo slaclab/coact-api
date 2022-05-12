@@ -23,6 +23,7 @@ def assert_one( items, thing, filter ):
         raise AssertionError( f"did not find {thing} matching {to_dict(filter)}")
     if len(items) > 1:
         raise AssertionError( f"found too many {thing} matching {to_dict(filter)}")
+    return items[0]
 
 @strawberry.type
 class Query:
@@ -35,8 +36,7 @@ class Query:
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def user(self, info: Info, filter: Optional[UserInput] ) -> User:
         users = find_users( info, filter )
-        assert_one( users, 'user', filter)
-        return users[0]
+        return assert_one( users, 'user', filter)
 
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
@@ -142,21 +142,23 @@ class Mutation:
         return "Done"
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def addUserToRepo(self, reponame: str, username: str, info: Info) -> str:
-        get_db(info,"repos").update_one({"name": reponame}, { "$addToSet": {"users": username}})
-        return "Done"
+    def addUserToRepo(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
+        filter = {"name": repo.name}
+        get_db(info,"repos").update_one(filter, { "$addToSet": {"users": user.username}})
+        return find_repos( info, filter )[0]
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def removeUserFromRepo(self, reponame: str, username: str, info: Info) -> str:
-        repos = find_repos( info, {"name": reponame}, exclude_fields=['roles',])
-        assert_one( repos, 'repo', filter)
-        therepo = repos[0]
-        if username not in therepo.users:
-            return username + " is not a user in repo " + reponame
-        if username == therepo.principal:
-            return username + " is a PI in repo " + reponame + ". Cannot be removed from the repo"
-        get_db(info,"repos").update_one({"name": reponame}, { "$pull": {"leaders": username, "users": username}})
-        return "Done"
+    def removeUserFromRepo(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
+        filter = {"name": repo.name}
+        repos = find_repos( info, filter )
+        therepo = assert_one( repos, 'repo', filter)
+        theuser = user.username
+        if theuser not in therepo.users:
+            raise Exception(theuser + " is not a user in repo " + repo.name)
+        if theuser == therepo.principal:
+            raise Exception(theuser + " is a PI in repo " + repo.name + ". Cannot be removed from the repo")
+        blah = get_db(info,"repos").update_one(filter, { "$pull": {"leaders": theuser, "users": theuser}})
+        return assert_one( find_repos( info, filter ), 'repos', filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def toggleUserRole(self, reponame: str, username: str, info: Info) -> str:
