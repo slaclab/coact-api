@@ -37,25 +37,36 @@ class CustomContext(BaseContext):
 
     LOG = logging.getLogger(__name__)
 
-    user: str = None
+    username: str = None
     is_admin: bool = False
 
     def __init__(self, *args, **kwargs):
         self.db = mongo
 
     def __str__(self):
-        return f"CustomContext User: {self.user} Roles: {self.roles} Privileges: {self.privileges}"
+        return f"CustomContext User: {self.username} is_admin {self.is_admin}"
 
     def authn(self):
-        # use USER_FIELD_IN_HEADER as source of truth of who is requesting this call
-        self.user = self.request.headers.get(USER_FIELD_IN_HEADER, None)
-        if not self.user:
-            self.user = environ.get("USER")
-        admins = re.sub( "\s", "", environ.get("ADMIN_USERNAMES",'')).split(',')
-        if self.user in admins:
-            self.is_admin = True
-            self.LOG.warn(f"admin user {self.user} identified")
-        return self.user
+        if bool(environ.get('PREFER_EPPN',False)):
+            eppn = self.request.headers.get(environ.get('EPPN_FIELD',None), None)
+            # hack to lookup User collection for username
+            if eppn:
+                cursor = self.db['iris']['users'].find( { 'eppns': eppn } )
+                users = [ u for u in cursor ]
+                if len(users) == 1:
+                    self.LOG.debug(f"found eppn {eppn} as usr {users[0]['username']}")
+                    self.username = users[0]['username']
+
+        if not self.username:
+            self.username = self.request.headers.get(USER_FIELD_IN_HEADER, None)
+
+        if self.username:
+            admins = re.sub( "\s", "", environ.get("ADMIN_USERNAMES",'')).split(',')
+            if self.username in admins:
+                self.is_admin = True
+                self.LOG.warn(f"admin user {self.username} identified")
+
+        return self.username
 
 def custom_context_dependency() -> CustomContext:
     return CustomContext()
