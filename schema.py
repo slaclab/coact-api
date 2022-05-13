@@ -18,13 +18,6 @@ import logging
 LOG = logging.getLogger(__name__)
 
 
-def assert_one( items, thing, filter ):
-    if len(items) == 0:
-        raise AssertionError( f"did not find {thing} matching {to_dict(filter)}")
-    if len(items) > 1:
-        raise AssertionError( f"found too many {thing} matching {to_dict(filter)}")
-    return items[0]
-
 @strawberry.type
 class Query:
 
@@ -132,8 +125,7 @@ class Mutation:
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def updateUserAllocation(self, repo: RepoInput, data: List[UserAllocationInput], info: Info, admin_override: bool=False) -> Repo:
         filter = {"name": repo.name}
-        repos =  info.context.db.find_repos( filter )
-        therepo = assert_one( repos, 'repo', filter)
+        therepos =  info.context.db.find_repo( filter )
         uas = [dict(j.__dict__.items()) for j in data]
         keys = ["facility", "repo", "resource", "year", "username"]
         for ua in uas:
@@ -162,21 +154,19 @@ class Mutation:
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def removeUserFromRepo(self, repo: RepoInput, user: UserInput, info: Info, admin_override: bool=False) -> Repo:
         filter = {"name": repo.name}
-        repos =  info.context.db.find_repos( filter )
-        therepo = assert_one( repos, 'repo', filter)
+        therepo =  info.context.db.find_repo( filter )
         theuser = user.username
         if theuser not in therepo.users:
             raise Exception(theuser + " is not a user in repo " + repo.name)
         if theuser == therepo.principal:
             raise Exception(theuser + " is a PI in repo " + repo.name + ". Cannot be removed from the repo")
         info.context.db.collection("repos").update_one(filter, { "$pull": {"leaders": theuser, "users": theuser}})
-        return assert_one( info.context.db.find("repos", filter ), 'repos', filter)
+        return info.context.db.find_repo( filter )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def toggleUserRole(self, repo: RepoInput, user: UserInput, info: Info, admin_override: bool=False) -> Repo:
         filter = {"name": repo.name}
-        repos = info.context.db.find_repos( filter )
-        therepo = assert_one( repos, 'repo', filter)
+        therepos = info.context.db.find_repo( filter )
         theuser = user.username
         if theuser not in therepo.users:
             raise Exception(theuser + " is not a user in repo " + repo.name)
@@ -186,28 +176,27 @@ class Mutation:
                 { "$setDifference": [ "$leaders", [ user.username ] ] },
                 { "$concatArrays": [ "$leaders", [ user.username ] ] }
                 ]}}}])
-        return assert_one( info.context.db.find_repos(filter), 'repos', filter)
+        return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def toggleGroupMembership(self, repo: RepoInput, user: UserInput, group: AccessGroupInput, info: Info, admin_override: bool=False) -> AccessGroup:
         filter = {"name": repo.name}
-        repos = info.context.db.find_repos( filter )
-        therepo = assert_one( repos, 'repo', filter)
+        therepo = info.context.db.find_repo( filter )
         theuser = user.username
         if theuser not in therepo.users:
             raise Exception(theuser + " is not a user in repo " + repo.name)
         grpfilter = { "name": group.name }
-        thegroup = assert_one( info.context.db.find_access_groups( grpfilter ), 'access_group', grpfilter)
+        thegroup = info.context.db.find_access_group( grpfilter )
         info.context.db.collection("access_groups").update_one({"name": group.name}, [{ "$set":
             { "members": { "$cond": [
                 { "$in": [ user.username, "$members" ] },
                 { "$setDifference": [ "$members", [ user.username ] ] },
                 { "$concatArrays": [ "$members", [ user.username ] ] }
                 ]}}}])
-        return assert_one( info.context.db.find_access_groups( grpfilter ), 'access_group', grpfilter )
+        return info.context.db.find_access_group( grpfilter )
 
     @strawberry.mutation
     def importJobs(self, jobs: List[Job], info: Info, admin_override: bool=False) -> str:
         jbs = [dict(j.__dict__.items()) for j in jobs]
-        get_db(info,"jobs").insert_many(jbs)
+        info.context.db.collection("jobs").insert_many(jbs)
         return "Done"
