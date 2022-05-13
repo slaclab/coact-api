@@ -87,7 +87,7 @@ class Query:
 
     @strawberry.field
     def qos(self, info: Info) -> List[Qos]:
-        return info.context.db.find_qoses( filter)
+        return info.context.db.find_qoses()
 
 
 
