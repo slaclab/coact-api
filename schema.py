@@ -125,8 +125,8 @@ class Mutation:
         uas = [dict(j.__dict__.items()) for j in data]
         keys = ["facility", "repo", "resource", "year", "username"]
         for ua in uas:
-            nua = {k: v for k,v in ua.items() if not isinstance(v, type(UNSET))}
-            get_db(info,"user_allocations").replace_one({k: v for k,v in nua.items() if k in keys}, nua, upsert=True)
+            nua = {k: v for k,v in ua.items() if not v is UNSET}
+            info.context.db.collection("user_allocations").replace_one({k: v for k,v in nua.items() if k in keys}, nua, upsert=True)
         return "Done"
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
@@ -138,7 +138,7 @@ class Mutation:
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def removeUserFromRepo(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
         filter = {"name": repo.name}
-        repos = info.context.db.find("repos",filter) 
+        repos =  info.context.db.find_repos( filter )
         therepo = assert_one( repos, 'repo', filter)
         theuser = user.username
         if theuser not in therepo.users:
@@ -149,24 +149,38 @@ class Mutation:
         return assert_one( info.context.db.find("repos", filter ), 'repos', filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def toggleUserRole(self, reponame: str, username: str, info: Info) -> str:
-        get_db(info,"repos").update_one({"name": reponame}, [{ "$set":
+    def toggleUserRole(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
+        filter = {"name": repo.name}
+        repos = info.context.db.find_repos( filter )
+        therepo = assert_one( repos, 'repo', filter)
+        theuser = user.username
+        if theuser not in therepo.users:
+            raise Exception(theuser + " is not a user in repo " + repo.name)
+        info.context.db.collection("repos").update_one({"name": repo.name}, [{ "$set":
             { "leaders": { "$cond": [
-                { "$in": [ username, "$leaders" ] },
-                { "$setDifference": [ "$leaders", [ username ] ] },
-                { "$concatArrays": [ "$leaders", [ username ] ] }
+                { "$in": [ user.username, "$leaders" ] },
+                { "$setDifference": [ "$leaders", [ user.username ] ] },
+                { "$concatArrays": [ "$leaders", [ user.username ] ] }
                 ]}}}])
-        return "Done"
+        return assert_one( info.context.db.find_repos(filter), 'repos', filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def toggleGroupMembership(self, groupname: str, username: str, info: Info) -> str:
-        get_db(info,"access_groups").update_one({"name": groupname}, [{ "$set":
+    def toggleGroupMembership(self, repo: RepoInput, user: UserInput, group: AccessGroupInput, info: Info) -> AccessGroup:
+        filter = {"name": repo.name}
+        repos = info.context.db.find_repos( filter )
+        therepo = assert_one( repos, 'repo', filter)
+        theuser = user.username
+        if theuser not in therepo.users:
+            raise Exception(theuser + " is not a user in repo " + repo.name)
+        grpfilter = { "name": group.name }
+        thegroup = assert_one( info.context.db.find_access_groups( grpfilter ), 'access_group', grpfilter)
+        info.context.db.collection("access_groups").update_one({"name": group.name}, [{ "$set":
             { "members": { "$cond": [
-                { "$in": [ username, "$members" ] },
-                { "$setDifference": [ "$members", [ username ] ] },
-                { "$concatArrays": [ "$members", [ username ] ] }
+                { "$in": [ user.username, "$members" ] },
+                { "$setDifference": [ "$members", [ user.username ] ] },
+                { "$concatArrays": [ "$members", [ user.username ] ] }
                 ]}}}])
-        return "Done"
+        return assert_one( info.context.db.find_access_groups( grpfilter ), 'access_group', grpfilter )
 
     @strawberry.mutation
     def importJobs(self, jobs: List[Job], info: Info) -> str:

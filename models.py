@@ -222,13 +222,13 @@ class Repo( RepoInput ):
     @strawberry.field
     def allUsers(self, info) -> List[User]:
         allusernames = list(set(self.users).union(set(self.leaders).union(set(list(self.principal)))))
-        return [ User(**x) for x in  info.context.db.find_users({"username": {"$in": allusernames}}) ]
+        return info.context.db.find_users({"username": {"$in": allusernames}})
 
     @strawberry.field
     def accessGroupObjs(self, info) ->List[AccessGroup]:
         if self.access_groups is UNSET:
             return []
-        return info.context.db.collection('access_groups', {"name": {"$in": self.access_groups}})
+        return info.context.db.find_access_groups({"name": {"$in": self.access_groups}})
 
     @strawberry.field
     def allocations(self, info, resource: str, year: int) ->List[Allocation]:
@@ -247,7 +247,7 @@ class Repo( RepoInput ):
     @strawberry.field
     def usage(self, info, resource: str, year: int) ->List[Usage]:
         LOG.debug("Getting the usage statistics for resource %s for year %s in facility %s for repo %s", resource, year, self.facility, self.name)
-        results = info.context.collection("jobs").aggregate([
+        results = info.context.db.collection("jobs").aggregate([
             { "$match": { "facility": self.facility, "resource": resource, "year": year, "repo": self.name }},
             { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year"},
                 "totalNerscSecs": { "$sum": "$nerscSecs" },
@@ -463,4 +463,3 @@ class StorageUsageInput:
 @strawberry.type
 class StorageUsage(StorageUsageInput):
     pass
-

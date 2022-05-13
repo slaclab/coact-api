@@ -9,7 +9,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from strawberry.fastapi import BaseContext, GraphQLRouter
 from strawberry import Schema
 from strawberry.schema.config import StrawberryConfig
-from strawberry.unset import UnsetType
 
 from pymongo import MongoClient
 
@@ -29,7 +28,7 @@ if not MONGODB_URL:
     print("Please use the enivironment variable MONGODB_URL to configure the database connection.")
 mongo = MongoClient(
         host=MONGODB_URL, tz_aware=True, connect=True,
-        username=environ.get("MONGODB_USER", None), 
+        username=environ.get("MONGODB_USER", None),
         password=environ.get("MONGODB_PASSWORD", None) )
 LOG.info("connected to %s" % (mongo,))
 
@@ -41,7 +40,7 @@ class CustomContext(BaseContext):
 
     username: str = None
     is_admin: bool = False
-   
+
     def __init__(self, *args, **kwargs):
         self.db = DB(mongo,DB_NAME)
 
@@ -98,7 +97,7 @@ class DB:
                 if isinstance(v,list) and len(v) == 0:
                     del d[k]
         return d
-    
+
     def find(self, thing: str, filter, exclude_fields=[] ):
         search = self.to_dict(filter)
         self.LOG.debug(f"searching for {thing} using {filter} -> {search} (excluding fields {exclude_fields})")
@@ -164,12 +163,12 @@ class DB:
         v['_id'] = x.inserted_id
         inserted = klass( **v )
         return inserted
-    
+
     def update( self, thing, data, required_fields=[ 'Id', ], find_existing={} ):
         klass = self.KLASSES[thing]
 
         for k,v in find_existing.items():
-            if isinstance( v, UnsetType ):
+            if v is UNSET:
                 raise Exception(f'unknown value for {k}')
 
         things = self.find( thing, find_existing )
