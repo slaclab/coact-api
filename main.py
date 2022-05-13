@@ -13,7 +13,6 @@ from strawberry.unset import UNSET
 
 from pymongo import MongoClient
 
-from auth import Authnz
 from schema import Query, Mutation
 
 import logging
@@ -22,7 +21,6 @@ logging.basicConfig( level=logging.DEBUG )
 
 LOG = logging.getLogger(__name__)
 
-authn = Authnz()
 DB_NAME = environ.get("DB_NAME", "iris")
 MONGODB_URL=environ.get("MONGODB_URL", "mongodb://127.0.0.1:27017/")
 if not MONGODB_URL:
