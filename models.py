@@ -8,8 +8,6 @@ from typing import NewType
 from datetime import datetime
 from bson import ObjectId
 
-# from db import get_db
-
 import logging
 
 LOG = logging.getLogger(__name__)
@@ -22,24 +20,6 @@ MongoId = strawberry.scalar(
     serialize = lambda v: str(v),
     parse_value = lambda v: ObjectId(v),
 )
-
-
-# used to map into pymongo as it doesn't like strawberry UNSET objects
-def to_dict( obj ):
-    d = {}
-    if isinstance(obj,dict):
-        return obj
-
-    for k,v in obj.__dict__.items():
-        #LOG.warn(f"field {k} is {v} ({type(v)})")
-        if v or isinstance(v, list):
-            d[k] = v
-            if isinstance(v,list) and len(v) == 0:
-                del d[k]
-    return d
-
-def get_db( info: Info, collection: str ):
-    return info.context.db[DB_NAME][collection]
 
 
 # would this be useful? https://github.com/strawberry-graphql/strawberry/discussions/444
@@ -111,13 +91,13 @@ class Resource:
     root: str
     @strawberry.field
     def partitionObjs(self, info) -> List[Partition]:
-        return [ Partition(**x) for x in  get_db(info,"partitions").find({"name": {"$in": self.partitions } } ) ]
+        return [ Partition(**x) for x in  info.context.db.collection("partitions").find({"name": {"$in": self.partitions } } ) ]
     @strawberry.field
     def capacities(self, info, year: int = 0) ->List[ResourceCapacity]:
         rc_filter = { "facility": self.facility_name,  "resource": self.name }
         if year:
             rc_filter["year"] = year
-        return [ ResourceCapacity(**{k:x.get(k, 0) for k in ["year", "compute", "storage", "inodes"] }) for x in  get_db(info,"resource_capacity").find(rc_filter) ]
+        return [ ResourceCapacity(**{k:x.get(k, 0) for k in ["year", "compute", "storage", "inodes"] }) for x in  info.context.db.collection("resource_capacity").find(rc_filter) ]
 
 @strawberry.input
 class FacilityInput:
@@ -129,7 +109,7 @@ class FacilityInput:
 class Facility( FacilityInput ):
     @strawberry.field
     def resources(self, info) -> List[Resource]:
-        fac = get_db(info,"facilities").find_one({"_id": self._id })
+        fac = info.context.db.collection("facilities").find_one({"_id": self._id })
         return [ Resource(**{"name": k, "facility_name": self.name, "type": v["type"], "partitions": v.get("partitions", []), "root": v.get("root", None)}) for k,v in fac.get("resources", {}).items() ]
 
 @strawberry.input
@@ -214,7 +194,7 @@ class AccessGroup( AccessGroupInput ):
     def memberObjs(self, info) ->List[User]:
         if self.members is UNSET:
             return []
-        return find_users(info, {"username": {"$in": self.members}})
+        return info.context.db.find_users({"username": {"$in": self.members}})
 
 @strawberry.input
 class RepoInput:
@@ -237,40 +217,37 @@ class RepoInput:
 class Repo( RepoInput ):
     @strawberry.field
     def facilityObj(self, info) -> Facility:
-        facilityObj = get_db(info,"facilities").find_one({"name": self.facility})
-        del facilityObj["resources"]
-        ret = Facility(**facilityObj)
-        return ret
+        return info.context.db.find_facility({"name": self.facility}, exclude_fields=['resources'])
 
     @strawberry.field
     def allUsers(self, info) -> List[User]:
         allusernames = list(set(self.users).union(set(self.leaders).union(set(list(self.principal)))))
-        return [ User(**x) for x in  get_db(info,"users").find({"username": {"$in": allusernames}}) ]
+        return [ User(**x) for x in  info.context.db.find_users({"username": {"$in": allusernames}}) ]
 
     @strawberry.field
     def accessGroupObjs(self, info) ->List[AccessGroup]:
         if self.access_groups is UNSET:
             return []
-        return find_access_groups(info, {"name": {"$in": self.access_groups}})
+        return info.context.db.collection('access_groups', {"name": {"$in": self.access_groups}})
 
     @strawberry.field
     def allocations(self, info, resource: str, year: int) ->List[Allocation]:
         rc_filter = { "facility": self.facility, "resource": resource, "repo": self.name}
         if year:
             rc_filter["year"] = year
-        return [ Allocation(**{k:x.get(k, 0) for k in ["repo", "year", "compute", "storage", "inodes", "resource", "facility"] }) for x in  get_db(info,"allocations").find(rc_filter) ]
+        return [ Allocation(**{k:x.get(k, 0) for k in ["repo", "year", "compute", "storage", "inodes", "resource", "facility"] }) for x in  info.context.db.collection("allocations").find(rc_filter) ]
 
     @strawberry.field
     def userAllocations(self, info, resource: str, year: int) ->List[UserAllocation]:
         rc_filter = { "facility": self.facility, "resource": resource, "repo": self.name }
         if year:
             rc_filter["year"] = year
-        return [ UserAllocation(**{k:x.get(k, 0) for k in ["repo", "year", "compute", "storage", "inodes", "resource", "facility", "username"] }) for x in  get_db(info,"user_allocations").find(rc_filter) ]
+        return [ UserAllocation(**{k:x.get(k, 0) for k in ["repo", "year", "compute", "storage", "inodes", "resource", "facility", "username"] }) for x in  info.context.db.collection("user_allocations").find(rc_filter) ]
 
     @strawberry.field
     def usage(self, info, resource: str, year: int) ->List[Usage]:
         LOG.debug("Getting the usage statistics for resource %s for year %s in facility %s for repo %s", resource, year, self.facility, self.name)
-        results = get_db(info,"jobs").aggregate([
+        results = info.context.collection("jobs").aggregate([
             { "$match": { "facility": self.facility, "resource": resource, "year": year, "repo": self.name }},
             { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year"},
                 "totalNerscSecs": { "$sum": "$nerscSecs" },
@@ -297,7 +274,7 @@ class Repo( RepoInput ):
     @strawberry.field
     def perDayUsage(self, info, resource: str, year: int) ->List[PerDayUsage]:
         LOG.debug("Getting the per day usage statistics for resource %s for year %s in facility %s for repo %s", resource, year, self.facility, self.name)
-        results = get_db(info,"jobs").aggregate([
+        results = info.context.db.collection("jobs").aggregate([
             { "$match": { "facility": self.facility, "resource": resource, "year": year, "repo": self.name }},
             { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year", "dayOfYear": { "$dayOfYear": {"date": "$startTs", "timezone": "America/Los_Angeles"}}},
                 "totalNerscSecs": { "$sum": "$nerscSecs" },
@@ -325,7 +302,7 @@ class Repo( RepoInput ):
     @strawberry.field
     def perUserUsage(self, info, resource: str, year: int) ->List[PerUserUsage]:
         LOG.debug("Getting the per user usage statistics for resource %s for year %s in facility %s for repo %s", resource, year, self.facility, self.name)
-        results = get_db(info,"jobs").aggregate([
+        results = info.context.db.collection("jobs").aggregate([
             { "$match": { "facility": self.facility, "resource": resource, "year": year, "repo": self.name }},
             { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year", "username": "$username"},
                 "totalNerscSecs": { "$sum": "$nerscSecs" },
@@ -353,7 +330,7 @@ class Repo( RepoInput ):
     @strawberry.field
     def storageUsage(self, info, resource: str, year: int) ->List[Usage]:
         LOG.debug("Getting the storage usage statistics for resource %s for year %s in facility %s for repo %s", resource, year, self.facility, self.name)
-        results = get_db(info,"diskusage").aggregate([
+        results = info.context.db.collection("diskusage").aggregate([
             { "$match": { "facility": self.facility, "resource": resource, "year": year, "repo": self.name }},
             { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year", "date": "$date"},
                 "totalStorage": { "$sum": "$storage" },
@@ -378,7 +355,7 @@ class Repo( RepoInput ):
     @strawberry.field
     def perDayStorageUsage(self, info, resource: str, year: int) ->List[PerDateUsage]:
         LOG.debug("Getting the per day storage usage statistics for resource %s for year %s in facility %s for repo %s", resource, year, self.facility, self.name)
-        results = get_db(info,"diskusage").aggregate([
+        results = info.context.db.collection("diskusage").aggregate([
             { "$match": { "facility": self.facility, "resource": resource, "year": year, "repo": self.name }},
             { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year", "date": "$date"},
                 "totalStorage": { "$sum": "$storage" },
@@ -402,7 +379,7 @@ class Repo( RepoInput ):
     @strawberry.field
     def perFolderStorageUsage(self, info, resource: str, year: int) ->List[PerFolderUsage]:
         LOG.debug("Getting the per folder storage usage statistics for resource %s for year %s in facility %s for repo %s", resource, year, self.facility, self.name)
-        results = get_db(info,"diskusage").aggregate([
+        results = info.context.db.collection("diskusage").aggregate([
             { "$match": { "facility": self.facility, "resource": resource, "year": year, "repo": self.name }},
             { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year", "date": "$date", "folder": "$folder" },
                 "totalStorage": { "$sum": "$storage" },
@@ -487,82 +464,3 @@ class StorageUsageInput:
 class StorageUsage(StorageUsageInput):
     pass
 
-
-# class mapping of the 'thing' to the class
-KLASSES = {
-    'users': User,
-    'access_groups': AccessGroup,
-    'repos': Repo,
-    'facilities': Facility,
-}
-
-# helper functions to prevent DRY for common queries
-def find_thing( thing, info, filter, exclude_fields=[] ):
-    search = to_dict(filter)
-    LOG.debug(f"searching for {thing} {filter} -> {search} (excluding fields {exclude_fields})")
-    cursor = get_db(info, thing).find(search)
-    items = []
-    klass = KLASSES[thing]
-    for item in cursor:
-        LOG.debug(f" found {item}")
-        for x in exclude_fields:
-            if x in item:
-                del item[x]
-        items.append( klass(**item) )
-    return items
-
-def find_users( info: Info, filter: Optional[UserInput], exclude_fields: Optional[List[str]] = [] ) -> List[User]:
-    return find_thing( 'users', info, filter, exclude_fields=exclude_fields )
-
-def find_facilities( info: Info, filter: Optional[FacilityInput], exclude_fields: Optional[List[str]] = ['resources',] ) -> List[Facility]:
-    return find_thing( 'facilities', info, filter, exclude_fields=exclude_fields )
-
-def find_access_groups( info: Info, filter: Optional[AccessGroupInput], exclude_fields: Optional[List[str]] = [] ) -> List[AccessGroup]:
-    return find_thing( 'access_groups', info, filter, exclude_fields=exclude_fields )
-
-def find_repos( info: Info, filter: Optional[RepoInput], exclude_fields: Optional[List[str]] = [] ) -> List[Repo]:
-    return find_thing( 'repos', info, filter, exclude_fields=exclude_fields )
-
-
-# helper class to create a thing and ensure that it doesn't already exist
-def create_thing( thing, info, data, required_fields=[], find_existing={ 'key': 'some_value' } ):
-    klass = KLASSES[thing]
-    input_data_okay = {}
-    for f in required_fields:
-        if getattr(data,f):
-            input_data_okay[f] = True
-        else:
-            input_data_okay[f] = False
-    if False in input_data_okay.values():
-        failed = []
-        for k,v in input_data_okay.items():
-            if v == False:
-                failed.append(k)
-        raise Exception( f"input did not contain required fields {failed}")
-    the_thing = klass( **vars(data) )
-    LOG.info(f"adding {thing} with {data} -> {the_thing}")
-    db = get_db(info,thing)
-    if db.find_one( find_existing ):
-        raise Exception(f"{thing} already exists with {find_existing}!")
-    x = db.insert_one( to_dict(the_thing) )
-    v = vars(data)
-    v['_id'] = x.inserted_id
-    inserted = klass( **v )
-    return inserted
-
-
-def update_thing( thing, info, data, required_fields=[ 'Id', ], find_existing={} ):
-    klass = KLASSES[thing]
-    things = find_thing( thing, info, find_existing )
-    if len(things) == 0:
-        raise Exception(f"{thing} not found with {find_existing}")
-    elif len(things) > 1:
-        raise Exception(f"too many {thing} matched with {find_existing}")
-    new = to_dict(things[0])
-    for k,v in vars(data).items():
-        if v:
-            new[k] = v
-    db = get_db(info, thing)
-    db.update_one( { '_id': new['_id'] }, { "$set": new } )
-    item = klass( **new )
-    return item

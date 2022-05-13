@@ -4,8 +4,6 @@ from strawberry.types import Info
 from functools import wraps
 from typing import Any
 
-from models import get_db
-
 import logging
 
 LOG = logging.getLogger(__name__)
@@ -52,35 +50,12 @@ class IsAuthenticated(BasePermission):
     LOG = logging.getLogger(__name__)
     message = "User is not authenticated"
     def has_permission(self, source: Any, info: Info, **kwargs) -> bool:
-        user = info.context.authn()
-        self.LOG.debug(f"attempting permissions with {type(self).__name__} for user {user} at path {info.path.key} for privilege {kwargs}")
-        if user:
-            db = get_db( info, "users" )
-            search = { "username": user }
-            cursor = db.find( search )
-            # why doesn't this find any relevant documents from db?
-            self.LOG.debug(f"  searching {db} for {search} -> {db.count_documents(search)}")
-            users = [ u for u in cursor ]
-            if len(users) > 1:
-                raise Exception(f"user {user} matched multiple users records")
-            if len(users) == 1 and users[0]['username'] == user:
-                return True
+        username = info.context.authn()
+        self.LOG.debug(f"attempting permissions with {type(self).__name__} for user {username} at path {info.path.key} for privilege {kwargs}")
+        if username:
+            user = info.context.db.find_user({"username": username })
+            return True
         return False
-        
-
-
-def getReposForUser( info, user, repo ):
-    repos = []
-    try:
-        db = get_db( info, "repos" )
-        search = { 'name': repo }
-        cursor = db.find( search )
-        LOG.debug(f"  searching {db} for {search} -> {db.count_documents(search)}")
-        repos = [ u for u in cursor ]
-        LOG.debug(f"  found repo {repos}")
-    except Exception as e:
-        LOG.error(f"failed to fetch repos for user: {e}") 
-    return repos
 
 
 class IsRepoPrincipal(BasePermission):
@@ -88,15 +63,12 @@ class IsRepoPrincipal(BasePermission):
     message = "User is not principal of repo"
     def has_permission(self, source: Any, info: Info, **kwargs) -> bool:
         user = info.context.authn()
-        repo = kwargs['data']['name']
-        self.LOG.debug(f"attempting {type(self).__name__} permissions for user {info.context.user} at path {info.path.key} for repo {repo} with {kwargs}")
+        reponame = kwargs['data']['name']
+        self.LOG.debug(f"attempting {type(self).__name__} permissions for user {user} at path {info.path.key} for repo {reponame} with {kwargs}")
         if user and repo:
-            repos = getReposForUser( info, user, repo )
-            if not len(repos) == 1:
-                self.LOG.warn(f"  user {user} requesting {info.path.key} for {repo}")
-                return False
-            assert repos[0]['name'] == repo
-            if repos[0]['principal'] == user:
+            repo = info.context.db.find_repo( { 'name': reponame })
+            assert repo.name == repo
+            if repo.principal == user:
                 self.LOG.debug(f"  user {user} permitted to modify repo {repo}")
                 return True
         return False
@@ -107,15 +79,12 @@ class IsRepoLeader(BasePermission):
     message = "User is not leader of repo"
     def has_permission(self, source: Any, info: Info, **kwargs) -> bool:
         user = info.context.authn()
-        repo = kwargs['data']['name']
-        self.LOG.debug(f"attempting {type(self).__name__} permissions for user {info.context.user} at path {info.path.key} for repo {repo} with {kwargs}")
+        reponame = kwargs['data']['name']
+        self.LOG.debug(f"attempting {type(self).__name__} permissions for user {info.context.user} at path {info.path.key} for repo {reponame} with {kwargs}")
         if user and repo:
-            repos = getReposForUser( info, user, repo )
-            if not len(repos) == 1:
-                self.LOG.warn(f"  user {user} requesting {info.path.key} for {repo}")
-                return False
-            assert repos[0]['name'] == repo
-            if user in repos[0]['leaders']:
+            repo = info.context.db.find_repo( { 'name': reponame } )
+            assert repo.name == reponame
+            if user in repo.leaders:
                 self.LOG.debug(f"  user {user} permitted to modify repo {repo}")
                 return True
         return False
@@ -132,12 +101,12 @@ class IsRepoPrincipalOrLeader(BasePermission):
             repo = kwargs['data']['name']
         self.LOG.debug(f"attempting {type(self).__name__} permissions for user {user} at path {info.path.key} for repo {repo} with {kwargs}")
         if user and repo:
-            repos = getReposForUser( info, user, repo )
+            repos = info.context.db.find( "repos", { "name": repo } )
             if not len(repos) == 1:
                 self.LOG.warn(f"  user {user} requesting {info.path.key} for {repo}")
                 return False
-            assert repos[0]['name'] == repo
-            if user in repos[0]['leaders'] or repos[0]['principal'] == user:
+            assert repos[0].name == repo
+            if user in repos[0].leaders or repos[0].principal == user:
                 self.LOG.debug(f"  user {user} permitted to modify repo {repo}")
                 return True
         return False
