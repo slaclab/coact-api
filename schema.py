@@ -64,6 +64,15 @@ class Query:
         return info.context.db.find_repo( filter )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def myRepos(self, info: Info) -> List[Repo]:
+        username = info.context.username
+        return info.context.db.find_repos( { '$or': [ 
+            { "users": username },
+            { "leaders": username },
+            { "principal": username }
+            ] } )
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def reposWithUser( self, info: Info, username: str ) -> List[Repo]:
         # want to search in principal and leaders too...
         return info.context.find( 'repos', { "users": username } )
