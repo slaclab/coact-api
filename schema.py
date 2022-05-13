@@ -148,7 +148,7 @@ class Mutation:
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def addLeaderToRepo(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
+    def addLeaderToRepo(self, repo: RepoInput, user: UserInput, info: Info, admin_override: Optional[bool]=False) -> Repo:
         filter = {"name": repo.name}
         info.context.db.collection("repos").update_one(filter, { "$addToSet": {"leaders": user.username}})
         return info.context.db.find_repo(filter)
