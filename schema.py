@@ -148,6 +148,18 @@ class Mutation:
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
+    def addLeaderToRepo(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
+        filter = {"name": repo.name}
+        info.context.db.collection("repos").update_one(filter, { "$addToSet": {"leaders": user.username}})
+        return info.context.db.find_repo(filter)
+
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    def changePrincipalForRepo(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
+        filter = {"name": repo.name}
+        info.context.db.collection("repos").update_one(filter, { "$set": {"principal": user.username}})
+        return info.context.db.find_repo(filter)
+
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def removeUserFromRepo(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
         filter = {"name": repo.name}
         repos =  info.context.db.find_repos( filter )
