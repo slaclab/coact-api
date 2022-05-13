@@ -57,7 +57,7 @@ class Query:
         return info.context.db.find_repo( filter )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def myRepos(self, info: Info) -> List[Repo]:
+    def myRepos(self, info: Info, impersonate: Optional[str]=None) -> List[Repo]:
         username = info.context.username
         return info.context.db.find_repos( { '$or': [ 
             { "users": username },

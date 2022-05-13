@@ -38,6 +38,7 @@ class CustomContext(BaseContext):
     LOG = logging.getLogger(__name__)
 
     username: str = None
+    origin_username: str = None
     is_admin: bool = False
 
     def __init__(self, *args, **kwargs):
@@ -46,24 +47,33 @@ class CustomContext(BaseContext):
     def __str__(self):
         return f"CustomContext User: {self.username} is_admin {self.is_admin}"
 
-    def authn(self):
+    def authn(self, **kwargs):
         if bool(environ.get('PREFER_EPPN',False)):
             eppn = self.request.headers.get(environ.get('EPPN_FIELD',None), None)
             # hack to lookup User collection for username
             if eppn:
                 user = self.db.find_user( { 'eppns': eppn } )
                 self.LOG.debug(f"found eppn {eppn} as user {user}")
-                self.username = user.username
+                self.origin_username = user.username
 
-        if not self.username:
+        if not self.origin_username:
             user = self.request.headers.get(USER_FIELD_IN_HEADER, None)
-            self.username = self.db.find_user( { 'username': user } )
+            self.origin_username = self.db.find_user( { 'username': user } )
 
-        if self.username:
+        if self.origin_username:
+            self.username = self.origin_username
             admins = re.sub( "\s", "", environ.get("ADMIN_USERNAMES",'')).split(',')
-            if self.username in admins:
+            if self.origin_username in admins:
                 self.is_admin = True
                 self.LOG.warn(f"admin user {self.username} identified")
+                
+                if 'impersonate' in kwargs:
+                    user = self.db.find_user( { 'username': kwargs['impersonate'] } )
+                    self.LOG.warning(f"user {self.username} is impersonating {user.username}")
+                    self.username = user.username
+
+        if 'impersonate' in kwargs and self.is_admin == False:
+            raise Exception(f"unauthorised attempt by user {self.username} to impersonate {kwargs['impersonate']}")
 
         return self.username
 
