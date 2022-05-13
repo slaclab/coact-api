@@ -89,7 +89,7 @@ class Mutation:
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def userCreate(self, user: UserInput, info: Info, admin_override: bool=False) -> User:
-        return info.context.db.create( 'users', user, required_fields=[ 'username', 'uidnumber', 'eppns' ], find_existing={ 'username': data.username } )
+        return info.context.db.create( 'users', user, required_fields=[ 'username', 'uidnumber', 'eppns' ], find_existing={ 'username': user.username } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def userUpdate(self, user: UserInput, info: Info, admin_override: bool=False) -> User:
