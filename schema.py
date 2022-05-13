@@ -197,5 +197,5 @@ class Mutation:
     @strawberry.mutation
     def importJobs(self, jobs: List[Job], info: Info) -> str:
         jbs = [dict(j.__dict__.items()) for j in jobs]
-        get_db(info,"jobs").insert_many(jbs)
+        info.context.db.collection("jobs").insert_many(jbs)
         return "Done"
