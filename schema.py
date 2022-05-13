@@ -123,7 +123,7 @@ class Mutation:
         return info.context.db.update( 'repos', info, repo, required_fields=[ 'Id' ], find_existing={ '_id': repo._id } )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def updateUserAllocation(self, repo: RepoInput, data: List[UserAllocationInput], info: Info, admin_override: bool=False) -> Repo:
+    def updateUserAllocation(self, repo: RepoInput, data: List[UserAllocationInput], info: Info, admin_override: bool=False, impersonate: str=None) -> Repo:
         filter = {"name": repo.name}
         therepos =  info.context.db.find_repo( filter )
         uas = [dict(j.__dict__.items()) for j in data]
@@ -134,25 +134,25 @@ class Mutation:
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def addUserToRepo(self, repo: RepoInput, user: UserInput, info: Info, admin_override: bool=False) -> Repo:
+    def addUserToRepo(self, repo: RepoInput, user: UserInput, info: Info, admin_override: bool=False, impersonate: str=None ) -> Repo:
         filter = {"name": repo.name}
         info.context.db.collection("repos").update_one(filter, { "$addToSet": {"users": user.username}})
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def addLeaderToRepo(self, repo: RepoInput, user: UserInput, info: Info, admin_override: Optional[bool]=False) -> Repo:
+    def addLeaderToRepo(self, repo: RepoInput, user: UserInput, info: Info, admin_override: Optional[bool]=False, impersonate: str=None ) -> Repo:
         filter = {"name": repo.name}
         info.context.db.collection("repos").update_one(filter, { "$addToSet": {"leaders": user.username}})
         return info.context.db.find_repo(filter)
 
-    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def changePrincipalForRepo(self, repo: RepoInput, user: UserInput, info: Info, admin_override: bool=False) -> Repo:
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipal ] )
+    def changePrincipalForRepo(self, repo: RepoInput, user: UserInput, info: Info, admin_override: bool=False, impersonate: str=None ) -> Repo:
         filter = {"name": repo.name}
         info.context.db.collection("repos").update_one(filter, { "$set": {"principal": user.username}})
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def removeUserFromRepo(self, repo: RepoInput, user: UserInput, info: Info, admin_override: bool=False) -> Repo:
+    def removeUserFromRepo(self, repo: RepoInput, user: UserInput, info: Info, admin_override: bool=False, impersonate: str=None ) -> Repo:
         filter = {"name": repo.name}
         therepo =  info.context.db.find_repo( filter )
         theuser = user.username
@@ -164,7 +164,7 @@ class Mutation:
         return info.context.db.find_repo( filter )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def toggleUserRole(self, repo: RepoInput, user: UserInput, info: Info, admin_override: bool=False) -> Repo:
+    def toggleUserRole(self, repo: RepoInput, user: UserInput, info: Info, admin_override: bool=False, impersonate: str=None ) -> Repo:
         filter = {"name": repo.name}
         therepos = info.context.db.find_repo( filter )
         theuser = user.username
@@ -179,7 +179,7 @@ class Mutation:
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def toggleGroupMembership(self, repo: RepoInput, user: UserInput, group: AccessGroupInput, info: Info, admin_override: bool=False) -> AccessGroup:
+    def toggleGroupMembership(self, repo: RepoInput, user: UserInput, group: AccessGroupInput, info: Info, admin_override: bool=False, impersonate: str=None ) -> AccessGroup:
         filter = {"name": repo.name}
         therepo = info.context.db.find_repo( filter )
         theuser = user.username
