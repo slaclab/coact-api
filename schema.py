@@ -29,12 +29,12 @@ def assert_one( items, thing, filter ):
 class Query:
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def users(self, info: Info, filter: Optional[UserInput] ) -> List[User]:
+    def users(self, info: Info, filter: Optional[UserInput]={} ) -> List[User]:
         return info.context.db.find_users( filter )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def user(self, info: Info, filter: Optional[UserInput] ) -> User:
-        return info.context.db.find_user( filter )
+    def user(self, info: Info, user: UserInput ) -> User:
+        return info.context.db.find_user( user )
 
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
@@ -95,12 +95,12 @@ class Query:
 class Mutation:
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def userCreate(self, data: UserInput, info: Info) -> User:
-        return info.context.db.create( 'users', data, required_fields=[ 'username', 'uidnumber', 'eppns' ], find_existing={ 'username': data.username } )
+    def userCreate(self, user: UserInput, info: Info) -> User:
+        return info.context.db.create( 'users', user, required_fields=[ 'username', 'uidnumber', 'eppns' ], find_existing={ 'username': data.username } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def userUpdate(self, data: UserInput, info: Info) -> User:
-        return info.context.db.update( 'users', data, required_fields=[ '_id' ], find_existing={ '_id': data._id } )
+    def userUpdate(self, user: UserInput, info: Info) -> User:
+        return info.context.db.update( 'users', user, required_fields=[ '_id' ], find_existing={ '_id': user._id } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def userUpdateEppn(self, eppns: List[str], info: Info) -> User:
@@ -108,26 +108,26 @@ class Mutation:
 
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def facilityCreate(self, data: FacilityInput, info: Info) -> Facility:
-        return info.context.db.create( 'facilities', data, required_fields=[ 'name' ], find_existing={ 'name': data.name } )
+    def facilityCreate(self, facility: FacilityInput, info: Info) -> Facility:
+        return info.context.db.create( 'facilities', facility, required_fields=[ 'name' ], find_existing={ 'name': facility.name } )
 
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def accessGroupCreate(self, data: AccessGroupInput, info: Info) -> AccessGroup:
-        return info.context.db.create( 'access_groups', data, required_fields=[ 'gid_number', 'name' ], find_existing={ 'gid_number': data.gid_number } )
+    def accessGroupCreate(self, access_group: AccessGroupInput, info: Info) -> AccessGroup:
+        return info.context.db.create( 'access_groups', access_group, required_fields=[ 'gid_number', 'name' ], find_existing={ 'gid_number': access_group.gid_number } )
 
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def accessGroupUpdate(self, data: AccessGroupInput, info: Info) -> AccessGroup:
-        return info.context.db.update( 'access_groups', info, data, required_fields=[ 'Id', ], find_existing={ '_id': data._id } )
+    def accessGroupUpdate(self, access_group: AccessGroupInput, info: Info) -> AccessGroup:
+        return info.context.db.update( 'access_groups', info, access_group, required_fields=[ 'Id', ], find_existing={ '_id': accesss_group._id } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def repoCreate(self, data: RepoInput, info: Info) -> Repo:
-        return info.context.db.create( 'repos', data, required_fields=[ 'name', 'facility' ], find_existing={ 'name': data.name, 'facility': data.facility } )
+    def repoCreate(self, repo: RepoInput, info: Info) -> Repo:
+        return info.context.db.create( 'repos', repo, required_fields=[ 'name', 'facility' ], find_existing={ 'name': repo.name, 'facility': repo.facility } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def repoUpdate(self, data: RepoInput, info: Info) -> Repo:
-        return info.context.db.update( 'repos', info, data, required_fields=[ 'Id' ], find_existing={ '_id': data._id } )
+    def repoUpdate(self, repo: RepoInput, info: Info) -> Repo:
+        return info.context.db.update( 'repos', info, repo, required_fields=[ 'Id' ], find_existing={ '_id': repo._id } )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def updateUserAllocation(self, repo: RepoInput, data: List[UserAllocationInput], info: Info) -> Repo:

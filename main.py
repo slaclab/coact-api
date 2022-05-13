@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from strawberry.fastapi import BaseContext, GraphQLRouter
 from strawberry import Schema
 from strawberry.schema.config import StrawberryConfig
+from strawberry.unset import UNSET
 
 from pymongo import MongoClient
 
