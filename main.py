@@ -56,7 +56,8 @@ class CustomContext(BaseContext):
                 self.username = user.username
 
         if not self.username:
-            self.username = self.request.headers.get(USER_FIELD_IN_HEADER, None)
+            user = self.request.headers.get(USER_FIELD_IN_HEADER, None)
+            self.username = self.db.find_user( { 'username': user } )
 
         if self.username:
             admins = re.sub( "\s", "", environ.get("ADMIN_USERNAMES",'')).split(',')

@@ -12,10 +12,9 @@ class IsAuthenticated(BasePermission):
     LOG = logging.getLogger(__name__)
     message = "User is not authenticated"
     def has_permission(self, source: Any, info: Info, **kwargs) -> bool:
-        username = info.context.authn()
-        self.LOG.debug(f"attempting permissions with {type(self).__name__} for user {username} at path {info.path.key} for privilege {kwargs}")
-        if username:
-            user = info.context.db.find_user({"username": username })
+        user = info.context.authn()
+        self.LOG.debug(f"attempting permissions with {type(self).__name__} for user {user} at path {info.path.key} for privilege {kwargs}")
+        if user:
             return True
         return False
 
