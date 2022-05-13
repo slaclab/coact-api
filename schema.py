@@ -120,14 +120,17 @@ class Mutation:
     def repoUpdate(self, data: RepoInput, info: Info) -> Repo:
         return info.context.db.update( 'repos', info, data, required_fields=[ 'Id' ], find_existing={ '_id': data._id } )
 
-    @strawberry.mutation( permission_classes=[ IsAuthenticated ] )
-    def updateUserAllocation(self, data: List[UserAllocationInput], info: Info) -> str:
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
+    def updateUserAllocation(self, repo: RepoInput, data: List[UserAllocationInput], info: Info) -> Repo:
+        filter = {"name": repo.name}
+        repos =  info.context.db.find_repos( filter )
+        therepo = assert_one( repos, 'repo', filter)
         uas = [dict(j.__dict__.items()) for j in data]
         keys = ["facility", "repo", "resource", "year", "username"]
         for ua in uas:
             nua = {k: v for k,v in ua.items() if not v is UNSET}
             info.context.db.collection("user_allocations").replace_one({k: v for k,v in nua.items() if k in keys}, nua, upsert=True)
-        return "Done"
+        return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def addUserToRepo(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
