@@ -95,42 +95,42 @@ class Query:
 class Mutation:
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def userCreate(self, user: UserInput, info: Info) -> User:
+    def userCreate(self, user: UserInput, info: Info, admin_override: bool=False) -> User:
         return info.context.db.create( 'users', user, required_fields=[ 'username', 'uidnumber', 'eppns' ], find_existing={ 'username': data.username } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def userUpdate(self, user: UserInput, info: Info) -> User:
+    def userUpdate(self, user: UserInput, info: Info, admin_override: bool=False) -> User:
         return info.context.db.update( 'users', user, required_fields=[ '_id' ], find_existing={ '_id': user._id } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def userUpdateEppn(self, eppns: List[str], info: Info) -> User:
+    def userUpdateEppn(self, eppns: List[str], info: Info, admin_override: bool=False) -> User:
         pass
 
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def facilityCreate(self, facility: FacilityInput, info: Info) -> Facility:
+    def facilityCreate(self, facility: FacilityInput, info: Info, admin_override: bool=False) -> Facility:
         return info.context.db.create( 'facilities', facility, required_fields=[ 'name' ], find_existing={ 'name': facility.name } )
 
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def accessGroupCreate(self, access_group: AccessGroupInput, info: Info) -> AccessGroup:
+    def accessGroupCreate(self, access_group: AccessGroupInput, info: Info, admin_override: bool=False) -> AccessGroup:
         return info.context.db.create( 'access_groups', access_group, required_fields=[ 'gid_number', 'name' ], find_existing={ 'gid_number': access_group.gid_number } )
 
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def accessGroupUpdate(self, access_group: AccessGroupInput, info: Info) -> AccessGroup:
+    def accessGroupUpdate(self, access_group: AccessGroupInput, info: Info, admin_override: bool=False) -> AccessGroup:
         return info.context.db.update( 'access_groups', info, access_group, required_fields=[ 'Id', ], find_existing={ '_id': accesss_group._id } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def repoCreate(self, repo: RepoInput, info: Info) -> Repo:
+    def repoCreate(self, repo: RepoInput, info: Info, admin_override: bool=False) -> Repo:
         return info.context.db.create( 'repos', repo, required_fields=[ 'name', 'facility' ], find_existing={ 'name': repo.name, 'facility': repo.facility } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def repoUpdate(self, repo: RepoInput, info: Info) -> Repo:
+    def repoUpdate(self, repo: RepoInput, info: Info, admin_override: bool=False) -> Repo:
         return info.context.db.update( 'repos', info, repo, required_fields=[ 'Id' ], find_existing={ '_id': repo._id } )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def updateUserAllocation(self, repo: RepoInput, data: List[UserAllocationInput], info: Info) -> Repo:
+    def updateUserAllocation(self, repo: RepoInput, data: List[UserAllocationInput], info: Info, admin_override: bool=False) -> Repo:
         filter = {"name": repo.name}
         repos =  info.context.db.find_repos( filter )
         therepo = assert_one( repos, 'repo', filter)
@@ -142,7 +142,7 @@ class Mutation:
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def addUserToRepo(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
+    def addUserToRepo(self, repo: RepoInput, user: UserInput, info: Info, admin_override: bool=False) -> Repo:
         filter = {"name": repo.name}
         info.context.db.collection("repos").update_one(filter, { "$addToSet": {"users": user.username}})
         return info.context.db.find_repo(filter)
@@ -154,13 +154,13 @@ class Mutation:
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def changePrincipalForRepo(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
+    def changePrincipalForRepo(self, repo: RepoInput, user: UserInput, info: Info, admin_override: bool=False) -> Repo:
         filter = {"name": repo.name}
         info.context.db.collection("repos").update_one(filter, { "$set": {"principal": user.username}})
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def removeUserFromRepo(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
+    def removeUserFromRepo(self, repo: RepoInput, user: UserInput, info: Info, admin_override: bool=False) -> Repo:
         filter = {"name": repo.name}
         repos =  info.context.db.find_repos( filter )
         therepo = assert_one( repos, 'repo', filter)
@@ -173,7 +173,7 @@ class Mutation:
         return assert_one( info.context.db.find("repos", filter ), 'repos', filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def toggleUserRole(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
+    def toggleUserRole(self, repo: RepoInput, user: UserInput, info: Info, admin_override: bool=False) -> Repo:
         filter = {"name": repo.name}
         repos = info.context.db.find_repos( filter )
         therepo = assert_one( repos, 'repo', filter)
@@ -189,7 +189,7 @@ class Mutation:
         return assert_one( info.context.db.find_repos(filter), 'repos', filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def toggleGroupMembership(self, repo: RepoInput, user: UserInput, group: AccessGroupInput, info: Info) -> AccessGroup:
+    def toggleGroupMembership(self, repo: RepoInput, user: UserInput, group: AccessGroupInput, info: Info, admin_override: bool=False) -> AccessGroup:
         filter = {"name": repo.name}
         repos = info.context.db.find_repos( filter )
         therepo = assert_one( repos, 'repo', filter)
@@ -207,7 +207,7 @@ class Mutation:
         return assert_one( info.context.db.find_access_groups( grpfilter ), 'access_group', grpfilter )
 
     @strawberry.mutation
-    def importJobs(self, jobs: List[Job], info: Info) -> str:
+    def importJobs(self, jobs: List[Job], info: Info, admin_override: bool=False) -> str:
         jbs = [dict(j.__dict__.items()) for j in jobs]
         get_db(info,"jobs").insert_many(jbs)
         return "Done"
