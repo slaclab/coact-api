@@ -31,7 +31,7 @@ class Query:
 
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def facilities(self, info: Info, filter: Optional[FacilityInput]) -> List[Facility]:
+    def facilities(self, info: Info, filter: Optional[FacilityInput]={} ) -> List[Facility]:
         return info.context.db.find_facilities( filter, exclude_fields=['resources',] )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
@@ -40,7 +40,7 @@ class Query:
 
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def access_groups(self, info: Info, filter: Optional[AccessGroupInput]) -> List[AccessGroup]:
+    def access_groups(self, info: Info, filter: Optional[AccessGroupInput]={} ) -> List[AccessGroup]:
         return info.context.db.find_access_groups( filter )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
@@ -49,7 +49,7 @@ class Query:
 
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def repos(self, info: Info, filter: Optional[RepoInput]) -> List[Repo]:
+    def repos(self, info: Info, filter: Optional[RepoInput]={} ) -> List[Repo]:
         return info.context.db.find_repos( filter )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
