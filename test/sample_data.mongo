@@ -146,7 +146,7 @@ db.getSiblingDB("iris").repos.insertOne({
   "leaders": [ "snelson" ],
   "users": [ "aquila", "mcbrowne", "snelson", "tmalla", "yanwen", "mshankar" ],
   "group": "cxi12345",
-  "access_groups": [ "cxi12345-g1", "cxi12345-g2"]
+  "access_groups": []
 })
 
 db.getSiblingDB("iris").repos.insertOne({
@@ -233,12 +233,58 @@ db.getSiblingDB("iris").access_class.insertOne({"name": "cxi12345", "gid_number"
 db.getSiblingDB("iris").access_class.insertOne({"name": "cryo-data", "gid_number": 6363, "members": [ "cryo-daq"]})
 
 
+// ?? do we need like a basePath Prefix definition in the Facility level?
+// a Volume merely defines some storage somewhere which is associated with teh access class to deteremine access permissions (gids)
+db.getSiblingDB("iris").volumes.insertOne({
+  "facility": "LCLS",
+  "name": "cxi12345",
+  "type": "science-data",
+  "access_class": [ "cxi12345" ],
+  "path": "/sdf/data/lcls/cxi/cxi/123456"
+})
+db.getSiblingDB("iris").volumes.insertOne({
+  "facility": "LCLS",
+  "name": "cxi12345",
+  "type": "group",
+  "access_class": [ "cxi12345" ],
+  "path": "/sdf/group/lcls/cxi/cxi/123456"
+})
+
+
+// a 'storage' allocation defines all the volumes for that repo
+// the key of each volume is the 'type' of volume defined above (bit suplurfuous perhaps)
+// as the quota of each volume can change, we keep the Volume as a separate document and use this allocation document
+// as the thing to keep upto date. we use 'active' as a crude of of determine the most upto date version.
+// ?? how to deal with stranded/orphaned volumes?
+db.getSiblingDB("iris").allocations.insertOne({
+  "facility": "LCLS",
+  "resource": "storage",
+  "repo": "cxi12345",
+  "active": true,
+  "from": "2021-05-01T00:00:00-07:00",
+  "to": null,
+  "volumes": {
+    "science-data": [
+      {
+        "name": "cxi12345"
+        "gigabytes": 5544, // gb
+        "inodes": 4455
+      }
+    ]
+    "group": [
+      {
+        "name": "cxi12345",
+        "gigabytes": 1000,
+        "inodes": 100
+      }
+    ]
+  }
+})
 
 
 
 
 
-db.getSiblingDB("iris").user_allocations.createIndex({"repo": 1, "username": 1, "facility": 1, "resource": 1, "year": -1}, unique=true)
 
 
 // This is all backend stuff from now on..
