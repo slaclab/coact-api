@@ -215,10 +215,28 @@ db.getSiblingDB("iris").users.insertOne({ "username": "ytl", "uidnumber": 129, "
 db.getSiblingDB("iris").users.insertOne({ "username": "wilko", "uidnumber": 130 })
 
 
+// an access class defines an abstraiton of access to some data. as such, by itself it merely defines essentially just a gidnumber. these shoudl be associated with eitehr: (note that all three can apply to all related storage)
+// 1) facility (to have all data under that facility with say the same primiarly group id defined in the access group)
+// 2) to a repo; so that the repo has this gid
+// 3) to a volume so that only that volume has that gid
+
 db.getSiblingDB("iris").access_groups.createIndex({"name": 1}, unique=true)
 db.getSiblingDB("iris").access_groups.createIndex({"gid_number": 1}, unique=true)
-db.getSiblingDB("iris").access_groups.insertOne({"name": "cxi12345-g1", "gid_number": 123, "members": [ "mshankar", "wilko", "ytl" ]})
-db.getSiblingDB("iris").access_groups.insertOne({"name": "cxi12345-g2", "gid_number": 124, "members": [ "mcbrowne", "yanwen"]})
+
+// facility service account; use the gid as default and uids from members as primary owners
+db.getSiblingDB("iris").access_class.insertOne({"name": "lcls-pcdsmgr", "gid_number": 808080, "members": [ "pcdmgr" ]})
+
+// no members means nothing special - use the principal, leaders and users for this group
+db.getSiblingDB("iris").access_class.insertOne({"name": "cxi12345", "gid_number": 12345, "members": null})
+
+
+db.getSiblingDB("iris").access_class.insertOne({"name": "cryo-data", "gid_number": 6363, "members": [ "cryo-daq"]})
+
+
+
+
+
+
 
 db.getSiblingDB("iris").user_allocations.createIndex({"repo": 1, "username": 1, "facility": 1, "resource": 1, "year": -1}, unique=true)
 
