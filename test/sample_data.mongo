@@ -53,24 +53,42 @@ db.getSiblingDB("iris").facilities.insertOne({
 
 
 
+// define a capacity to be the actual resources provided to each facility
+// keep a count of the number of units of each type of cluster - this shoudl make it simple for admins to add new resrouces to each facility
+
+db.getSiblingDB("iris").capacity.createIndex({"facility": 1, "resource": 1})
 
 
-
-db.getSiblingDB("iris").resource_capacity.createIndex({"facility": 1, "resource": 1, "year": -1}, unique=true)
-
-// Capacity for LCLS for 2022; resource is the name of the resource
-db.getSiblingDB("iris").resource_capacity.insertOne({
+db.getSiblingDB("iris").capacity.insertOne({
   "facility": "LCLS",
-  "resource": "CPU",
-  "year": 2022,
-  "compute": 3000000
+  "resource": "compute",
+  "active": false, // aid searching for most current
+  "from": "2020-01-01T00:00:00-07:00",
+  "to": "2021-05-01T00:00:00-07:00",
+  // keep track of understandable units here - let the math deal with conversions (which could change)
+  "clusters": {
+    "rome-b050": 23.5, // nodes
+    "milan-srcf": 10.0
+  }
 })
-db.getSiblingDB("iris").resource_capacity.insertOne({
+
+db.getSiblingDB("iris").capacity.insertOne({
   "facility": "LCLS",
-  "resource": "GPU",
-  "year": 2022,
-  "compute": 30000
+  "resource": "compute",
+  "active": true,
+  "from": "2021-05-01T00:00:00-07:00",
+  "to": null, // implies current
+  "clusters": {
+    "rome-b050": 23.5, // nodes
+    "milan-srcf": 10.0,
+    "ampt": 1.0
+  }
 })
+
+
+
+
+
 db.getSiblingDB("iris").resource_capacity.insertOne({
   "facility": "LCLS",
   "resource": "data",
@@ -85,19 +103,7 @@ db.getSiblingDB("iris").resource_capacity.insertOne({
   "storage": 3000,
   "inodes": 1000000
 })
-// Capacity for Cryo for 2022
-db.getSiblingDB("iris").resource_capacity.insertOne({
-  "facility": "CryoEM",
-  "resource": "CPU",
-  "year": 2022,
-  "compute": 3000000
-})
-db.getSiblingDB("iris").resource_capacity.insertOne({
-  "facility": "CryoEM",
-  "resource": "GPU",
-  "year": 2022,
-  "compute": 30000
-})
+
 db.getSiblingDB("iris").resource_capacity.insertOne({
   "facility": "CryoEM",
   "resource": "data",
@@ -113,18 +119,7 @@ db.getSiblingDB("iris").resource_capacity.insertOne({
   "inodes": 1000000
 })
 // Capacity for SUNCAT for 2022
-db.getSiblingDB("iris").resource_capacity.insertOne({
-  "facility": "SUNCAT",
-  "resource": "CPU",
-  "year": 2022,
-  "compute": 3000000
-})
-db.getSiblingDB("iris").resource_capacity.insertOne({
-  "facility": "SUNCAT",
-  "resource": "GPU",
-  "year": 2022,
-  "compute": 30000
-})
+
 db.getSiblingDB("iris").resource_capacity.insertOne({
   "facility": "SUNCAT",
   "resource": "data",
