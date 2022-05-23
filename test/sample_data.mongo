@@ -1,4 +1,17 @@
+//
+// At a top level, we have a Facility. A Facility contains Repos.
 
+// A Facility will have Capacities that define the amount of resource that is available to that Facility.
+// At the moment, we only have a count of the compute resource that is available to the Facility. This is defined as 
+// a count of the number of compute servers from each Cluster.
+
+// We only currently associate storage with a Repo.
+// We have different classes of storage (science-data, group, etc). and each Repo may have none or many of each
+// type. We want to keep tabs of the Quota ie the Repo's storage Capacity.
+// We keep the permissions model of the storage with an Access Class and associate them to Volumes. It is the Volumes
+// that are associated with the Repos.
+
+// is this backwards? on one hand we have the Facility with a total Capacity, and we provide percentage Allocations of compute to each Repo; but with storage we have a an absolute quota per volume in a Repo; but don't actually keep anything yet in the Facility regarding storage.
 
 db.getSiblingDB("iris").facilities.createIndex({"name": 1}, unique=true)
 // Facilities have compute classes and storage classes associated with them.
@@ -65,6 +78,16 @@ db.getSiblingDB("iris").capacity.insertOne({
   "clusters": {
     "rome-b050": 23.5, // nodes
     "milan-srcf": 10.0
+  },
+  "storage": {
+    "science-data": {
+      "gigabytes": 1000000,
+      "inodes": 100000
+    },
+    "group": {
+      "gigabytes": 100000,
+      "inodes": 10000
+    }
   }
 })
 
@@ -78,6 +101,16 @@ db.getSiblingDB("iris").capacity.insertOne({
     "rome-b050": 23.5, // nodes
     "milan-srcf": 10.0,
     "ampt": 1.0
+  },
+  "storage": {
+    "science-data": {
+      "gigabytes": 40000000,
+      "inodes": 200000
+    },
+    "group": {
+      "gigabytes": 600000,
+      "inodes": 20000
+    }
   }
 })
 
@@ -95,25 +128,25 @@ db.getSiblingDB("iris").repos.insertOne({
   "principal": "aquila",
   "leaders": [ "snelson" ],
   "users": [ "aquila", "mcbrowne", "snelson", "tmalla", "yanwen", "mshankar" ],
-  "group": "cxi12345",
   "access_groups": []
 })
 
 db.getSiblingDB("iris").repos.insertOne({
-  "name": "20191205-CS14",
+  "name": "CS14",
   "facility": "CryoEM",
   "principal": "ytl",
   "leaders": [],
-  "users": [ "ytl" ],
-  "group": "20191205-CS14"
+  "users": [ "cszhang" ],
+  "access_groups": [ "CS14" ]
+
 })
 db.getSiblingDB("iris").repos.insertOne({
-  "name": "20191205-CA104",
+  "name": "CA104",
   "facility": "CryoEM",
   "principal": "mshankar",
   "leaders": [ "ytl" ],
   "users": [ ],
-  "group": "20191205-CA014"
+  "access_groups": [ "CA104" ]
 })
 
 
@@ -121,35 +154,6 @@ db.getSiblingDB("iris").repos.insertOne({
 
 
 
-db.getSiblingDB("iris").allocations.createIndex({"repo": 1, "facility": 1, "resource": 1, "year": -1}, unique=true)
-
-db.getSiblingDB("iris").allocations.insertOne({
-  "facility": "LCLS",
-  "resource": "CPU",
-  "repo": "cxi12345",
-  "year": 2022,
-  "compute": 3000
-})
-
-db.getSiblingDB("iris").allocations.createIndex({"repo": 1, "facility": 1, "resource": 1, "year": -1}, unique=true)
-
-db.getSiblingDB("iris").allocations.insertOne({
-  "facility": "LCLS",
-  "resource": "data",
-  "repo": "cxi12345",
-  "year": 2022,
-  "storage": 5544,
-  "inodes": 4455
-})
-
-db.getSiblingDB("iris").allocations.insertOne({
-  "facility": "LCLS",
-  "resource": "scratch",
-  "repo": "cxi12345",
-  "year": 2022,
-  "storage": 6655,
-  "inodes": 5566
-})
 
 // Of course, user has other information like full name, email etc. Maybe some of that comes from inCommon?
 db.getSiblingDB("iris").users.createIndex({"username": 1}, unique=true)
@@ -181,6 +185,9 @@ db.getSiblingDB("iris").access_class.insertOne({"name": "cxi12345", "gid_number"
 
 
 db.getSiblingDB("iris").access_class.insertOne({"name": "cryo-data", "gid_number": 6363, "members": [ "cryo-daq"]})
+db.getSiblingDB("iris").access_class.insertOne({"name": "CS14", "gid_number": 8393, "members": []})
+db.getSiblingDB("iris").access_class.insertOne({"name": "CA104", "gid_number": 8343, "members": []})
+
 
 
 // ?? do we need like a basePath Prefix definition in the Facility level?
@@ -201,11 +208,32 @@ db.getSiblingDB("iris").volumes.insertOne({
 })
 
 
+db.getSiblingDB("iris").volumes.insertOne({
+  "facility": "LCLS",
+  "name": "20211107-CS14",
+  "type": "science-data",
+  "access_class": [ "CS14" ],
+  "path": "/sdf/data/cryoem/202111/20211107-CS14_TEM4"
+})
+db.getSiblingDB("iris").volumes.insertOne({
+  "facility": "LCLS",
+  "name": "20221112_CA104",
+  "type": "science-data",
+  "access_class": [ "CA104" ],
+  "path": "/sdf/data/cryoem/202111/20221112_CA104_TEMBETA"
+})
+
+
+
 // a 'storage' allocation defines all the volumes for that repo
 // the key of each volume is the 'type' of volume defined above (bit suplurfuous perhaps)
 // as the quota of each volume can change, we keep the Volume as a separate document and use this allocation document
 // as the thing to keep upto date. we use 'active' as a crude of of determine the most upto date version.
 // ?? how to deal with stranded/orphaned volumes?
+
+db.getSiblingDB("iris").allocations.createIndex({"repo": 1, "facility": 1, "resource": 1, "year": -1}, unique=true)
+
+
 db.getSiblingDB("iris").allocations.insertOne({
   "facility": "LCLS",
   "resource": "storage",
@@ -233,11 +261,45 @@ db.getSiblingDB("iris").allocations.insertOne({
 
 
 
+db.getSiblingDB("iris").allocations.insertOne({
+  "facility": "CryoEM",
+  "resource": "storage",
+  "repo": "CS14",
+  "active": true,
+  "from": "2021-05-01T00:00:00-07:00",
+  "to": null,
+  "volumes": {
+    "science-data": [
+      {
+        "name": "20211107-CS14"
+        "gigabytes": 2000,
+        "inodes": 20000
+      }
+    ]
+  }
+})
+
+db.getSiblingDB("iris").allocations.insertOne({
+  "facility": "CryoEM",
+  "resource": "storage",
+  "repo": "CA104",
+  "active": true,
+  "from": "2021-05-01T00:00:00-07:00",
+  "to": null,
+  "volumes": {
+    "science-data": [
+      {
+        "name": "20221112_CA104"
+        "gigabytes": 2000,
+        "inodes": 20000
+      }
+    ]
+  }
+})
 
 
 
 
-// This is all backend stuff from now on..
 db.getSiblingDB("iris").cluster.createIndex({"name": 1}, unique=true)
 
 db.getSiblingDB("iris").cluster.insertOne({
@@ -247,7 +309,7 @@ db.getSiblingDB("iris").cluster.insertOne({
   "node_mem_gb": 512,
   "charge_factor": 0.8,
   "node_cpu_smt": 1, // threads per core
-  "members": [ "rome0001", "rome0002","rome0003","rome0004","rome0005" ]
+  "members": [ "rome0001", "rome0002","rome0003","rome0004","rome0005" ] // perhaps use regex?
 })
 
 
