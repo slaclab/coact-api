@@ -27,6 +27,9 @@ def assert_one( items, thing, filter ):
 
 @strawberry.type
 class Query:
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def whoami(self, info: Info) -> User:
+        return info.context.db.find_user( { "username": info.context.username } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def users(self, info: Info, filter: Optional[UserInput] ) -> List[User]:
