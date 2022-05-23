@@ -166,69 +166,9 @@ db.getSiblingDB("iris").repos.insertOne({
   "group": "20191205-CA014"
 })
 
-db.getSiblingDB("iris").qos.createIndex({"name": 1, "repo": 1}, unique=true)
-db.getSiblingDB("iris").qos.createIndex({"qos": 1, "partition": 1}) // For performance
-
-// For every repo, we have at least one QOS.
-// The lookup is going from a SLURM job detail to the repo.
-// We use the account name (which should be the same as the repo); if that fails, we use (qos, partition) to determine the repo
-db.getSiblingDB("iris").qos.insertOne({
-  "name": "normal",
-  "repo": "cxi12345",
-  "qos": "LCLS-cxi12345-normal",
-  "partition": "psanaq"
-})
-
-db.getSiblingDB("iris").qos.insertOne({
-  "name": "hihi",
-  "repo": "cxi12345",
-  "qos": "LCLS-cxi12345-hihi",
-  "partition": "psfehhiprioq"
-})
-
-db.getSiblingDB("iris").qos.insertOne({
-  "name": "hprio",
-  "repo": "cxi12345",
-  "qos": "LCLS-cxi12345-hprio",
-  "partition": "psfehprioq"
-})
-
-db.getSiblingDB("iris").qos.insertOne({
-  "name": "feh",
-  "repo": "cxi12345",
-  "qos": "LCLS-cxi12345-feh",
-  "partition": "psfehq"
-})
-
-db.getSiblingDB("iris").qos.insertOne({
-  "name": "normal",
-  "repo": "20191205-CS14",
-  "qos": "LCLS-20191205-CS14-normal",
-  "partition": "CryoGPU"
-})
 
 
-db.getSiblingDB("iris").repos.insertOne({
-  "name": "CoffeeWorld",
-  "facility": "LCLS",
-  "principal": "coffee",
-  "leaders": [],
-  "users": [ "coffee" ],
-  "group": "CoffeeWorld"
-})
-// CoffeeWorld belongs to multiple partitions; so it has a QOS defined for each partition.
-db.getSiblingDB("iris").qos.insertOne({
-  "name": "LCLS-normal",
-  "repo": "CoffeeWorld",
-  "qos": "LCLS-CoffeeWorld-normal",
-  "partition": "psanagpuq"
-})
-db.getSiblingDB("iris").qos.insertOne({
-  "name": "Suncat-normal",
-  "repo": "CoffeeWorld",
-  "qos": "Suncat-CoffeeWorld-normal",
-  "partition": "suncat"
-})
+
 
 
 db.getSiblingDB("iris").allocations.createIndex({"repo": 1, "facility": 1, "resource": 1, "year": -1}, unique=true)
@@ -320,16 +260,6 @@ db.getSiblingDB("iris").cluster.insertOne({
 })
 
 
-
-
-db.getSiblingDB("iris").partitions.createIndex({"name": 1}, unique=true)
-db.getSiblingDB("iris").partitions.insertOne({ "name": "psanaq", "charge_factor": 1.0 })
-db.getSiblingDB("iris").partitions.insertOne({ "name": "psanagpuq", "charge_factor": 1.0 })
-db.getSiblingDB("iris").partitions.insertOne({ "name": "psfehq", "charge_factor": 1.0 })
-db.getSiblingDB("iris").partitions.insertOne({ "name": "psfehprioq", "charge_factor": 1.0 })
-db.getSiblingDB("iris").partitions.insertOne({ "name": "psfehhiprioq", "charge_factor": 1.0 })
-db.getSiblingDB("iris").partitions.insertOne({ "name": "cryoem", "charge_factor": 1.0 })
-db.getSiblingDB("iris").partitions.insertOne({ "name": "suncat", "charge_factor": 1.0 })
 
 
 // Jobs have lots of information from SLURM in addition to the final mapping into repo, year and resource name.
