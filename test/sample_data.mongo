@@ -6,69 +6,55 @@ db.getSiblingDB("iris").resource_types.insertOne({"type": "inodes", "units": "in
 
 db.getSiblingDB("iris").facilities.createIndex({"name": 1}, unique=true)
 // Facilities have compute classes and storage classes associated with them.
+
+
 db.getSiblingDB("iris").facilities.insertOne({
   "name" : "LCLS",
-  "resources": {
-    "CPU": {
-      "type": "compute",
-      "partitions": [ "psanaq", "psfehq", "psfehprioq", "psfehhiprioq" ]
+  "resources": { // necessary??
+    "compute": {
+      "type": "compute"
     },
-    "GPU": {
-      "type": "compute",
-      "partitions": [ "psanagpuq" ]
-    },
-    "data": {
-      "type": "storage",
-      "root": "/sdf/data/lcls"
-    },
-    "scratch": {
-      "type": "storage",
-      "root": "/scratch/lcls"
+    "storage": {
+      "type": "storage"
     }
-  }
+  },
+  "czars": [ "lcls-pcdsdata"], // set primary uid on all volumes
+  "access_class": [ "lcls-pcdsmgr" ] // set primary gid on all volumes
 })
+
 db.getSiblingDB("iris").facilities.insertOne({
   "name" : "CryoEM",
-  "resources": {
-    "CPU": {
-      "type": "compute",
-      "partitions": [ "cryoem" ]
+  "resources": { // necessary??
+    "compute": {
+      "type": "compute"
     },
-    "GPU": {
-      "type": "compute",
-      "partitions": [ "cryoem" ]
-    },
-    "data": {
-      "type": "storage",
-      "root": "/sdf/data/cryoem"
-    },
-    "scratch": {
-      "type": "storage",
-      "root": "/scratch/cryoem"
+    "storage": {
+      "type": "storage"
     }
-  }
+  },
+  "czars": [ "cryo-daq"], // set primary uid on all volumes
+  "access_class": [ "cryo-data" ] // set primary gid on all volumes
 })
+
 db.getSiblingDB("iris").facilities.insertOne({
-  "name" : "SUNCAT",
-  "resources": {
-    "CPU": {
-      "type": "compute",
-      "partitions": [ "suncat" ]
+  "name" : "CryoEM",
+  "resources": { // necessary??
+    "compute": {
+      "type": "compute"
     },
-    "GPU": {
-      "type": "compute",
-      "partitions": [ "suncat" ]
-    },
-    "data": {
-      "type": "storage",
-      "root": "/sdf/data/suncat"
-    },
-    "scratch": {
-      "type": "storage",
-      "root": "/scratch/suncat"
+    "storage": {
+      "type": "storage"
     }
-  }
+  },
+  "czars": [ "johannes"], // set primary uid on all volumes
+  "access_class": [ ] // set primary gid on all volumes
 })
+
+
+
+
+
+
 
 db.getSiblingDB("iris").resource_capacity.createIndex({"facility": 1, "resource": 1, "year": -1}, unique=true)
 
