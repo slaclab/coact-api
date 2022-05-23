@@ -1,8 +1,4 @@
 
-db.getSiblingDB("iris").resource_types.createIndex({"type": 1}, unique=true)
-db.getSiblingDB("iris").resource_types.insertOne({"type": "compute", "units": "node_hours"})
-db.getSiblingDB("iris").resource_types.insertOne({"type": "storage", "units": "GB"})
-db.getSiblingDB("iris").resource_types.insertOne({"type": "inodes", "units": "inodes"})
 
 db.getSiblingDB("iris").facilities.createIndex({"name": 1}, unique=true)
 // Facilities have compute classes and storage classes associated with them.
