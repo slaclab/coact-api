@@ -336,6 +336,35 @@ db.getSiblingDB("iris").cluster.insertOne({
 })
 
 
+// usage collection to store information about post processed units of resources that have been consumed by the Repo.
+// keep the data in a raw format to reduce the amount of processing to get the data to teh client. would tehre be limits to teh size of the data as a result of keeping it like this?
+db.getSiblingDB("iris").usage.insertOne({
+  "facility": "LCLS",
+  "resource": "storage",
+  "repo": "cxi12345",
+  "name": "cxi12345",
+  "class": "science-data"
+  "history": {
+    ["20220101",56320,3456], // date, gigabutes, inodes
+    ["20220102",56330,3452], // date, gigabutes, inodes
+    ["20220103",57530,3552], // date, gigabutes, inodes
+  }
+})
+
+
+db.getSiblingDB("iris").usage.insertOne({
+  "facility": "LCLS",
+  "resource": "compute",
+  "repo": "cxi12345",
+  "name": "cxi12345",
+  "history": {
+    ["20220101",1202], // date, slac-hours
+    ["20220102",1842], // date, slac-hours
+    ["20220103",2349], // date, slac-hours
+  }
+})
+
+
 
 
 // Jobs have lots of information from SLURM in addition to the final mapping into repo, year and resource name.
