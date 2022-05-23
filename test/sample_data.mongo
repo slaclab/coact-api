@@ -89,52 +89,6 @@ db.getSiblingDB("iris").capacity.insertOne({
 
 
 
-db.getSiblingDB("iris").resource_capacity.insertOne({
-  "facility": "LCLS",
-  "resource": "data",
-  "year": 2022,
-  "storage": 3000,
-  "inodes": 1000000
-})
-db.getSiblingDB("iris").resource_capacity.insertOne({
-  "facility": "LCLS",
-  "resource": "scratch",
-  "year": 2022,
-  "storage": 3000,
-  "inodes": 1000000
-})
-
-db.getSiblingDB("iris").resource_capacity.insertOne({
-  "facility": "CryoEM",
-  "resource": "data",
-  "year": 2022,
-  "storage": 3000,
-  "inodes": 1000000
-})
-db.getSiblingDB("iris").resource_capacity.insertOne({
-  "facility": "CryoEM",
-  "resource": "scratch",
-  "year": 2022,
-  "storage": 3000,
-  "inodes": 1000000
-})
-// Capacity for SUNCAT for 2022
-
-db.getSiblingDB("iris").resource_capacity.insertOne({
-  "facility": "SUNCAT",
-  "resource": "data",
-  "year": 2022,
-  "storage": 3000,
-  "inodes": 1000000
-})
-db.getSiblingDB("iris").resource_capacity.insertOne({
-  "facility": "SUNCAT",
-  "resource": "scratch",
-  "year": 2022,
-  "storage": 3000,
-  "inodes": 1000000
-})
-
 db.getSiblingDB("iris").repos.createIndex({"name": 1}, unique=true)
 db.getSiblingDB("iris").repos.createIndex({"leader": 1}) // For performance
 db.getSiblingDB("iris").repos.createIndex({"group": 1}, unique=true)
