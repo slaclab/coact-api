@@ -298,6 +298,34 @@ db.getSiblingDB("iris").allocations.insertOne({
 })
 
 
+// compute allocations
+// in terms of a compute quota; we assume that slac-hours already considers things like cpu/gpu and has the
+// calculated weights required for varying cluster performances.
+// do we want to narrow down specific allocations per partition? the current schema only considers the qoses for the repo - is this sufficient to do everythign we want? how does this map to a partition?
+
+db.getSiblingDB("iris").allocations.insertOne({
+  "facility": "LCLS",
+  "resource": "compute",
+  "repo": "cxi12345",
+  "active": true,
+  "from": "2021-05-01T00:00:00-07:00",
+  "to": null,
+  "compute": {
+    "qos": [
+      {
+        "name": "cxi12345"
+        "slac-hours": 100000, // need normlised units?
+      },
+      {
+        "name": "cxi12345-priority"
+        "slac-hours": 1000, // need normlised units?
+      }
+    ]
+  }
+})
+
+
+
 
 
 db.getSiblingDB("iris").cluster.createIndex({"name": 1}, unique=true)
