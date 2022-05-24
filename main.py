@@ -68,7 +68,7 @@ class CustomContext(BaseContext):
         return self.username
 
 
-from models import User, AccessGroup, Repo, Facility
+from models import User, AccessGroup, Repo, Facility, Qos
 
 class DB:
     LOG = logging.getLogger(__name__)
@@ -77,6 +77,7 @@ class DB:
         'access_groups': AccessGroup,
         'repos': Repo,
         'facilities': Facility,
+        "qos": Qos,
     }
     def __init__(self, mongo, db_name):
         self._db = mongo
@@ -129,8 +130,8 @@ class DB:
         return self.find("facilities", filter, exclude_fields)
     def find_facility(self, filter, exclude_fields: Optional[list[str]]=[] ):
         return self.assert_one( self.find_facilities( filter, exclude_fields ) )
-    def find_qoses(self, filter):
-        return self.find("qoses", filter)
+    def find_qoses(self):
+        return self.find("qos", {})
     def find_qos(self, filter):
         return self.assert_one( self.find_qoses( filter ) )
     def find_access_groups(self, filter):

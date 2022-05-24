@@ -27,6 +27,9 @@ def assert_one( items, thing, filter ):
 
 @strawberry.type
 class Query:
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def whoami(self, info: Info) -> User:
+        return info.context.db.find_user( { "username": info.context.username } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def users(self, info: Info, filter: Optional[UserInput] ) -> List[User]:
@@ -87,7 +90,7 @@ class Query:
 
     @strawberry.field
     def qos(self, info: Info) -> List[Qos]:
-        return info.context.db.find_qoses( filter)
+        return info.context.db.find_qoses()
 
 
 
@@ -197,5 +200,5 @@ class Mutation:
     @strawberry.mutation
     def importJobs(self, jobs: List[Job], info: Info) -> str:
         jbs = [dict(j.__dict__.items()) for j in jobs]
-        get_db(info,"jobs").insert_many(jbs)
+        info.context.db.collection("jobs").insert_many(jbs)
         return "Done"
