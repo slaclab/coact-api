@@ -104,9 +104,8 @@ class FacilityInput:
     _id: Optional[MongoId] = UNSET
     name: Optional[str] = UNSET
     description: Optional[str] = UNSET
-    resources: Optional[str] = UNSET # hmm...
-    czars: List[str] = UNSET
-    access_classes: List[str] = UNSET
+    czars: Optional[List[str]] = UNSET
+    access_class: Optional[List[str]] = UNSET
 
 @strawberry.type
 class Facility( FacilityInput ):

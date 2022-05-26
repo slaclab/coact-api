@@ -85,9 +85,10 @@ if __name__ == '__main__':
 
         # Map job to repo.
         # First, try to get as much information as we can from the partition name.
-        facility = partition2facility[job["partitionName"]]
-        job["facility"] = facility["facility"]
-        job["resource"] = facility["resource"]
+        facility = partition2facility.get(job["partitionName"], None)
+        if facility:
+            job["facility"] = facility["facility"]
+            job["resource"] = facility["resource"]
 
         acc_name = job.get("accountName", None)
         if acc_name and acc_name in repo_names:
