@@ -1,4 +1,8 @@
-from auth import Authnz, IsAuthenticated, IsRepoPrincipal, IsRepoLeader, IsRepoPrincipalOrLeader, IsAdmin
+from auth import IsAuthenticated, \
+        IsRepoPrincipal, \
+        IsRepoLeader, \
+        IsRepoPrincipalOrLeader, \
+        IsAdmin
 
 from typing import List, Optional
 import strawberry
@@ -14,7 +18,6 @@ from models import \
         UserAllocationInput, UserAllocation
 
 import logging
-
 LOG = logging.getLogger(__name__)
 
 
