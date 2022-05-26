@@ -1,5 +1,5 @@
 import dataclasses
-from typing import List, Optional
+from typing import List, Optional, Dict
 import strawberry
 from strawberry.types import Info
 from strawberry.arguments import UNSET
@@ -104,6 +104,9 @@ class FacilityInput:
     _id: Optional[MongoId] = UNSET
     name: Optional[str] = UNSET
     description: Optional[str] = UNSET
+    resources: Optional[str] = UNSET # hmm...
+    czars: List[str] = UNSET
+    access_classes: List[str] = UNSET
 
 @strawberry.type
 class Facility( FacilityInput ):
@@ -184,7 +187,7 @@ class Cluster(ClusterInput):
 class AccessGroupInput:
     _id: Optional[MongoId] = UNSET
     state: Optional[str] = UNSET
-    gid_number: Optional[int] = UNSET
+    gid_number: Optional[int] = UNSET # perhaps we should use a linux non-specific name?
     name: Optional[str] = UNSET
     members: Optional[List[str]] = UNSET
 
@@ -195,6 +198,16 @@ class AccessGroup( AccessGroupInput ):
         if self.members is UNSET:
             return []
         return info.context.db.find_users({"username": {"$in": self.members}})
+
+@strawberry.input
+class Volume:
+    _id: Optional[MongoId] = UNSET
+    facility: Optional[str] = UNSET
+    name: Optional[str] = UNSET
+    type: Optional[str] = UNSET
+    access_classes: Optional[List[str]] = UNSET
+    path: Optional[str] = UNSET # Path object? how about uri for s3?
+
 
 @strawberry.input
 class RepoInput:
