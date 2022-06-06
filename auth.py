@@ -34,6 +34,22 @@ class IsFacilityCzar(BasePermission):
                 return True
         return False
 
+
+class IsFacilityCzar(BasePermission):
+    LOG = logging.getLogger(__name__)
+    message = "User is not czar of facility"
+    def has_permission(self, source: Any, info: Info, **kwargs) -> bool:
+        user = info.context.authn()
+        facilityname = kwargs['data']['name']
+        self.LOG.debug(f"attempting {type(self).__name__} permissions for user {user} at path {info.path.key} for facility {facilityname} with {kwargs}")
+        if user and repo:
+            facility = info.context.db.find_facility( { 'name': facilityname })
+            assert facility.name == facilityname
+            if user in facility.czars:
+                self.LOG.debug(f"  user {user} permitted to modify facility {facility}")
+                return True
+        return False
+
 class IsRepoPrincipal(BasePermission):
     LOG = logging.getLogger(__name__)
     message = "User is not principal of repo"
@@ -89,6 +105,36 @@ class IsRepoPrincipalOrLeader(BasePermission):
             if user in repo.leaders or repo.principal == user:
                 self.LOG.debug(f"  user {user} permitted to modify repo {repo}")
                 return True
+        return False
+
+class IsPermittedToModifyRepo(BasePermission):
+    LOG = logging.getLogger(__name__)
+    message = "User is not authorized to modify repo"
+    def has_permission(self, source: Any, info: Info, **kwargs) -> bool:
+        user = info.context.authn()
+        repo = None
+        if 'repo' in kwargs:
+            repo = kwargs['repo']['name']
+        else:
+            repo = kwargs['data']['name']
+        self.LOG.debug(f"attempting {type(self).__name__} permissions for user {user} at path {info.path.key} for repo {repo} with {kwargs}")
+        if user and repo:
+            # check against the repo
+            repos = info.context.db.find( "repos", { "name": repo } )
+            if not len(repos) == 1:
+                self.LOG.warn(f"  user {user} requesting {info.path.key} for {repo}") # raise AssertError instead?
+                return False
+            assert repos[0].name == repo
+            if user in repos[0].leaders or repos[0].principal == user:
+                self.LOG.debug(f"  user {user} permitted to modify repo {repo}")
+                return True
+            # check against the czar, but only if not true
+            else:
+                facility = info.context.db.find_facility( { 'name': repos[0].facility })
+                assert facility.name == repos[0].facility
+                if user in facility.czars:
+                    self.LOG.debug(f"  user {user} permitted to modify repo {repo} as czar for facility {facility}")
+                    return True
         return False
 
 class IsPermittedToModifyRepo(BasePermission):
