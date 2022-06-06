@@ -66,8 +66,7 @@ class CustomContext(BaseContext):
             if self.origin_username in admins:
                 self.is_admin = True
                 self.LOG.warn(f"admin user {self.username} identified")
-                
-                if 'impersonate' in kwargs:
+                if 'impersonate' in kwargs and kwargs['impersonate']:
                     user = self.db.find_user( { 'username': kwargs['impersonate'] } )
                     self.LOG.warning(f"user {self.username} is impersonating {user.username}")
                     self.username = user.username
