@@ -2,7 +2,7 @@
 // At a top level, we have a Facility. A Facility contains Repos.
 
 // A Facility will have Capacities that define the amount of resource that is available to that Facility.
-// At the moment, we only have a count of the compute resource that is available to the Facility. This is defined as 
+// At the moment, we only have a count of the compute resource that is available to the Facility. This is defined as
 // a count of the number of compute servers from each Cluster.
 
 // We only currently associate storage with a Repo.
@@ -46,7 +46,7 @@ db.getSiblingDB("iris").facilities.insertOne({
 })
 
 db.getSiblingDB("iris").facilities.insertOne({
-  "name" : "CryoEM",
+  "name" : "Suncat",
   "resources": { // necessary??
     "compute": {
       "type": "compute"
@@ -65,53 +65,103 @@ db.getSiblingDB("iris").facilities.insertOne({
 // define a capacity to be the actual resources provided to each facility
 // keep a count of the number of units of each type of cluster - this shoudl make it simple for admins to add new resrouces to each facility
 
-db.getSiblingDB("iris").capacity.createIndex({"facility": 1, "resource": 1})
+db.getSiblingDB("iris").capacity.createIndex({"facility": 1, "start": 1})
 
 
 db.getSiblingDB("iris").capacity.insertOne({
   "facility": "LCLS",
-  "resource": "compute",
-  "active": false, // aid searching for most current
-  "from": "2020-01-01T00:00:00-07:00",
-  "to": "2021-05-01T00:00:00-07:00",
-  // keep track of understandable units here - let the math deal with conversions (which could change)
-  "clusters": {
-    "rome-b050": 23.5, // nodes
-    "milan-srcf": 10.0
-  },
-  "storage": {
-    "science-data": {
+  "start": "2020-01-01T00:00:00-07:00",
+  "end": "2021-05-01T00:00:00-07:00",
+  "clusters": [
+    {
+      "name": "rome-b050",
+      "slac-hours": 23.5, // Can this be computed from the cluster itself?
+    },
+    {
+      "name": "milan-srcf",
+      "slac-hours": 10.0
+    }
+  ],
+  "storage": [
+    {
+      "name": "science-data",
       "gigabytes": 1000000,
       "inodes": 100000
     },
-    "group": {
+    {
+      "name": "group",
       "gigabytes": 100000,
       "inodes": 10000
     }
-  }
+  ]
 })
 
 db.getSiblingDB("iris").capacity.insertOne({
   "facility": "LCLS",
-  "resource": "compute",
-  "active": true,
-  "from": "2021-05-01T00:00:00-07:00",
-  "to": null, // implies current
-  "clusters": {
-    "rome-b050": 23.5, // nodes
-    "milan-srcf": 10.0,
-    "ampt": 1.0
-  },
-  "storage": {
-    "science-data": {
+  "start": "2021-05-01T00:00:00-07:00",
+  "end": "2100-01-01T00:00:00Z", // Distant future
+  "clusters": [
+    {
+      "name": "rome-b050",
+      "slac-hours": 23.5, // Can this be computed from the cluster itself?
+    },
+    {
+      "name": "milan-srcf",
+      "slac-hours": 10.0
+    },
+    {
+      "name": "ampt",
+      "slac-hours": 1.0
+    }
+  ],
+  "storage": [
+    {
+      "name": "science-data",
       "gigabytes": 40000000,
       "inodes": 200000
     },
-    "group": {
+    {
+      "name": "group",
       "gigabytes": 600000,
       "inodes": 20000
     }
-  }
+  ]
+})
+
+
+db.getSiblingDB("iris").cluster.createIndex({"name": 1}, unique=true)
+
+db.getSiblingDB("iris").cluster.insertOne({
+  "name": "rome-b050",
+  "node_cpu_count": 128,
+  "node_cpu_count_divisor": 64, //?? sockets?
+  "node_mem_gb": 512,
+  "charge_factor": 0.8,
+  "node_cpu_smt": 1, // threads per core
+  "members": [ "rome0001", "rome0002","rome0003","rome0004","rome0005" ] // perhaps use regex?
+})
+
+
+db.getSiblingDB("iris").cluster.insertOne({
+  "name": "milan-srcf",
+  "node_cpu_count": 16,
+  "node_cpu_count_divisor": 16, //??
+  "node_mem_gb": 512,
+  "charge_factor": 0.8,
+  "node_cpu_smt": 1, // threads per core
+  "members": [ "milan0001", "milan0002","milan0003","milan0004","milan0005" ]
+})
+
+db.getSiblingDB("iris").cluster.insertOne({
+  "name": "ampt",
+  "node_cpu_count": 128,
+  "node_cpu_count_divisor": 16, //??
+  "node_mem_gb": 1024,
+  "charge_factor": 0.8,
+  "node_cpu_smt": 2, // threads per core
+  "node_gpu_count": 4,
+  "node_gpu_mem_gb": 40,
+  "members": [ "ampt001", "ampt002","ampt003","ampt004","ampt005" ]
 })
 
 
@@ -120,8 +170,6 @@ db.getSiblingDB("iris").capacity.insertOne({
 
 db.getSiblingDB("iris").repos.createIndex({"name": 1}, unique=true)
 db.getSiblingDB("iris").repos.createIndex({"leader": 1}) // For performance
-db.getSiblingDB("iris").repos.createIndex({"group": 1}, unique=true)
-// Repos have a PI and can belong to multiple facilities
 db.getSiblingDB("iris").repos.insertOne({
   "name": "cxi12345",
   "facility": "LCLS",
@@ -148,11 +196,6 @@ db.getSiblingDB("iris").repos.insertOne({
   "users": [ ],
   "access_groups": [ "CA104" ]
 })
-
-
-
-
-
 
 
 // Of course, user has other information like full name, email etc. Maybe some of that comes from inCommon?
@@ -239,16 +282,16 @@ db.getSiblingDB("iris").allocations.insertOne({
   "resource": "storage",
   "repo": "cxi12345",
   "active": true,
-  "from": "2021-05-01T00:00:00-07:00",
-  "to": null,
+  "start": "2021-05-01T00:00:00-07:00",
+  "end": "2100-01-01T00:00:00Z", // Distant future
   "volumes": {
     "science-data": [
       {
-        "name": "cxi12345"
+        "name": "cxi12345",
         "gigabytes": 5544, // gb
         "inodes": 4455
       }
-    ]
+    ],
     "group": [
       {
         "name": "cxi12345",
@@ -266,12 +309,12 @@ db.getSiblingDB("iris").allocations.insertOne({
   "resource": "storage",
   "repo": "CS14",
   "active": true,
-  "from": "2021-05-01T00:00:00-07:00",
-  "to": null,
+  "start": "2021-05-01T00:00:00-07:00",
+  "end": "2100-01-01T00:00:00Z", // Distant future
   "volumes": {
     "science-data": [
       {
-        "name": "20211107-CS14"
+        "name": "20211107-CS14",
         "gigabytes": 2000,
         "inodes": 20000
       }
@@ -284,12 +327,12 @@ db.getSiblingDB("iris").allocations.insertOne({
   "resource": "storage",
   "repo": "CA104",
   "active": true,
-  "from": "2021-05-01T00:00:00-07:00",
-  "to": null,
+  "start": "2021-05-01T00:00:00-07:00",
+  "end": "2100-01-01T00:00:00Z", // Distant future
   "volumes": {
     "science-data": [
       {
-        "name": "20221112_CA104"
+        "name": "20221112_CA104",
         "gigabytes": 2000,
         "inodes": 20000
       }
@@ -308,16 +351,16 @@ db.getSiblingDB("iris").allocations.insertOne({
   "resource": "compute",
   "repo": "cxi12345",
   "active": true,
-  "from": "2021-05-01T00:00:00-07:00",
-  "to": null,
+  "start": "2021-05-01T00:00:00-07:00",
+  "end": "2100-01-01T00:00:00Z", // Distant future
   "compute": {
     "qos": [
       {
-        "name": "cxi12345"
+        "name": "cxi12345",
         "slac-hours": 100000, // need normlised units?
       },
       {
-        "name": "cxi12345-priority"
+        "name": "cxi12345-priority",
         "slac-hours": 1000, // need normlised units?
       }
     ]
@@ -328,41 +371,6 @@ db.getSiblingDB("iris").allocations.insertOne({
 
 
 
-db.getSiblingDB("iris").cluster.createIndex({"name": 1}, unique=true)
-
-db.getSiblingDB("iris").cluster.insertOne({
-  "name": "rome-b050",
-  "node_cpu_count": 128,
-  "node_cpu_count_divisor": 64, //?? sockets?
-  "node_mem_gb": 512,
-  "charge_factor": 0.8,
-  "node_cpu_smt": 1, // threads per core
-  "members": [ "rome0001", "rome0002","rome0003","rome0004","rome0005" ] // perhaps use regex?
-})
-
-
-db.getSiblingDB("iris").cluster.insertOne({
-  "name": "milan-srcf",
-  "node_cpu_count": 16,
-  "node_cpu_count_divisor": 16, //??
-  "node_mem_gb": 512,
-  "charge_factor": 0.8,
-  "node_cpu_smt": 1, // threads per core
-  "members": [ "milan0001", "milan0002","milan0003","milan0004","milan0005" ]
-})
-
-db.getSiblingDB("iris").cluster.insertOne({
-  "name": "ampt",
-  "node_cpu_count": 128,
-  "node_cpu_count_divisor": 16, //??
-  "node_mem_gb": 1024,
-  "charge_factor": 0.8,
-  "node_cpu_smt": 2, // threads per core
-  "node_gpu_count": 4,
-  "node_gpu_mem_gb": 40,
-  "members": [ "ampt001", "ampt002","ampt003","ampt004","ampt005" ]
-})
-
 
 // usage collection to store information about post processed units of resources that have been consumed by the Repo.
 // keep the data in a raw format to reduce the amount of processing to get the data to teh client. would tehre be limits to teh size of the data as a result of keeping it like this?
@@ -371,12 +379,12 @@ db.getSiblingDB("iris").usage.insertOne({
   "resource": "storage",
   "repo": "cxi12345",
   "name": "cxi12345",
-  "class": "science-data"
-  "history": {
+  "class": "science-data",
+  "history": [
     ["20220101",56320,3456], // date, gigabutes, inodes
     ["20220102",56330,3452], // date, gigabutes, inodes
     ["20220103",57530,3552], // date, gigabutes, inodes
-  }
+  ]
 })
 
 
@@ -385,11 +393,11 @@ db.getSiblingDB("iris").usage.insertOne({
   "resource": "compute",
   "repo": "cxi12345",
   "name": "cxi12345",
-  "history": {
+  "history": [
     ["20220101",1202], // date, slac-hours
     ["20220102",1842], // date, slac-hours
     ["20220103",2349], // date, slac-hours
-  }
+  ]
 })
 
 
