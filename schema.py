@@ -1,4 +1,8 @@
-from auth import IsAuthenticated, IsRepoPrincipal, IsRepoLeader, IsRepoPrincipalOrLeader, IsAdmin
+from auth import IsAuthenticated, \
+        IsRepoPrincipal, \
+        IsRepoLeader, \
+        IsRepoPrincipalOrLeader, \
+        IsAdmin
 
 from typing import List, Optional
 import strawberry
@@ -14,12 +18,14 @@ from models import \
         UserAllocationInput, UserAllocation
 
 import logging
-
 LOG = logging.getLogger(__name__)
 
 
 @strawberry.type
 class Query:
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def whoami(self, info: Info) -> User:
+        return info.context.db.find_user( { "username": info.context.username } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def users(self, info: Info, filter: Optional[UserInput]={} ) -> List[User]:
@@ -80,7 +86,7 @@ class Query:
 
     @strawberry.field
     def qos(self, info: Info) -> List[Qos]:
-        return info.context.db.find_qoses( filter)
+        return info.context.db.find_qoses()
 
 
 

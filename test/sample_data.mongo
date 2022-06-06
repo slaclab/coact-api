@@ -1,158 +1,122 @@
+//
+// At a top level, we have a Facility. A Facility contains Repos.
 
-db.getSiblingDB("iris").resource_types.createIndex({"type": 1}, unique=true)
-db.getSiblingDB("iris").resource_types.insertOne({"type": "compute", "units": "node_hours"})
-db.getSiblingDB("iris").resource_types.insertOne({"type": "storage", "units": "GB"})
-db.getSiblingDB("iris").resource_types.insertOne({"type": "inodes", "units": "inodes"})
+// A Facility will have Capacities that define the amount of resource that is available to that Facility.
+// At the moment, we only have a count of the compute resource that is available to the Facility. This is defined as 
+// a count of the number of compute servers from each Cluster.
+
+// We only currently associate storage with a Repo.
+// We have different classes of storage (science-data, group, etc). and each Repo may have none or many of each
+// type. We want to keep tabs of the Quota ie the Repo's storage Capacity.
+// We keep the permissions model of the storage with an Access Class and associate them to Volumes. It is the Volumes
+// that are associated with the Repos.
+
+// is this backwards? on one hand we have the Facility with a total Capacity, and we provide percentage Allocations of compute to each Repo; but with storage we have a an absolute quota per volume in a Repo; but don't actually keep anything yet in the Facility regarding storage.
 
 db.getSiblingDB("iris").facilities.createIndex({"name": 1}, unique=true)
 // Facilities have compute classes and storage classes associated with them.
+
+
 db.getSiblingDB("iris").facilities.insertOne({
   "name" : "LCLS",
-  "resources": {
-    "CPU": {
-      "type": "compute",
-      "partitions": [ "psanaq", "psfehq", "psfehprioq", "psfehhiprioq" ]
+  "resources": { // necessary??
+    "compute": {
+      "type": "compute"
     },
-    "GPU": {
-      "type": "compute",
-      "partitions": [ "psanagpuq" ]
-    },
-    "data": {
-      "type": "storage",
-      "root": "/sdf/data/lcls"
-    },
-    "scratch": {
-      "type": "storage",
-      "root": "/scratch/lcls"
+    "storage": {
+      "type": "storage"
     }
-  }
+  },
+  "czars": [ "lcls-pcdsdata"], // set primary uid on all volumes
+  "access_class": [ "lcls-pcdsmgr" ] // set primary gid on all volumes
 })
+
 db.getSiblingDB("iris").facilities.insertOne({
   "name" : "CryoEM",
-  "resources": {
-    "CPU": {
-      "type": "compute",
-      "partitions": [ "cryoem" ]
+  "resources": { // necessary??
+    "compute": {
+      "type": "compute"
     },
-    "GPU": {
-      "type": "compute",
-      "partitions": [ "cryoem" ]
-    },
-    "data": {
-      "type": "storage",
-      "root": "/sdf/data/cryoem"
-    },
-    "scratch": {
-      "type": "storage",
-      "root": "/scratch/cryoem"
+    "storage": {
+      "type": "storage"
     }
-  }
+  },
+  "czars": [ "cryo-daq"], // set primary uid on all volumes
+  "access_class": [ "cryo-data" ] // set primary gid on all volumes
 })
+
 db.getSiblingDB("iris").facilities.insertOne({
-  "name" : "SUNCAT",
-  "resources": {
-    "CPU": {
-      "type": "compute",
-      "partitions": [ "suncat" ]
+  "name" : "CryoEM",
+  "resources": { // necessary??
+    "compute": {
+      "type": "compute"
     },
-    "GPU": {
-      "type": "compute",
-      "partitions": [ "suncat" ]
+    "storage": {
+      "type": "storage"
+    }
+  },
+  "czars": [ "johannes"], // set primary uid on all volumes
+  "access_class": [ ] // set primary gid on all volumes
+})
+
+
+
+
+// define a capacity to be the actual resources provided to each facility
+// keep a count of the number of units of each type of cluster - this shoudl make it simple for admins to add new resrouces to each facility
+
+db.getSiblingDB("iris").capacity.createIndex({"facility": 1, "resource": 1})
+
+
+db.getSiblingDB("iris").capacity.insertOne({
+  "facility": "LCLS",
+  "resource": "compute",
+  "active": false, // aid searching for most current
+  "from": "2020-01-01T00:00:00-07:00",
+  "to": "2021-05-01T00:00:00-07:00",
+  // keep track of understandable units here - let the math deal with conversions (which could change)
+  "clusters": {
+    "rome-b050": 23.5, // nodes
+    "milan-srcf": 10.0
+  },
+  "storage": {
+    "science-data": {
+      "gigabytes": 1000000,
+      "inodes": 100000
     },
-    "data": {
-      "type": "storage",
-      "root": "/sdf/data/suncat"
-    },
-    "scratch": {
-      "type": "storage",
-      "root": "/scratch/suncat"
+    "group": {
+      "gigabytes": 100000,
+      "inodes": 10000
     }
   }
 })
 
-db.getSiblingDB("iris").resource_capacity.createIndex({"facility": 1, "resource": 1, "year": -1}, unique=true)
+db.getSiblingDB("iris").capacity.insertOne({
+  "facility": "LCLS",
+  "resource": "compute",
+  "active": true,
+  "from": "2021-05-01T00:00:00-07:00",
+  "to": null, // implies current
+  "clusters": {
+    "rome-b050": 23.5, // nodes
+    "milan-srcf": 10.0,
+    "ampt": 1.0
+  },
+  "storage": {
+    "science-data": {
+      "gigabytes": 40000000,
+      "inodes": 200000
+    },
+    "group": {
+      "gigabytes": 600000,
+      "inodes": 20000
+    }
+  }
+})
 
-// Capacity for LCLS for 2022; resource is the name of the resource
-db.getSiblingDB("iris").resource_capacity.insertOne({
-  "facility": "LCLS",
-  "resource": "CPU",
-  "year": 2022,
-  "compute": 3000000
-})
-db.getSiblingDB("iris").resource_capacity.insertOne({
-  "facility": "LCLS",
-  "resource": "GPU",
-  "year": 2022,
-  "compute": 30000
-})
-db.getSiblingDB("iris").resource_capacity.insertOne({
-  "facility": "LCLS",
-  "resource": "data",
-  "year": 2022,
-  "storage": 3000,
-  "inodes": 1000000
-})
-db.getSiblingDB("iris").resource_capacity.insertOne({
-  "facility": "LCLS",
-  "resource": "scratch",
-  "year": 2022,
-  "storage": 3000,
-  "inodes": 1000000
-})
-// Capacity for Cryo for 2022
-db.getSiblingDB("iris").resource_capacity.insertOne({
-  "facility": "CryoEM",
-  "resource": "CPU",
-  "year": 2022,
-  "compute": 3000000
-})
-db.getSiblingDB("iris").resource_capacity.insertOne({
-  "facility": "CryoEM",
-  "resource": "GPU",
-  "year": 2022,
-  "compute": 30000
-})
-db.getSiblingDB("iris").resource_capacity.insertOne({
-  "facility": "CryoEM",
-  "resource": "data",
-  "year": 2022,
-  "storage": 3000,
-  "inodes": 1000000
-})
-db.getSiblingDB("iris").resource_capacity.insertOne({
-  "facility": "CryoEM",
-  "resource": "scratch",
-  "year": 2022,
-  "storage": 3000,
-  "inodes": 1000000
-})
-// Capacity for SUNCAT for 2022
-db.getSiblingDB("iris").resource_capacity.insertOne({
-  "facility": "SUNCAT",
-  "resource": "CPU",
-  "year": 2022,
-  "compute": 3000000
-})
-db.getSiblingDB("iris").resource_capacity.insertOne({
-  "facility": "SUNCAT",
-  "resource": "GPU",
-  "year": 2022,
-  "compute": 30000
-})
-db.getSiblingDB("iris").resource_capacity.insertOne({
-  "facility": "SUNCAT",
-  "resource": "data",
-  "year": 2022,
-  "storage": 3000,
-  "inodes": 1000000
-})
-db.getSiblingDB("iris").resource_capacity.insertOne({
-  "facility": "SUNCAT",
-  "resource": "scratch",
-  "year": 2022,
-  "storage": 3000,
-  "inodes": 1000000
-})
+
+
+
 
 db.getSiblingDB("iris").repos.createIndex({"name": 1}, unique=true)
 db.getSiblingDB("iris").repos.createIndex({"leader": 1}) // For performance
@@ -164,121 +128,32 @@ db.getSiblingDB("iris").repos.insertOne({
   "principal": "aquila",
   "leaders": [ "snelson" ],
   "users": [ "aquila", "mcbrowne", "snelson", "tmalla", "yanwen", "mshankar" ],
-  "group": "cxi12345",
-  "access_groups": [ "cxi12345-g1", "cxi12345-g2"]
+  "access_groups": []
 })
 
 db.getSiblingDB("iris").repos.insertOne({
-  "name": "20191205-CS14",
+  "name": "CS14",
   "facility": "CryoEM",
   "principal": "ytl",
   "leaders": [],
-  "users": [ "ytl" ],
-  "group": "20191205-CS14"
+  "users": [ "cszhang" ],
+  "access_groups": [ "CS14" ]
+
 })
 db.getSiblingDB("iris").repos.insertOne({
-  "name": "20191205-CA104",
+  "name": "CA104",
   "facility": "CryoEM",
   "principal": "mshankar",
   "leaders": [ "ytl" ],
   "users": [ ],
-  "group": "20191205-CA014"
-})
-
-db.getSiblingDB("iris").qos.createIndex({"name": 1, "repo": 1}, unique=true)
-db.getSiblingDB("iris").qos.createIndex({"qos": 1, "partition": 1}) // For performance
-
-// For every repo, we have at least one QOS.
-// The lookup is going from a SLURM job detail to the repo.
-// We use the account name (which should be the same as the repo); if that fails, we use (qos, partition) to determine the repo
-db.getSiblingDB("iris").qos.insertOne({
-  "name": "normal",
-  "repo": "cxi12345",
-  "qos": "LCLS-cxi12345-normal",
-  "partition": "psanaq"
-})
-
-db.getSiblingDB("iris").qos.insertOne({
-  "name": "hihi",
-  "repo": "cxi12345",
-  "qos": "LCLS-cxi12345-hihi",
-  "partition": "psfehhiprioq"
-})
-
-db.getSiblingDB("iris").qos.insertOne({
-  "name": "hprio",
-  "repo": "cxi12345",
-  "qos": "LCLS-cxi12345-hprio",
-  "partition": "psfehprioq"
-})
-
-db.getSiblingDB("iris").qos.insertOne({
-  "name": "feh",
-  "repo": "cxi12345",
-  "qos": "LCLS-cxi12345-feh",
-  "partition": "psfehq"
-})
-
-db.getSiblingDB("iris").qos.insertOne({
-  "name": "normal",
-  "repo": "20191205-CS14",
-  "qos": "LCLS-20191205-CS14-normal",
-  "partition": "CryoGPU"
+  "access_groups": [ "CA104" ]
 })
 
 
-db.getSiblingDB("iris").repos.insertOne({
-  "name": "CoffeeWorld",
-  "facility": "LCLS",
-  "principal": "coffee",
-  "leaders": [],
-  "users": [ "coffee" ],
-  "group": "CoffeeWorld"
-})
-// CoffeeWorld belongs to multiple partitions; so it has a QOS defined for each partition.
-db.getSiblingDB("iris").qos.insertOne({
-  "name": "LCLS-normal",
-  "repo": "CoffeeWorld",
-  "qos": "LCLS-CoffeeWorld-normal",
-  "partition": "psanagpuq"
-})
-db.getSiblingDB("iris").qos.insertOne({
-  "name": "Suncat-normal",
-  "repo": "CoffeeWorld",
-  "qos": "Suncat-CoffeeWorld-normal",
-  "partition": "suncat"
-})
 
 
-db.getSiblingDB("iris").allocations.createIndex({"repo": 1, "facility": 1, "resource": 1, "year": -1}, unique=true)
 
-db.getSiblingDB("iris").allocations.insertOne({
-  "facility": "LCLS",
-  "resource": "CPU",
-  "repo": "cxi12345",
-  "year": 2022,
-  "compute": 3000
-})
 
-db.getSiblingDB("iris").allocations.createIndex({"repo": 1, "facility": 1, "resource": 1, "year": -1}, unique=true)
-
-db.getSiblingDB("iris").allocations.insertOne({
-  "facility": "LCLS",
-  "resource": "data",
-  "repo": "cxi12345",
-  "year": 2022,
-  "storage": 5544,
-  "inodes": 4455
-})
-
-db.getSiblingDB("iris").allocations.insertOne({
-  "facility": "LCLS",
-  "resource": "scratch",
-  "repo": "cxi12345",
-  "year": 2022,
-  "storage": 6655,
-  "inodes": 5566
-})
 
 // Of course, user has other information like full name, email etc. Maybe some of that comes from inCommon?
 db.getSiblingDB("iris").users.createIndex({"username": 1}, unique=true)
@@ -294,37 +169,230 @@ db.getSiblingDB("iris").users.insertOne({ "username": "ytl", "uidnumber": 129, "
 db.getSiblingDB("iris").users.insertOne({ "username": "wilko", "uidnumber": 130 })
 
 
+// an access class defines an abstraiton of access to some data. as such, by itself it merely defines essentially just a gidnumber. these shoudl be associated with eitehr: (note that all three can apply to all related storage)
+// 1) facility (to have all data under that facility with say the same primiarly group id defined in the access group)
+// 2) to a repo; so that the repo has this gid
+// 3) to a volume so that only that volume has that gid
+
 db.getSiblingDB("iris").access_groups.createIndex({"name": 1}, unique=true)
 db.getSiblingDB("iris").access_groups.createIndex({"gid_number": 1}, unique=true)
-db.getSiblingDB("iris").access_groups.insertOne({"name": "cxi12345-g1", "gid_number": 123, "members": [ "mshankar", "wilko", "ytl" ]})
-db.getSiblingDB("iris").access_groups.insertOne({"name": "cxi12345-g2", "gid_number": 124, "members": [ "mcbrowne", "yanwen"]})
 
-db.getSiblingDB("iris").user_allocations.createIndex({"repo": 1, "username": 1, "facility": 1, "resource": 1, "year": -1}, unique=true)
+// facility service account; use the gid as default and uids from members as primary owners
+db.getSiblingDB("iris").access_class.insertOne({"name": "lcls-pcdsmgr", "gid_number": 808080, "members": [ "pcdmgr" ]})
+
+// no members means nothing special - use the principal, leaders and users for this group
+db.getSiblingDB("iris").access_class.insertOne({"name": "cxi12345", "gid_number": 12345, "members": null})
 
 
-// This is all backend stuff from now on..
+db.getSiblingDB("iris").access_class.insertOne({"name": "cryo-data", "gid_number": 6363, "members": [ "cryo-daq"]})
+db.getSiblingDB("iris").access_class.insertOne({"name": "CS14", "gid_number": 8393, "members": []})
+db.getSiblingDB("iris").access_class.insertOne({"name": "CA104", "gid_number": 8343, "members": []})
+
+
+
+// ?? do we need like a basePath Prefix definition in the Facility level?
+// a Volume merely defines some storage somewhere which is associated with teh access class to deteremine access permissions (gids)
+db.getSiblingDB("iris").volumes.insertOne({
+  "facility": "LCLS",
+  "name": "cxi12345",
+  "type": "science-data",
+  "access_class": [ "cxi12345" ],
+  "path": "/sdf/data/lcls/cxi/cxi/123456"
+})
+db.getSiblingDB("iris").volumes.insertOne({
+  "facility": "LCLS",
+  "name": "cxi12345",
+  "type": "group",
+  "access_class": [ "cxi12345" ],
+  "path": "/sdf/group/lcls/cxi/cxi/123456"
+})
+
+
+db.getSiblingDB("iris").volumes.insertOne({
+  "facility": "LCLS",
+  "name": "20211107-CS14",
+  "type": "science-data",
+  "access_class": [ "CS14" ],
+  "path": "/sdf/data/cryoem/202111/20211107-CS14_TEM4"
+})
+db.getSiblingDB("iris").volumes.insertOne({
+  "facility": "LCLS",
+  "name": "20221112_CA104",
+  "type": "science-data",
+  "access_class": [ "CA104" ],
+  "path": "/sdf/data/cryoem/202111/20221112_CA104_TEMBETA"
+})
+
+
+
+// a 'storage' allocation defines all the volumes for that repo
+// the key of each volume is the 'type' of volume defined above (bit suplurfuous perhaps)
+// as the quota of each volume can change, we keep the Volume as a separate document and use this allocation document
+// as the thing to keep upto date. we use 'active' as a crude of of determine the most upto date version.
+// ?? how to deal with stranded/orphaned volumes?
+
+db.getSiblingDB("iris").allocations.createIndex({"repo": 1, "facility": 1, "resource": 1, "year": -1}, unique=true)
+
+
+db.getSiblingDB("iris").allocations.insertOne({
+  "facility": "LCLS",
+  "resource": "storage",
+  "repo": "cxi12345",
+  "active": true,
+  "from": "2021-05-01T00:00:00-07:00",
+  "to": null,
+  "volumes": {
+    "science-data": [
+      {
+        "name": "cxi12345"
+        "gigabytes": 5544, // gb
+        "inodes": 4455
+      }
+    ]
+    "group": [
+      {
+        "name": "cxi12345",
+        "gigabytes": 1000,
+        "inodes": 100
+      }
+    ]
+  }
+})
+
+
+
+db.getSiblingDB("iris").allocations.insertOne({
+  "facility": "CryoEM",
+  "resource": "storage",
+  "repo": "CS14",
+  "active": true,
+  "from": "2021-05-01T00:00:00-07:00",
+  "to": null,
+  "volumes": {
+    "science-data": [
+      {
+        "name": "20211107-CS14"
+        "gigabytes": 2000,
+        "inodes": 20000
+      }
+    ]
+  }
+})
+
+db.getSiblingDB("iris").allocations.insertOne({
+  "facility": "CryoEM",
+  "resource": "storage",
+  "repo": "CA104",
+  "active": true,
+  "from": "2021-05-01T00:00:00-07:00",
+  "to": null,
+  "volumes": {
+    "science-data": [
+      {
+        "name": "20221112_CA104"
+        "gigabytes": 2000,
+        "inodes": 20000
+      }
+    ]
+  }
+})
+
+
+// compute allocations
+// in terms of a compute quota; we assume that slac-hours already considers things like cpu/gpu and has the
+// calculated weights required for varying cluster performances.
+// do we want to narrow down specific allocations per partition? the current schema only considers the qoses for the repo - is this sufficient to do everythign we want? how does this map to a partition?
+
+db.getSiblingDB("iris").allocations.insertOne({
+  "facility": "LCLS",
+  "resource": "compute",
+  "repo": "cxi12345",
+  "active": true,
+  "from": "2021-05-01T00:00:00-07:00",
+  "to": null,
+  "compute": {
+    "qos": [
+      {
+        "name": "cxi12345"
+        "slac-hours": 100000, // need normlised units?
+      },
+      {
+        "name": "cxi12345-priority"
+        "slac-hours": 1000, // need normlised units?
+      }
+    ]
+  }
+})
+
+
+
+
+
 db.getSiblingDB("iris").cluster.createIndex({"name": 1}, unique=true)
+
 db.getSiblingDB("iris").cluster.insertOne({
-  "name": "psana1501",
-  "node_cpu_count": 16,
-  "node_cpu_count_divisor": 16,
-  "charge_factor": 0.8
-})
-db.getSiblingDB("iris").cluster.insertOne({
-  "name": "psana1502",
-  "node_cpu_count": 16,
-  "node_cpu_count_divisor": 16,
-  "charge_factor": 0.75
+  "name": "rome-b050",
+  "node_cpu_count": 128,
+  "node_cpu_count_divisor": 64, //?? sockets?
+  "node_mem_gb": 512,
+  "charge_factor": 0.8,
+  "node_cpu_smt": 1, // threads per core
+  "members": [ "rome0001", "rome0002","rome0003","rome0004","rome0005" ] // perhaps use regex?
 })
 
-db.getSiblingDB("iris").partitions.createIndex({"name": 1}, unique=true)
-db.getSiblingDB("iris").partitions.insertOne({ "name": "psanaq", "charge_factor": 1.0 })
-db.getSiblingDB("iris").partitions.insertOne({ "name": "psanagpuq", "charge_factor": 1.0 })
-db.getSiblingDB("iris").partitions.insertOne({ "name": "psfehq", "charge_factor": 1.0 })
-db.getSiblingDB("iris").partitions.insertOne({ "name": "psfehprioq", "charge_factor": 1.0 })
-db.getSiblingDB("iris").partitions.insertOne({ "name": "psfehhiprioq", "charge_factor": 1.0 })
-db.getSiblingDB("iris").partitions.insertOne({ "name": "cryoem", "charge_factor": 1.0 })
-db.getSiblingDB("iris").partitions.insertOne({ "name": "suncat", "charge_factor": 1.0 })
+
+db.getSiblingDB("iris").cluster.insertOne({
+  "name": "milan-srcf",
+  "node_cpu_count": 16,
+  "node_cpu_count_divisor": 16, //??
+  "node_mem_gb": 512,
+  "charge_factor": 0.8,
+  "node_cpu_smt": 1, // threads per core
+  "members": [ "milan0001", "milan0002","milan0003","milan0004","milan0005" ]
+})
+
+db.getSiblingDB("iris").cluster.insertOne({
+  "name": "ampt",
+  "node_cpu_count": 128,
+  "node_cpu_count_divisor": 16, //??
+  "node_mem_gb": 1024,
+  "charge_factor": 0.8,
+  "node_cpu_smt": 2, // threads per core
+  "node_gpu_count": 4,
+  "node_gpu_mem_gb": 40,
+  "members": [ "ampt001", "ampt002","ampt003","ampt004","ampt005" ]
+})
+
+
+// usage collection to store information about post processed units of resources that have been consumed by the Repo.
+// keep the data in a raw format to reduce the amount of processing to get the data to teh client. would tehre be limits to teh size of the data as a result of keeping it like this?
+db.getSiblingDB("iris").usage.insertOne({
+  "facility": "LCLS",
+  "resource": "storage",
+  "repo": "cxi12345",
+  "name": "cxi12345",
+  "class": "science-data"
+  "history": {
+    ["20220101",56320,3456], // date, gigabutes, inodes
+    ["20220102",56330,3452], // date, gigabutes, inodes
+    ["20220103",57530,3552], // date, gigabutes, inodes
+  }
+})
+
+
+db.getSiblingDB("iris").usage.insertOne({
+  "facility": "LCLS",
+  "resource": "compute",
+  "repo": "cxi12345",
+  "name": "cxi12345",
+  "history": {
+    ["20220101",1202], // date, slac-hours
+    ["20220102",1842], // date, slac-hours
+    ["20220103",2349], // date, slac-hours
+  }
+})
+
+
 
 
 // Jobs have lots of information from SLURM in addition to the final mapping into repo, year and resource name.
