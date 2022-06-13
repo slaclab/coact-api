@@ -30,6 +30,7 @@ class JSONEncoder(json.JSONEncoder):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Load sample data from SLURM into the jobs collection. This is mainly for testing")
     parser.add_argument("-v", "--verbose", action='store_true', help="Turn on verbose logging")
+    parser.add_argument("-u", "--url", help="The URL to the CoAct GraphQL API, for example, http://localhost:17669/irisapi/graphql", required=True)
     parser.add_argument("datafile", help="Load jobs data from this file.")
     args = parser.parse_args()
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
@@ -38,16 +39,10 @@ if __name__ == '__main__':
     with open(args.datafile, "r") as f:
         jobs = json.load(f)
 
-    # Data for mapping jobs to repos/facilities
-    # Given a partition, determine the unique facility
-    # Given a facility, find all repos
-    # Given a user, find all repos
-    # Given a facility and a qos, find all repos
+    # We rely on the accountName mapping directly to the reponame.
+    # What do we do with jobs that do not maintain this mapping?
+    # Perhaps have a default repo and send them there?
 
-    facilities = requests.post("http://localhost:17669/irisapi/graphql", json={"query": "query{facilities(filter: {}){ name resources{ name partitionObjs { name } } }}"}).json()["data"]["facilities"]
-    partition2facility = { partition["name"] : {"facility": facility["name"], "resource": rsrc["name"]} for facility in facilities for rsrc in facility["resources"] for partition in rsrc.get("partitionObjs", []) }
-    print(partition2facility)
-    # partition2facility = { partition : {"facility": facility["name"], "resource": rname} for facility in facilities for rname, rsrc in facility["resources"].items() for partition in rsrc.get("partitions", []) }
     reporesp = requests.post("http://localhost:17669/irisapi/graphql", json={"query": "query{repos(filter:{}){ name facility principal leaders users }}"})
     reporesp.raise_for_status()
     repos = reporesp.json()["data"]["repos"]
@@ -69,13 +64,6 @@ if __name__ == '__main__':
 
     print(user2reposlst)
 
-    qoses = requests.post("http://localhost:17669/irisapi/graphql", json={"query":"query{qos{ name repo qos partition}}"}).json()["data"]["qos"]
-    qos2repolst = { (x["partition"], x["name"]) : x["repo"] for x in qoses }
-
-    user2repos = { k: set(v) for k,v in user2reposlst.items() }
-    facility2repos = { k: set(v) for k,v in facility2reposlst.items() }
-    qos2repos = { k: set(v) for k,v in qos2repolst.items()}
-
     for job in jobs:
         # Fix up everything with a "_ts"
         for k, v in job.items():
@@ -84,50 +72,13 @@ if __name__ == '__main__':
         job["year"] = job["startTs"].year
 
         # Map job to repo.
-        # First, try to get as much information as we can from the partition name.
-        facility = partition2facility.get(job["partitionName"], None)
-        if facility:
-            job["facility"] = facility["facility"]
-            job["resource"] = facility["resource"]
-
         acc_name = job.get("accountName", None)
         if acc_name and acc_name in repo_names:
             job["repo"] = acc_name
             logger.info(f"Mapping {job['jobId']} to {job['repo']} based on account name")
             continue
 
-        facrepos = facility2repos.get(facility["facility"], set())
-        logger.debug("Repos from facliity %s for job %s are %s", facility["facility"], job["jobId"], facrepos)
-        usrrepos = user2repos.get(job["username"], set())
-        logger.debug("Repos from user %s for job %s are %s", job["username"], job["jobId"], usrrepos)
-
-        # See if we have any common repos from the facility side and from the user side.
-        common_repos = facrepos & usrrepos
-        if not common_repos:
-            raise Exception(f"We should have at least a few common repos for {job['jobId']} From facility {facrepos} and from user {usrrepos}")
-
-        if len(common_repos) == 1:
-            logger.debug("We have only one common repo from the facility and from the user side")
-            job["repo"] = list(common_repos)[0]
-            logger.info(f"Mapping {job['jobId']} to {job['repo']} based on facility and user repos")
-            continue
-
-        # We have more than one repo from the facility and the user side.
-        # Use the qos partition index to map now.
-        qosrepos = qos2repos.get((job["partitionName"], job["qos"]), set())
-        common_repos = facrepos & usrrepos & qosrepos
-        if not common_repos:
-            raise Exception(f"We should have at least a few common repos for {job['jobId']} From facility {facrepos} and from user {usrrepos} From QOS {qosrepos}")
-
-        if len(common_repos) == 1:
-            job["repo"] = list(common_repos)[0]
-            logger.info(f"Mapping {job['jobId']} to {job['repo']} based on facility, user and qos repos")
-            continue
-
-        logger.warn(f"Breaking the tie arbitrarily for {job['jobId']} as we have too many repos")
-        job["repo"] = list(common_repos)[0]
-
-        raise Exception(f"Cannot map job to repo %s {job['jobId']}")
+        raise Exception(f"Cannot map job to repo %s {job['jobId']}, account {job['accountName']}")
 
     def encodeJobVal(v):
         if isinstance(v, datetime):
