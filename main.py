@@ -58,7 +58,7 @@ class CustomContext(BaseContext):
 
         if not self.origin_username:
             user = self.request.headers.get(USER_FIELD_IN_HEADER, None)
-            self.origin_username = self.db.find_user( { 'username': user } )
+            self.origin_username = self.db.find_user( { 'username': user } ).username
 
         if self.origin_username:
             self.username = self.origin_username
@@ -71,7 +71,7 @@ class CustomContext(BaseContext):
                     self.LOG.warning(f"user {self.username} is impersonating {user.username}")
                     self.username = user.username
 
-        if 'impersonate' in kwargs and self.is_admin == False:
+        if 'impersonate' in kwargs and kwargs['impersonate'] and self.is_admin == False:
             raise Exception(f"unauthorised attempt by user {self.username} to impersonate {kwargs['impersonate']}")
 
         return self.username

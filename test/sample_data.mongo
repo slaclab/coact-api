@@ -75,11 +75,11 @@ db.getSiblingDB("iris").capacity.insertOne({
   "clusters": [
     {
       "name": "rome-b050",
-      "slac-hours": 23.5, // Can this be computed from the cluster itself?
+      "slachours": 23.5, // Can this be computed from the cluster itself?
     },
     {
       "name": "milan-srcf",
-      "slac-hours": 10.0
+      "slachours": 10.0
     }
   ],
   "storage": [
@@ -103,15 +103,15 @@ db.getSiblingDB("iris").capacity.insertOne({
   "clusters": [
     {
       "name": "rome-b050",
-      "slac-hours": 23.5, // Can this be computed from the cluster itself?
+      "slachours": 23.5, // Can this be computed from the cluster itself?
     },
     {
       "name": "milan-srcf",
-      "slac-hours": 10.0
+      "slachours": 10.0
     },
     {
       "name": "ampt",
-      "slac-hours": 1.0
+      "slachours": 1.0
     }
   ],
   "storage": [
@@ -342,7 +342,7 @@ db.getSiblingDB("iris").allocations.insertOne({
 
 
 // compute allocations
-// in terms of a compute quota; we assume that slac-hours already considers things like cpu/gpu and has the
+// in terms of a compute quota; we assume that slachours already considers things like cpu/gpu and has the
 // calculated weights required for varying cluster performances.
 // do we want to narrow down specific allocations per partition? the current schema only considers the qoses for the repo - is this sufficient to do everythign we want? how does this map to a partition?
 
@@ -353,18 +353,16 @@ db.getSiblingDB("iris").allocations.insertOne({
   "active": true,
   "start": "2021-05-01T00:00:00-07:00",
   "end": "2100-01-01T00:00:00Z", // Distant future
-  "compute": {
-    "qos": [
-      {
-        "name": "cxi12345",
-        "slac-hours": 100000, // need normlised units?
-      },
-      {
-        "name": "cxi12345-priority",
-        "slac-hours": 1000, // need normlised units?
-      }
-    ]
-  }
+  "qoses": [
+    {
+      "name": "cxi12345",
+      "slachours": 100000, // need normlised units?
+    },
+    {
+      "name": "cxi12345-priority",
+      "slachours": 1000, // need normlised units?
+    }
+  ]
 })
 
 
@@ -394,9 +392,9 @@ db.getSiblingDB("iris").usage.insertOne({
   "repo": "cxi12345",
   "name": "cxi12345",
   "history": [
-    ["20220101",1202], // date, slac-hours
-    ["20220102",1842], // date, slac-hours
-    ["20220103",2349], // date, slac-hours
+    ["20220101",1202], // date, slachours
+    ["20220102",1842], // date, slachours
+    ["20220103",2349], // date, slachours
   ]
 })
 

@@ -31,6 +31,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Load sample data from SLURM into the jobs collection. This is mainly for testing")
     parser.add_argument("-v", "--verbose", action='store_true', help="Turn on verbose logging")
     parser.add_argument("-u", "--url", help="The URL to the CoAct GraphQL API, for example, http://localhost:17669/irisapi/graphql", required=True)
+    parser.add_argument("-r", "--resource_name", help="The name of the resource, typically something like compute", required=True)
     parser.add_argument("datafile", help="Load jobs data from this file.")
     args = parser.parse_args()
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
@@ -42,27 +43,18 @@ if __name__ == '__main__':
     # We rely on the accountName mapping directly to the reponame.
     # What do we do with jobs that do not maintain this mapping?
     # Perhaps have a default repo and send them there?
+    # We map the job to the resource based on the qos. If we only have one resource, we simply map to that.
 
-    reporesp = requests.post("http://localhost:17669/irisapi/graphql", json={"query": "query{repos(filter:{}){ name facility principal leaders users }}"})
+
+    reporesp = requests.post("http://localhost:17669/irisapi/graphql", json={"query": 'query{repos(filter:{}){ name facility principal leaders users allocations(resource: "' + args.resource_name + '"){resource qoses{name slachours}}}}'})
     reporesp.raise_for_status()
-    repos = reporesp.json()["data"]["repos"]
-    repo_names = [ x["name"] for x in repos ]
-    user2reposlst = {}
-    facility2reposlst = {}
-    for repo in repos:
-        def addUsrRepo(usr, repo):
-            if not usr in user2reposlst:
-                user2reposlst[usr] = list()
-            user2reposlst[usr].append(repo["name"])
-        for user in repo.get("users", {}):
-            addUsrRepo(user, repo)
-        def addFacRepo(facility, repo):
-            if not facility in facility2reposlst:
-                facility2reposlst[facility] = []
-            facility2reposlst[facility].append(repo)
-        addFacRepo(repo["facility"], repo["name"])
-
-    print(user2reposlst)
+    repos = { x["name"] : x for x in reporesp.json()["data"]["repos"] }
+    for repo in repos.values():
+        qos2resource = {}
+        for alloc in repo.get("allocations", []):
+            for qos in alloc.get("qoses", []):
+                qos2resource[qos["name"]] = alloc["resource"]
+        repo["qos2resource"] = qos2resource
 
     for job in jobs:
         # Fix up everything with a "_ts"
@@ -73,12 +65,16 @@ if __name__ == '__main__':
 
         # Map job to repo.
         acc_name = job.get("accountName", None)
-        if acc_name and acc_name in repo_names:
+        if acc_name and acc_name in repos.keys():
             job["repo"] = acc_name
+            job["facility"] = repos[acc_name]["facility"]
+            job["resource"] = repos[acc_name]["qos2resource"][job["qos"]]
             logger.info(f"Mapping {job['jobId']} to {job['repo']} based on account name")
-            continue
+        else:
+            raise Exception(f"Cannot map job to repo %s {job['jobId']}, account {job['accountName']}")
 
-        raise Exception(f"Cannot map job to repo %s {job['jobId']}, account {job['accountName']}")
+        # Use qos to map to proper resource
+
 
     def encodeJobVal(v):
         if isinstance(v, datetime):
@@ -92,5 +88,5 @@ if __name__ == '__main__':
         return ret
 
     jobstr = "mutation{importJobs( jobs: [" +  ",\n".join([encodeJob(x) for x in jobs ]) + "])}"
-    print(jobstr)
+    # print(jobstr)
     requests.post("http://localhost:17669/irisapi/graphql", json={"query": jobstr}).json()

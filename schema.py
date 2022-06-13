@@ -66,7 +66,7 @@ class Query:
     def myRepos(self, info: Info, impersonate: Optional[str]=None) -> List[Repo]:
         username = info.context.username
         assert username != None
-        return info.context.db.find_repos( { '$or': [ 
+        return info.context.db.find_repos( { '$or': [
             { "users": username },
             { "leaders": username },
             { "principal": username }

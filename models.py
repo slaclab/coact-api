@@ -115,19 +115,30 @@ class Facility( FacilityInput ):
         return [ Resource(**{"name": k, "facility_name": self.name, "type": v["type"], "partitions": v.get("partitions", []), "root": v.get("root", None)}) for k,v in fac.get("resources", {}).items() ]
 
 @strawberry.input
+class QosInput:
+    name: Optional[str] = UNSET
+    slachours: Optional[float] = UNSET
+
+@strawberry.type
+class Qos(QosInput):
+    pass
+
+@strawberry.input
 class AllocationInput:
     _id: Optional[MongoId] = UNSET
     facility: Optional[str] = UNSET
     resource: Optional[str] = UNSET
     repo: Optional[str] = UNSET
-    year: Optional[int] = UNSET
-    compute: Optional[float] = UNSET
-    storage: Optional[float] = UNSET
-    inodes: Optional[float] = UNSET
+    start: Optional[datetime] = UNSET
+    end: Optional[datetime] = UNSET
 
 @strawberry.type
 class Allocation(AllocationInput):
-    pass
+    qoses: Optional[List[Qos]] = UNSET
+    @strawberry.field
+    def qoses(self, info) ->List[Qos]:
+        me = info.context.db.collection("allocations").find_one({"_id": self._id})
+        return [ Qos(**x) for x in me.get("qoses", []) ]
 
 @strawberry.input
 class UserAllocationInput(AllocationInput):
@@ -243,11 +254,9 @@ class Repo( RepoInput ):
         return info.context.db.find_access_groups({"name": {"$in": self.access_groups}})
 
     @strawberry.field
-    def allocations(self, info, resource: str, year: int) ->List[Allocation]:
+    def allocations(self, info, resource: str) ->List[Allocation]:
         rc_filter = { "facility": self.facility, "resource": resource, "repo": self.name}
-        if year:
-            rc_filter["year"] = year
-        return [ Allocation(**{k:x.get(k, 0) for k in ["repo", "year", "compute", "storage", "inodes", "resource", "facility"] }) for x in  info.context.db.collection("allocations").find(rc_filter) ]
+        return [ Allocation(**{k:x.get(k, 0) for k in ["_id", "facility", "resource", "repo", "start", "end" ] }) for x in  info.context.db.collection("allocations").find(rc_filter).sort([("end", -1)]).limit(1) ]
 
     @strawberry.field
     def userAllocations(self, info, resource: str, year: int) ->List[UserAllocation]:
@@ -414,18 +423,6 @@ class Repo( RepoInput ):
         usage = list(results)
         LOG.debug(usage)
         return [ PerFolderUsage(**x) for x in  usage ]
-
-@strawberry.type
-class Qos:
-
-    _id: MongoId
-    name: str
-    repo: str
-    qos: str
-    partition: str
-
-
-
 
 @strawberry.input
 class Job:
