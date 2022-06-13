@@ -14,6 +14,8 @@ import csv
 from datetime import datetime
 import pytz
 import dateutil.parser as dateparser
+from utils.nl import NodeList
+from statistics import mean
 
 from pymongo import MongoClient
 
@@ -46,15 +48,44 @@ if __name__ == '__main__':
     # We map the job to the resource based on the qos. If we only have one resource, we simply map to that.
 
 
-    reporesp = requests.post("http://localhost:17669/irisapi/graphql", json={"query": 'query{repos(filter:{}){ name facility principal leaders users allocations(resource: "' + args.resource_name + '"){resource qoses{name slachours}}}}'})
+    reporesp = requests.post("http://localhost:17669/irisapi/graphql", json={"query": '''query{
+        repos(filter:{}){
+            name
+            facility
+            principal
+            leaders
+            users
+            allocations(resource: "%s"){
+                resource
+                qoses{
+                    name
+                    slachours
+                    chargefactor
+                }
+            }
+        }
+        clusters(filter:{}){
+            name
+            chargefactor
+            members
+        }
+    }''' % args.resource_name})
     reporesp.raise_for_status()
     repos = { x["name"] : x for x in reporesp.json()["data"]["repos"] }
     for repo in repos.values():
         qos2resource = {}
+        qos2cf = {}
         for alloc in repo.get("allocations", []):
             for qos in alloc.get("qoses", []):
                 qos2resource[qos["name"]] = alloc["resource"]
+                qos2cf[qos["name"]] = qos["chargefactor"]
         repo["qos2resource"] = qos2resource
+        repo["qos2cf"] = qos2cf
+
+    nodename2cf = {}
+    for cluster in reporesp.json()["data"]["clusters"]:
+        for member in cluster.get("members", []):
+            nodename2cf[member] = cluster["chargefactor"]
 
     for job in jobs:
         # Fix up everything with a "_ts"
@@ -69,6 +100,13 @@ if __name__ == '__main__':
             job["repo"] = acc_name
             job["facility"] = repos[acc_name]["facility"]
             job["resource"] = repos[acc_name]["qos2resource"][job["qos"]]
+            job["priocf"] = repos[acc_name]["qos2cf"][job["qos"]]
+            job["hwcf"] = mean(map(lambda x : nodename2cf[x], NodeList(job["nodelist"]).sorted()))
+            job["finalcf"] = job["priocf"] * job["hwcf"]
+            job["rawSecs"] = job["elapsedSecs"] * job["allocNodes"] # elapsed seconds * number of nodes
+            job["machineSecs"] = job["rawSecs"] * job["hwcf"] # raw seconds after applying the hardware charge factor
+            job["nodeSecs"] = job["machineSecs"] * job["priocf"] # machineSecs after applying the priority charge factor
+            # TODO we also need to apply a factor if the quota has been exceeded.
             logger.info(f"Mapping {job['jobId']} to {job['repo']} based on account name")
         else:
             raise Exception(f"Cannot map job to repo %s {job['jobId']}, account {job['accountName']}")

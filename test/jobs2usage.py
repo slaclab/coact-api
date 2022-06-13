@@ -8,9 +8,12 @@ import pytz
 import re
 import traceback
 import json
+import argparse
+import logging
 
 """
-Determine what to enter into the jobs collection based on SLURM sacct stats.
+Use SLURM sacct stats to generate a JSON file with job information.
+This is then consumed by load_sample_job_data to load the jobs into the database.
 Combines various methods from the original iris code
 """
 
@@ -28,13 +31,7 @@ class JSONEncoder(json.JSONEncoder):
             return o.isoformat()
         return json.JSONEncoder.default(self, o)
 
-
-
-def get_log(daystr):
-   for line in stream(daystr):
-	      sys.stdout.write(line)
-
-def stream(daystr):
+def fetch_data_from_SLURM(daystr):
     day = datetime.datetime(int(daystr[0:4]), int(daystr[4:6]), int(daystr[6:8]))
     start = day.strftime("%Y-%m-%d")
     commandstr = f"""SLURM_TIME_FORMAT=%s sacct --allusers --duplicates --allclusters --allocations --starttime="{start}T00:00:00" --endtime="{start}T23:59:59" --truncate --parsable2 --format=JobID,User,UID,Account,Partition,QOS,Submit,Start,End,Elapsed,NCPUS,AllocNodes,AllocTRES,CPUTimeRAW,NodeList,Reservation,ReservationId,State"""
@@ -96,38 +93,34 @@ def parse_datetime(value, make_date=False):
 def _to_job(index, parts):
     parts_d = { field: parts[idx] for field, idx in index.items() }
     nodelist = parts_d["NodeList"]
-    host_name = "Disambiguated hostname " + nodelist
-    if host_name == None:
-        raise Exception("Unable to determine hostname for nodelist: %s" % nodelist)
     return {
-        "job_id": parts_d["JobID"],
-        "user_name": parts_d["User"],
+        "jobId": parts_d["JobID"],
+        "username": parts_d["User"],
         "uid": conv(parts_d["UID"], int, 0),
-        "account_name": parts_d["Account"],
-        "partition_name": parts_d["Partition"],
+        "accountName": parts_d["Account"],
+        "partitionName": parts_d["Partition"],
         "qos": parts_d["QOS"],
-        "start_ts": parts_d["Start"],
-        "end_ts": parts_d["End"],
+        "startTs": parts_d["Start"],
+        "endTs": parts_d["End"],
         "ncpus": conv(parts_d["NCPUS"], int, 0),
-        "alloc_nodes": kilos_to_int(parts_d["AllocNodes"]),
-        "alloc_tres": parts_d["AllocTRES"],
+        "allocNodes": kilos_to_int(parts_d["AllocNodes"]),
+        "allocTres": parts_d["AllocTRES"],
         "nodelist": nodelist,
         "reservation": parts_d["Reservation"],
-        "reservation_id": parts_d["ReservationId"],
+        "reservationId": parts_d["ReservationId"],
         "submitter": None,
-        "submit_ts": parts_d["Submit"],
-        "host_name": host_name,
-        "official_import": True
+        "submitTs": parts_d["Submit"],
+        "officialImport": True
     }
 
 
-def process_cache(daystr):
+def process_cache(daystr, compusage):
     first = True
     index = {}
     buffer = []
     job_count = 0
     total_secs = 0
-    for line in stream(daystr):
+    for line in fetch_data_from_SLURM(daystr):
         if line:
             parts = line.split("|")
             print(parts)
@@ -145,77 +138,28 @@ def process_cache(daystr):
                 buffer.append(_to_job(index, parts))
                 if len(buffer) >= 1000:
                     print("+++ Upserting %d jobs..." % len(buffer))
-                    ComputeUsage.save_jobs(buffer, None)
+                    compusage.save_jobs(buffer)
                     buffer = []
     if len(buffer) > 0:
         print("+++ Final upsert of %d jobs..." % len(buffer))
-        ComputeUsage.save_jobs(buffer, None)
+        compusage.save_jobs(buffer)
 
     return job_count, total_secs
 
-def get_cpu_multiplier(compute, job_cpus, job_nodes):
-    return 1
-    # compute is self; look up cpus on node from db.
-    # if job_nodes <= 1:
-    #     # if there's only 1 node, use the number of cpu-s used / threads divided by the total cpu count for a node
-    #     return (job_cpus / self.node_cpu_count_divisor) / self.node_cpu_count
-    # else:
-    #     # otherwise, there's no cpu multiplier
-    #     return 1
-
-def get_charge_factor(compute):
-    return 1.0
-
-def get_priority_factor(compute_name, qos, node_count, start_ts, project_premium_threshold_reached):
-    """Return the queue charge factor as described in the "modifications to base charge" section of
-    http://www.nersc.gov/users/accounts/user-accounts/how-usage-is-charged/#toc-anchor-1"""
-    return 1.0
-    # pf = _get_priority_factor(compute_name, qos, start_ts)
-    # if not pf:
-    #     # the default, just so job ingestion doesn't stop.
-    #     _unknown_qos(compute_name, qos)
-    #     return 1.0
-    #
-    # # Apply node-count discounts
-    # if NODE_DISCOUNTS.get(compute_name):
-    #     discount = NODE_DISCOUNTS[compute_name].get(pf.name)
-    #     if discount and node_count >= discount.min_node_count:
-    #         return next(e[1] for e in discount.charge_factor[::-1] if e[0] is None or start_ts.date() >= e[0])
-    #
-    # # Apply per-project priority factor for premium (or just return the regular charge factor)
-    # return pf.high_charge_factor if project_premium_threshold_reached else pf.charge_factor
-
-
-
-def get_computed_values(start_ts, end_ts, submit_ts, alloc_nodes, ncpus, qos, compute, project_premium_threshold_reached):
+def get_computed_values(startTs, endTs, submitTs, alloc_nodes, ncpus, qos):
     # calculate elapsed time as UTC so we don't get bitten by DST
-    elapsed_secs = (end_ts.astimezone(pytz.utc) - start_ts.astimezone(pytz.utc)).total_seconds()
-    wait_time = (start_ts.astimezone(pytz.utc) - submit_ts.astimezone(pytz.utc)).total_seconds() if submit_ts else None
-    if alloc_nodes is None:
-        if qos == "RESERVE":
-            # for RESERVE jobs that don't have alloc_nodes or ncpus
-            raw_secs = elapsed_secs
-            machine_secs = raw_secs * compute.charge_factor
-            queue_charge_factor = 1
-        else:
-            raise Exception("Only qos=RESERVE can have alloc_nodes==None")
-    else:
-        raw_secs = elapsed_secs * alloc_nodes * get_cpu_multiplier(compute, ncpus, alloc_nodes)
-        machine_secs = raw_secs * get_charge_factor(compute)
-        queue_charge_factor = get_priority_factor(
-            compute,
-            qos,
-            alloc_nodes,
-            start_ts,
-            project_premium_threshold_reached
-        )
-    nersc_secs = machine_secs * queue_charge_factor
-    return elapsed_secs, wait_time, queue_charge_factor, raw_secs, nersc_secs, machine_secs
+    elapsed_secs = (endTs.astimezone(pytz.utc) - startTs.astimezone(pytz.utc)).total_seconds()
+    wait_time = (startTs.astimezone(pytz.utc) - submitTs.astimezone(pytz.utc)).total_seconds() if submitTs else None
+    return elapsed_secs, wait_time
+
+
 
 
 class ComputeUsage():
-    @classmethod
-    def save_jobs(cls, jobs, project_thresholds):
+    def __init__(self):
+        self.todb = {}
+
+    def save_jobs(self, jobs):
         try:
             # gather the values
             values = []
@@ -226,68 +170,60 @@ class ComputeUsage():
             realtime_job_ids = []
             for inp in jobs:
                 # skip dupes (they cause a sql exception)
-                key = "%s,%s" % (inp["job_id"], inp["start_ts"])
+                key = "%s,%s" % (inp["jobId"], inp["startTs"])
                 if key in seen:
                     continue
                 seen.add(key)
 
-                inp["compute_id"] = "compute_id_for_hostname_" + inp["host_name"]
-                compute = inp["compute_id"]
-
                 # convert to datetime
-                inp["start_ts"] = parse_datetime(inp["start_ts"])
-                inp["end_ts"] = parse_datetime(inp["end_ts"])
-                inp["submit_ts"] = parse_datetime(inp.get("submit_ts"))
+                inp["startTs"] = parse_datetime(inp["startTs"])
+                inp["endTs"] = parse_datetime(inp["endTs"])
+                inp["submitTs"] = parse_datetime(inp.get("submitTs"))
 
                 # assume it's a realtime update
-                if "official_import" not in inp:
-                    inp["official_import"] = False
+                if "officialImport" not in inp:
+                    inp["officialImport"] = False
 
-                if inp["official_import"]:
+                if inp["officialImport"]:
                     # if even one job is part of an official import, we will index the whole day
                     index_jobs_offline = True
                 else:
                     # otherwise, keep track of what to index for the given days
-                    realtime_job_ids.append(inp["job_id"])
+                    realtime_job_ids.append(inp["jobId"])
 
-                days.add(datetime.date(inp["start_ts"].year, inp["start_ts"].month, inp["start_ts"].day))
+                days.add(datetime.date(inp["startTs"].year, inp["startTs"].month, inp["startTs"].day))
 
                 # compute some values
-                inp["elapsed_secs"], inp["wait_time"], inp["charge_factor"], inp["raw_secs"], inp["nersc_secs"], inp["machine_secs"] = \
+                inp["elapsedSecs"], inp["waitSecs"] = \
                     get_computed_values(
-                        inp["start_ts"],
-                        inp["end_ts"],
-                        inp["submit_ts"],
-                        inp["alloc_nodes"],
+                        inp["startTs"],
+                        inp["endTs"],
+                        inp["submitTs"],
+                        inp["allocNodes"],
                         inp["ncpus"],
-                        inp["qos"],
-                        compute,
-                        False) #models.ComputeAllocation.ran_after_threshold(project_thresholds, inp["account_name"], inp["start_ts"])
+                        inp["qos"])
 
-                # inp["created_at"] = sa.func.now()
-                # inp["updated_at"] = sa.func.now()
-
-                inp["user_name"] = inp.get("user_name", "")
+                inp["username"] = inp.get("username", "")
 
                 values.append(inp)
 
-                ids.append([inp["job_id"], inp["start_ts"], inp["compute_id"]])
+                ids.append([inp["jobId"], inp["startTs"]])
             if not values:
-                return ComputeUsage(status="ERROR", error="Error: no input")
+                raise Exception("Error: no input")
 
             # Insert all in a single pass.
             # We do this via sqlalchemy core. Orm doesn't support this.
             # http://docs.sqlalchemy.org/en/latest/core/dml.html#sqlalchemy.sql.expression.Insert.values
             print(JSONEncoder(indent=4).encode(values))
             for val in values:
-                todb[val["job_id"]] = val
+                self.todb[val["jobId"]] = val
             # insert_statement = postgresql.insert(models.Job).values(values)
-            # updates = {k: insert_statement.excluded[k] for k in values[0].keys() if k not in ["job_id", "start_ts", "created_at", "compute_id"]}
+            # updates = {k: insert_statement.excluded[k] for k in values[0].keys() if k not in ["jobId", "startTs", "created_at", "compute_id"]}
             #
             # # On conflict, update existing row; this is a postgres feature called upsert
             # # http://docs.sqlalchemy.org/en/latest/dialects/postgresql.html?highlight=conflict#insert-on-conflict-upsert
             # do_update_statement = insert_statement.on_conflict_do_update(
-            #     index_elements=[models.Job.job_id, models.Job.start_ts, models.Job.compute_id],
+            #     index_elements=[models.Job.job_id, models.Job.startTs, models.Job.compute_id],
             #     set_=updates
             # )
             #
@@ -324,17 +260,19 @@ class ComputeUsage():
         except Exception as exc:
             print("Error saving usage: ")
             traceback.print_exc()
-            notify.notify_error("Job import error", exc)
-            return ComputeUsage(status="ERROR", error=str(exc))
+            raise exc
 
 
-if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python ./log.py <YYYYMMDD>")
-        print("Eg.: python ./log.py 20180524")
-    else:
-        process_cache(sys.argv[1])
-        # print("************************************************************************************************************************")
-        # print(fromslurm["JobID"])
-        # print(fromslurm["14353"])
-        # print(JSONEncoder(indent=4).encode(todb["14353"]))
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Import data from SLURM using sacct and generate a JSON file that can be consumed by CoAct")
+    parser.add_argument("-v", "--verbose", action='store_true', help="Turn on verbose logging")
+    parser.add_argument("-d", "--date", help="Load job information for this date. Specify as a YYYYMMDD; for example, 20180524. Defaults to yesterday", default=(datetime.date.today() - datetime.timedelta(days=1)).strftime("%Y%m%d"))
+    parser.add_argument("datafolder", help="Save jobs data into this folder as a file named <Date>.json")
+    args = parser.parse_args()
+    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
+
+    compusage = ComputeUsage()
+    process_cache(args.date, compusage)
+    with open(os.path.join(args.datafolder, args.date + ".json"), "w") as f:
+        json.dump(list(compusage.todb.values()), f, indent=4, cls=JSONEncoder)
+    print("Done")

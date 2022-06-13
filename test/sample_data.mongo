@@ -70,8 +70,8 @@ db.getSiblingDB("iris").capacity.createIndex({"facility": 1, "start": 1})
 
 db.getSiblingDB("iris").capacity.insertOne({
   "facility": "LCLS",
-  "start": "2020-01-01T00:00:00-07:00",
-  "end": "2021-05-01T00:00:00-07:00",
+  "start": ISODate("2020-01-01T00:00:00-07:00"),
+  "end": ISODate("2021-05-01T00:00:00-07:00"),
   "clusters": [
     {
       "name": "rome-b050",
@@ -98,8 +98,8 @@ db.getSiblingDB("iris").capacity.insertOne({
 
 db.getSiblingDB("iris").capacity.insertOne({
   "facility": "LCLS",
-  "start": "2021-05-01T00:00:00-07:00",
-  "end": "2100-01-01T00:00:00Z", // Distant future
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
   "clusters": [
     {
       "name": "rome-b050",
@@ -112,6 +112,10 @@ db.getSiblingDB("iris").capacity.insertOne({
     {
       "name": "ampt",
       "slachours": 1.0
+    },
+    {
+      "name": "psana",
+      "slachours": 100.0
     }
   ],
   "storage": [
@@ -133,40 +137,49 @@ db.getSiblingDB("iris").cluster.createIndex({"name": 1}, unique=true)
 
 db.getSiblingDB("iris").cluster.insertOne({
   "name": "rome-b050",
-  "node_cpu_count": 128,
-  "node_cpu_count_divisor": 64, //?? sockets?
-  "node_mem_gb": 512,
-  "charge_factor": 0.8,
-  "node_cpu_smt": 1, // threads per core
+  "nodecpucount": 128,
+  "nodecpucountdivisor": 64, //?? sockets?
+  "nodememgb": 512,
+  "chargefactor": 0.8,
+  "nodecpusmt": 1, // threads per core
   "members": [ "rome0001", "rome0002","rome0003","rome0004","rome0005" ] // perhaps use regex?
 })
 
 
 db.getSiblingDB("iris").cluster.insertOne({
   "name": "milan-srcf",
-  "node_cpu_count": 16,
-  "node_cpu_count_divisor": 16, //??
-  "node_mem_gb": 512,
-  "charge_factor": 0.8,
-  "node_cpu_smt": 1, // threads per core
+  "nodecpucount": 16,
+  "nodecpucountdivisor": 16, //??
+  "nodememgb": 512,
+  "chargefactor": 0.8,
+  "nodecpusmt": 1, // threads per core
   "members": [ "milan0001", "milan0002","milan0003","milan0004","milan0005" ]
 })
 
 db.getSiblingDB("iris").cluster.insertOne({
   "name": "ampt",
-  "node_cpu_count": 128,
-  "node_cpu_count_divisor": 16, //??
-  "node_mem_gb": 1024,
-  "charge_factor": 0.8,
-  "node_cpu_smt": 2, // threads per core
-  "node_gpu_count": 4,
-  "node_gpu_mem_gb": 40,
+  "nodecpucount": 128,
+  "nodecpucountdivisor": 16, //??
+  "nodememgb": 1024,
+  "chargefactor": 0.8,
+  "nodecpusmt": 2, // threads per core
+  "nodegpucount": 4,
+  "nodegpumemgb": 40,
   "members": [ "ampt001", "ampt002","ampt003","ampt004","ampt005" ]
 })
 
+db.getSiblingDB("iris").cluster.insertOne({
+  "name": "psana",
+  "nodecpucount": 16,
+  "nodecpucountdivisor": 16, //??
+  "nodememgb": 512,
+  "chargefactor": 0.8,
+  "nodecpusmt": 1, // threads per core
+  "members": [ ]
+})
 
-
-
+// Too lazy to create all the cluster members for psana
+for(c=1200;c<1600;c++) {   db.getSiblingDB("iris").cluster.updateOne({"name": "psana"}, {"$addToSet": {"members": "psana"+c}})}
 
 db.getSiblingDB("iris").repos.createIndex({"name": 1}, unique=true)
 db.getSiblingDB("iris").repos.createIndex({"leader": 1}) // For performance
@@ -282,8 +295,8 @@ db.getSiblingDB("iris").allocations.insertOne({
   "resource": "storage",
   "repo": "cxi12345",
   "active": true,
-  "start": "2021-05-01T00:00:00-07:00",
-  "end": "2100-01-01T00:00:00Z", // Distant future
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
   "volumes": {
     "science-data": [
       {
@@ -309,8 +322,8 @@ db.getSiblingDB("iris").allocations.insertOne({
   "resource": "storage",
   "repo": "CS14",
   "active": true,
-  "start": "2021-05-01T00:00:00-07:00",
-  "end": "2100-01-01T00:00:00Z", // Distant future
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
   "volumes": {
     "science-data": [
       {
@@ -327,8 +340,8 @@ db.getSiblingDB("iris").allocations.insertOne({
   "resource": "storage",
   "repo": "CA104",
   "active": true,
-  "start": "2021-05-01T00:00:00-07:00",
-  "end": "2100-01-01T00:00:00Z", // Distant future
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
   "volumes": {
     "science-data": [
       {
@@ -351,16 +364,18 @@ db.getSiblingDB("iris").allocations.insertOne({
   "resource": "compute",
   "repo": "cxi12345",
   "active": true,
-  "start": "2021-05-01T00:00:00-07:00",
-  "end": "2100-01-01T00:00:00Z", // Distant future
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
   "qoses": [
     {
       "name": "cxi12345",
       "slachours": 100000, // need normlised units?
+      "chargefactor": 1.0
     },
     {
       "name": "cxi12345-priority",
       "slachours": 1000, // need normlised units?
+      "chargefactor": 1.25
     }
   ]
 })

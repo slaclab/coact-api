@@ -77,12 +77,13 @@ class CustomContext(BaseContext):
         return self.username
 
 
-from models import User, AccessGroup, Repo, Facility, Qos
+from models import User, AccessGroup, Repo, Facility, Qos, Cluster
 
 class DB:
     LOG = logging.getLogger(__name__)
     KLASSES = {
         'users': User,
+        'cluster': Cluster,
         'access_groups': AccessGroup,
         'repos': Repo,
         'facilities': Facility,
@@ -99,11 +100,16 @@ class DB:
     def to_dict(self, obj ):
         d = {}
         if isinstance(obj,dict):
-            return obj
+            for k, v in obj.items():
+                if not v is UNSET:
+                    d[k] = v
+            return d
         for k,v in obj.__dict__.items():
             #LOG.warn(f"field {k} is {v} ({type(v)})")
             if v or isinstance(v, list):
                 d[k] = v
+                if v is UNSET:
+                    del d[k]
                 if isinstance(v,list) and len(v) == 0:
                     del d[k]
         return d
@@ -133,6 +139,8 @@ class DB:
         return self.assert_one( self.find_repos( filter ) )
     def find_users(self, filter):
         return self.find("users", filter)
+    def find_clusters(self, filter):
+        return self.find("cluster", filter)
     def find_user(self, filter):
         return self.assert_one( self.find_users( filter ) )
     def find_facilities(self, filter, exclude_fields: Optional[list[str]]=[] ):

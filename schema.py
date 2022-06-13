@@ -15,7 +15,8 @@ from models import \
         Repo, RepoInput, \
         Facility, FacilityInput, \
         Resource, Qos, Job, \
-        UserAllocationInput, UserAllocation
+        UserAllocationInput, UserAllocation, \
+        ClusterInput, Cluster
 
 import logging
 LOG = logging.getLogger(__name__)
@@ -35,14 +36,17 @@ class Query:
     def user(self, info: Info, user: UserInput ) -> User:
         return info.context.db.find_user( user )
 
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def clusters(self, info: Info, filter: Optional[ClusterInput]={} ) -> List[Cluster]:
+        return info.context.db.find_clusters( filter )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def facilities(self, info: Info, filter: Optional[FacilityInput]={} ) -> List[Facility]:
         return info.context.db.find_facilities( filter, exclude_fields=['resources',] )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def facility(self, name: str, info: Info, filter: Optional[FacilityInput]) -> Facility:
-        return info.context.db.find_facilities( filter )
+    def facility(self, info: Info, filter: Optional[FacilityInput]) -> Facility:
+        return info.context.db.find_facilities( filter, exclude_fields=['resources',] )[0]
 
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )

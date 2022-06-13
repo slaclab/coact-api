@@ -60,44 +60,58 @@ class User(UserInput):
                 ret.append(Eppn(**{ "eppn": x.split("@")[0], "fullname": x, "email": x, "organization": x.split("@")[1] }))
         return ret
 
-@strawberry.type
-class PartitionInput:
+@strawberry.input
+class ClusterInput:
     _id: Optional[MongoId] = UNSET
     name: Optional[str] = UNSET
-    charge_factor: Optional[float] = UNSET
+    nodecpucount: Optional[int] = UNSET
+    nodecpucountdivisor: Optional[int] = UNSET
+    nodegpucount: Optional[int] = UNSET
+    nodememgb: Optional[int] = UNSET
+    nodegpumemgb: Optional[int] = UNSET
+    chargefactor: Optional[float] = UNSET
+    nodecpusmt: Optional[int] = UNSET
+    members: Optional[List[str]] = UNSET
 
 @strawberry.type
-class Partition(PartitionInput):
+class Cluster(ClusterInput):
     pass
 
+@strawberry.input
+class ClusterCapacityInput:
+    name: Optional[str] = UNSET
+    slachours: Optional[float] = UNSET
+
+
 @strawberry.type
-class ResourceCapacityInput:
+class ClusterCapacity(ClusterCapacityInput):
+    @strawberry.field
+    def cluster(self, info) -> Cluster:
+        clusdefn = info.context.db.collection("cluster").find_one({"name": self.name})
+        print(clusdefn)
+        return Cluster(**clusdefn)
+
+@strawberry.input
+class ResourceInput:
+    name: Optional[str] = UNSET
+    type: Optional[str] = UNSET
+
+@strawberry.type
+class Resource(ResourceInput):
+    pass
+
+@strawberry.input
+class CapacityInput:
     _id: Optional[MongoId] = UNSET
-    year: Optional[int] = UNSET
-    compute: Optional[float] = UNSET
-    storage: Optional[float] = UNSET
-    inodes: Optional[float] = UNSET
+    start: Optional[datetime] = UNSET
+    end: Optional[datetime] = UNSET
 
 @strawberry.type
-class ResourceCapacity(ResourceCapacityInput):
-    pass
-
-@strawberry.type
-class Resource:
-    name: str
-    type: str
-    facility_name: str
-    partitions: List[str]
-    root: str
+class Capacity(CapacityInput):
     @strawberry.field
-    def partitionObjs(self, info) -> List[Partition]:
-        return [ Partition(**x) for x in  info.context.db.collection("partitions").find({"name": {"$in": self.partitions } } ) ]
-    @strawberry.field
-    def capacities(self, info, year: int = 0) ->List[ResourceCapacity]:
-        rc_filter = { "facility": self.facility_name,  "resource": self.name }
-        if year:
-            rc_filter["year"] = year
-        return [ ResourceCapacity(**{k:x.get(k, 0) for k in ["year", "compute", "storage", "inodes"] }) for x in  info.context.db.collection("resource_capacity").find(rc_filter) ]
+    def clusters(self, info) -> List[ClusterCapacity]:
+        cap = info.context.db.collection("capacity").find_one({"_id": self._id})
+        return [ ClusterCapacity(**{ k: c[k] for k in ["name", "slachours"] }) for c in cap.get("clusters", []) ]
 
 @strawberry.input
 class FacilityInput:
@@ -112,12 +126,17 @@ class Facility( FacilityInput ):
     @strawberry.field
     def resources(self, info) -> List[Resource]:
         fac = info.context.db.collection("facilities").find_one({"_id": self._id })
-        return [ Resource(**{"name": k, "facility_name": self.name, "type": v["type"], "partitions": v.get("partitions", []), "root": v.get("root", None)}) for k,v in fac.get("resources", {}).items() ]
+        return [ Resource(**{"name": k, "type": v["type"]}) for k,v in fac.get("resources", {}).items() ]
+    @strawberry.field
+    def capacity(self, info) -> Capacity:
+        cap = list(info.context.db.collection("capacity").find({"facility": self.name }).sort([("end", -1)]).limit(1))[0]
+        return Capacity(**{k : cap[k] for k in [ "_id", "start", "end" ]})
 
 @strawberry.input
 class QosInput:
     name: Optional[str] = UNSET
     slachours: Optional[float] = UNSET
+    chargefactor: Optional[float] = UNSET
 
 @strawberry.type
 class Qos(QosInput):
@@ -180,18 +199,6 @@ class PerUserUsage(Usage):
 @strawberry.type
 class PerFolderUsage(Usage):
     folder: Optional[str] = UNSET
-
-@strawberry.type
-class ClusterInput:
-    _id: Optional[MongoId] = UNSET
-    name: Optional[str] = UNSET
-    node_cpu_count: Optional[int] = UNSET
-    node_cpu_count_divisor: Optional[int] = UNSET
-    charge_factor: Optional[float] = UNSET
-
-@strawberry.type
-class Cluster(ClusterInput):
-    pass
 
 @strawberry.input
 class AccessGroupInput:
@@ -259,11 +266,9 @@ class Repo( RepoInput ):
         return [ Allocation(**{k:x.get(k, 0) for k in ["_id", "facility", "resource", "repo", "start", "end" ] }) for x in  info.context.db.collection("allocations").find(rc_filter).sort([("end", -1)]).limit(1) ]
 
     @strawberry.field
-    def userAllocations(self, info, resource: str, year: int) ->List[UserAllocation]:
+    def userAllocations(self, info, resource: str) ->List[UserAllocation]:
         rc_filter = { "facility": self.facility, "resource": resource, "repo": self.name }
-        if year:
-            rc_filter["year"] = year
-        return [ UserAllocation(**{k:x.get(k, 0) for k in ["repo", "year", "compute", "storage", "inodes", "resource", "facility", "username"] }) for x in  info.context.db.collection("user_allocations").find(rc_filter) ]
+        return [ UserAllocation(**{k:x.get(k, 0) for k in ["facility", "resource", "repo", "username"] }) for x in  info.context.db.collection("user_allocations").find(rc_filter) ]
 
     @strawberry.field
     def usage(self, info, resource: str, year: int) ->List[Usage]:
@@ -442,20 +447,20 @@ class Job:
     reservationId: str
     submitter: str
     submitTs: datetime
-    hostName: str
     officialImport: bool
-    computeId: str
     elapsedSecs: float
-    waitTime: float
-    chargeFactor: float
-    rawSecs: float
-    nerscSecs: float
-    machineSecs: float
+    waitSecs: float
+    # After this, all the values are computed ( some of them are matched from info in the database)
+    priocf: float
+    hwcf: float
+    finalcf: float
+    rawSecs: float # elapsed seconds * number of nodes
+    machineSecs: float # raw seconds after applying the hardware charge factor
+    nodeSecs: float # machineSecs after applying the priority charge factor
     repo: str
     year: int
     facility: str
     resource: str
-
 
 @strawberry.type
 class StorageUsageInput:
