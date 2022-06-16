@@ -173,9 +173,9 @@ class UsageInput:
     resource: Optional[str] = UNSET
     repo: Optional[str] = UNSET
     year: Optional[int] = UNSET
-    totalNerscSecs: Optional[float] = UNSET
     totalRawSecs: Optional[float] = UNSET
     totalMachineSecs: Optional[float] = UNSET
+    totalNodeSecs: Optional[float] = UNSET
     averageChargeFactor: Optional[float] = UNSET
     totalStorage: Optional[float] = UNSET
     totalInodes: Optional[float] = UNSET
@@ -276,7 +276,7 @@ class Repo( RepoInput ):
         results = info.context.db.collection("jobs").aggregate([
             { "$match": { "facility": self.facility, "resource": resource, "year": year, "repo": self.name }},
             { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year"},
-                "totalNerscSecs": { "$sum": "$nerscSecs" },
+                "totalNodeSecs": { "$sum": "$nodeSecs" },
                 "totalRawSecs": { "$sum": "$rawSecs" },
                 "totalMachineSecs": { "$sum": "$machineSecs" },
                 "averageChargeFactor": { "$avg": "$chargeFactor" }
@@ -287,7 +287,7 @@ class Repo( RepoInput ):
                 "resource": "$_id.resource",
                 "facility": "$_id.facility",
                 "year": "$_id.year",
-                "totalNerscSecs": 1,
+                "totalNodeSecs": 1,
                 "totalRawSecs": 1,
                 "totalMachineSecs": 1,
                 "averageChargeFactor": 1
@@ -303,7 +303,7 @@ class Repo( RepoInput ):
         results = info.context.db.collection("jobs").aggregate([
             { "$match": { "facility": self.facility, "resource": resource, "year": year, "repo": self.name }},
             { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year", "dayOfYear": { "$dayOfYear": {"date": "$startTs", "timezone": "America/Los_Angeles"}}},
-                "totalNerscSecs": { "$sum": "$nerscSecs" },
+                "totalNodeSecs": { "$sum": "$nodeSecs" },
                 "totalRawSecs": { "$sum": "$rawSecs" },
                 "totalMachineSecs": { "$sum": "$machineSecs" },
                 "averageChargeFactor": { "$avg": "$chargeFactor" }
@@ -315,7 +315,7 @@ class Repo( RepoInput ):
                 "facility": "$_id.facility",
                 "year": "$_id.year",
                 "dayOfYear": "$_id.dayOfYear",
-                "totalNerscSecs": 1,
+                "totalNodeSecs": 1,
                 "totalRawSecs": 1,
                 "totalMachineSecs": 1,
                 "averageChargeFactor": 1
@@ -331,7 +331,7 @@ class Repo( RepoInput ):
         results = info.context.db.collection("jobs").aggregate([
             { "$match": { "facility": self.facility, "resource": resource, "year": year, "repo": self.name }},
             { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year", "username": "$username"},
-                "totalNerscSecs": { "$sum": "$nerscSecs" },
+                "totalNodeSecs": { "$sum": "$nodeSecs" },
                 "totalRawSecs": { "$sum": "$rawSecs" },
                 "totalMachineSecs": { "$sum": "$machineSecs" },
                 "averageChargeFactor": { "$avg": "$chargeFactor" }
@@ -343,7 +343,7 @@ class Repo( RepoInput ):
                 "facility": "$_id.facility",
                 "year": "$_id.year",
                 "username": "$_id.username",
-                "totalNerscSecs": 1,
+                "totalNodeSecs": 1,
                 "totalRawSecs": 1,
                 "totalMachineSecs": 1,
                 "averageChargeFactor": 1
