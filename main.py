@@ -3,6 +3,7 @@ import re
 
 from functools import wraps
 from typing import List, Optional
+from enum import Enum
 
 from fastapi import FastAPI, Depends, Request, WebSocket, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,6 +13,8 @@ from strawberry.schema.config import StrawberryConfig
 from strawberry.arguments import UNSET
 
 from pymongo import MongoClient
+from bson import ObjectId
+
 
 from schema import Query, Mutation
 
@@ -47,6 +50,22 @@ class CustomContext(BaseContext):
     def __str__(self):
         return f"CustomContext User: {self.username} is_admin {self.is_admin}"
 
+    def isUserRegistered(self, **kwargs):
+        eppn = None
+        if bool(environ.get('PREFER_EPPN',False)):
+            eppn = self.request.headers.get(environ.get('EPPN_FIELD',None), None)
+            if eppn:
+                users = self.db.find_users( { 'eppns': eppn } )
+                self.LOG.debug(f"found eppn {eppn} as user {users}")
+                return len(users) > 0, eppn
+
+        username = self.request.headers.get(USER_FIELD_IN_HEADER, None)
+        if username:
+            users = self.db.find_users( { 'username': username } )
+            return len(users) > 0, eppn
+
+        return False, None
+
     def authn(self, **kwargs):
         if bool(environ.get('PREFER_EPPN',False)):
             eppn = self.request.headers.get(environ.get('EPPN_FIELD',None), None)
@@ -77,7 +96,7 @@ class CustomContext(BaseContext):
         return self.username
 
 
-from models import User, AccessGroup, Repo, Facility, Qos, Cluster
+from models import User, AccessGroup, Repo, Facility, Qos, Cluster, SDFRequest
 
 class DB:
     LOG = logging.getLogger(__name__)
@@ -88,6 +107,7 @@ class DB:
         'repos': Repo,
         'facilities': Facility,
         "qos": Qos,
+        'requests': SDFRequest,
     }
     def __init__(self, mongo, db_name):
         self._db = mongo
@@ -145,6 +165,8 @@ class DB:
         return self.assert_one( self.find_users( filter ) )
     def find_facilities(self, filter, exclude_fields: Optional[list[str]]=[] ):
         return self.find("facilities", filter, exclude_fields)
+    def find_requests(self, filter, exclude_fields: Optional[list[str]]=[] ):
+        return self.find("requests", filter, exclude_fields)
     def find_facility(self, filter, exclude_fields: Optional[list[str]]=[] ):
         return self.assert_one( self.find_facilities( filter, exclude_fields ) )
     def find_qoses(self):
@@ -170,6 +192,9 @@ class DB:
                 if v == False:
                     failed.append(k)
             raise Exception( f"input did not contain required fields {failed}")
+        for k, v in vars(data).items():
+            if isinstance(v, Enum):
+                setattr(data, k, v.name)
         the_thing = klass( **vars(data) )
         self.LOG.info(f"adding {thing} with {data} -> {the_thing}")
         db = self.collection(thing)
@@ -207,6 +232,11 @@ class DB:
         db.update_one( { '_id': new['_id'] }, { "$set": new } )
         item = klass( **new )
         return item
+
+    def remove(self, thing, id):
+        db = self.collection(thing)
+        print(id)
+        db.remove( { '_id': ObjectId(id["_id"]) } )
 
 
 def custom_context_dependency() -> CustomContext:

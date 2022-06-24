@@ -2,7 +2,8 @@ from auth import IsAuthenticated, \
         IsRepoPrincipal, \
         IsRepoLeader, \
         IsRepoPrincipalOrLeader, \
-        IsAdmin
+        IsAdmin, \
+        IsValidEPPN
 
 from typing import List, Optional
 import strawberry
@@ -10,13 +11,15 @@ from strawberry.types import Info
 from strawberry.arguments import UNSET
 
 from models import \
-        User, UserInput, \
+        MongoId, \
+        User, UserInput, UserRegistration, \
         AccessGroup, AccessGroupInput, \
         Repo, RepoInput, \
         Facility, FacilityInput, \
         Resource, Qos, Job, \
         UserAllocationInput, UserAllocation, \
-        ClusterInput, Cluster
+        ClusterInput, Cluster, \
+        SDFRequestInput, SDFRequest
 
 import logging
 LOG = logging.getLogger(__name__)
@@ -24,6 +27,14 @@ LOG = logging.getLogger(__name__)
 
 @strawberry.type
 class Query:
+    @strawberry.field
+    def amIRegistered(self, info: Info) -> UserRegistration:
+        isRegis, eppn = info.context.isUserRegistered()
+        regis_pending = False
+        if not isRegis:
+            regis_pending = len(info.context.db.find("requests", {"reqtype" : "UserAccount", "eppn" : eppn})) == 1
+        return UserRegistration(**{ "isRegistered": isRegis, "eppn": eppn, "isRegistrationPending": regis_pending })
+
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def whoami(self, info: Info) -> User:
         return info.context.db.find_user( { "username": info.context.username } )
@@ -43,6 +54,10 @@ class Query:
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def facilities(self, info: Info, filter: Optional[FacilityInput]={} ) -> List[Facility]:
         return info.context.db.find_facilities( filter, exclude_fields=['resources',] )
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def requests(self, info: Info) -> List[SDFRequest]:
+        return info.context.db.find_requests( {} )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def facility(self, info: Info, filter: Optional[FacilityInput]) -> Facility:
@@ -110,6 +125,19 @@ class Mutation:
     def userUpdateEppn(self, eppns: List[str], info: Info, admin_override: bool=False) -> User:
         pass
 
+    @strawberry.field( permission_classes=[ IsValidEPPN ] )
+    def newSDFAccountRequest(self, request: SDFRequestInput, info: Info) -> SDFRequest:
+        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing={ 'reqtype': request.reqtype.name, "eppn": request.eppn } )
+
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    def approveRequest(id: str, info: Info) -> bool:
+        info.context.db.remove( 'requests', { "_id": id } )
+        return True
+
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    def rejectRequest(id: str, info: Info) -> bool:
+        info.context.db.remove( 'requests', { "_id": id } )
+        return True
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def facilityCreate(self, facility: FacilityInput, info: Info, admin_override: bool=False) -> Facility:

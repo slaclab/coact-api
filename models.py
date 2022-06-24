@@ -4,6 +4,7 @@ import strawberry
 from strawberry.types import Info
 from strawberry.arguments import UNSET
 from typing import NewType
+from enum import Enum
 
 from datetime import datetime
 from bson import ObjectId
@@ -26,6 +27,23 @@ MongoId = strawberry.scalar(
 
 # we generally just set everything to be option so that we can create a form like experience with graphql. we impose some of the required fields in some utility functions like create_thing(). not a great use of the graphql spec, but allows to to limit the amount of code we have to write
 
+@strawberry.enum
+class SDFRequestType(Enum):
+    UserAccount = "UserAccount"
+    NewRepo = "NewRepo"
+    NewFacility = "NewFacility"
+
+@strawberry.input
+class SDFRequestInput:
+    reqtype: Optional[SDFRequestType] = UNSET
+    eppn: Optional[str] = UNSET
+    reponame: Optional[str] = UNSET
+    facilityname: Optional[str] = UNSET
+
+@strawberry.type
+class SDFRequest(SDFRequestInput):
+    _id: Optional[MongoId] = UNSET
+
 @strawberry.input
 class EppnInput:
     eppn: Optional[str] = UNSET
@@ -36,6 +54,11 @@ class EppnInput:
 @strawberry.type
 class Eppn(EppnInput):
     pass
+
+@strawberry.type
+class UserRegistration(EppnInput):
+    isRegistered: Optional[bool] = UNSET
+    isRegistrationPending: Optional[bool] = UNSET
 
 @strawberry.input
 class UserInput:

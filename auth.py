@@ -19,6 +19,16 @@ class IsAuthenticated(BasePermission):
             return True
         return False
 
+class IsValidEPPN(BasePermission):
+    LOG = logging.getLogger(__name__)
+    message = "User does not have a valid EPPN"
+    def has_permission(self, source: Any, info: Info, **kwargs) -> bool:
+        regis, eppn = info.context.isUserRegistered(**kwargs)
+        self.LOG.debug(f"attempting permissions with {type(self).__name__} for eppn {eppn} at path {info.path.key} for privilege {kwargs}")
+        if eppn:
+            return True
+        return False
+
 class IsFacilityCzar(BasePermission):
     LOG = logging.getLogger(__name__)
     message = "User is not czar of facility"
@@ -175,4 +185,3 @@ class IsAdmin(BasePermission):
         if info.context.is_admin:
             return True
         return False
-
