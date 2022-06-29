@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Load sample data from SLURM into the jobs collection.
@@ -32,13 +32,32 @@ class JSONEncoder(json.JSONEncoder):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Load sample data from SLURM into the jobs collection. This is mainly for testing")
     parser.add_argument("-v", "--verbose", action='store_true', help="Turn on verbose logging")
-    parser.add_argument("-u", "--url", help="The URL to the CoAct GraphQL API, for example, http://localhost:17669/irisapi/graphql", required=True)
-    parser.add_argument("-r", "--resource_name", help="The name of the resource, typically something like compute", required=True)
-    parser.add_argument("datafile", help="Load jobs data from this file.")
+    parser.add_argument("-u", "--url", help="The URL to the CoAct GraphQL API", default="https://coact-dev.slac.stanford.edu/graphql")
+    parser.add_argument("-C", "--vouch_cookie_name", help="The cookie name that Vouch expects", default='slac-vouch' )
+    parser.add_argument("-c", "--cookie", help="The Vouch cookie for authenticated access to Coact", required=True )
+    parser.add_argument("-r", "--resource_name", help="The name of the resource, typically something like compute", default='compute')
+    parser.add_argument("--timezone", help="Timezone to use for analysis", default='America/Los_Angeles' )
+    parser.add_argument("--dry_run", help="Do not insert data into Coact", default=False, action='store_true' )
+    parser.add_argument("datafile", help="Load slurm jobs data from this (json) file.")
     args = parser.parse_args()
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
 
-    tz = pytz.timezone('America/Los_Angeles')
+    # setup auth
+    cookies = { args.vouch_cookie_name: args.cookie }
+
+    # test
+    q = """
+        query {
+            whoami {
+                username
+            }
+        }
+    """
+    user = requests.post(args.url, cookies=cookies, json={'query': q}).json()['data']['whoami']['username']
+    logging.info(f"Authenticated as {user}")
+
+    # load and process the slurm json file
+    tz = pytz.timezone(args.timezone)
     with open(args.datafile, "r") as f:
         jobs = json.load(f)
 
@@ -47,29 +66,31 @@ if __name__ == '__main__':
     # Perhaps have a default repo and send them there?
     # We map the job to the resource based on the qos. If we only have one resource, we simply map to that.
 
-
-    reporesp = requests.post("http://localhost:17669/irisapi/graphql", json={"query": '''query{
-        repos(filter:{}){
-            name
-            facility
-            principal
-            leaders
-            users
-            allocations(resource: "%s"){
-                resource
-                qoses{
-                    name
-                    slachours
-                    chargefactor
+    q = """
+        query{
+            repos(filter:{}){
+                name
+                facility
+                principal
+                leaders
+                users
+                allocations(resource: "%s"){
+                    resource
+                    qoses{
+                        name
+                        slachours
+                        chargefactor
+                    }
                 }
             }
+            clusters(filter:{}){
+                name
+                chargefactor
+                members
+            }
         }
-        clusters(filter:{}){
-            name
-            chargefactor
-            members
-        }
-    }''' % args.resource_name})
+    """
+    reporesp = requests.post(args.url, cookies=cookies, json={"query": q % args.resource_name})
     reporesp.raise_for_status()
     repos = { x["name"] : x for x in reporesp.json()["data"]["repos"] }
     for repo in repos.values():
@@ -81,6 +102,7 @@ if __name__ == '__main__':
                 qos2cf[qos["name"]] = qos["chargefactor"]
         repo["qos2resource"] = qos2resource
         repo["qos2cf"] = qos2cf
+        logging.info("found repo {repo}")
 
     nodename2cf = {}
     for cluster in reporesp.json()["data"]["clusters"]:
@@ -125,6 +147,7 @@ if __name__ == '__main__':
         ret = ret + " }"
         return ret
 
-    jobstr = "mutation{importJobs( jobs: [" +  ",\n".join([encodeJob(x) for x in jobs ]) + "])}"
-    # print(jobstr)
-    requests.post("http://localhost:17669/irisapi/graphql", json={"query": jobstr}).json()
+ 
+    if not args.dry_run:
+        jobstr = "mutation{importJobs( jobs: [" +  ",\n".join([encodeJob(x) for x in jobs ]) + "])}"
+        requests.post(args.url, json={"query": jobstr}).json()
