@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: coact
+  name: coact-api
 spec:
   type: ClusterIP
   #type: LoadBalancer
@@ -10,19 +10,23 @@ spec:
     port: 8000
     protocol: TCP
   selector:
-    app: coact
+    app: coact-api
 
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: coact
+  name: coact-api
   annotations:
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "PUT, GET, POST, OPTIONS, DELETE"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,X-CustomHeader,X-LANG,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,X-Api-Key,X-Device-Id,Access-Control-Allow-Origin"
     nginx.ingress.kubernetes.io/auth-signin: "https://vouch.slac.stanford.edu/login?url=$scheme://$http_host$request_uri&vouch-failcount=$auth_resp_failcount&X-Vouch-Token=$auth_resp_jwt&error=$auth_resp_err"
     nginx.ingress.kubernetes.io/auth-url: https://vouch.slac.stanford.edu/validate
-    nginx.ingress.kubernetes.io/auth-response-headers: 'X-Vouch-User, X-Vouch-Idp-Claims-Name'
+    nginx.ingress.kubernetes.io/auth-response-headers: 'X-Vouch-User, X-Vouch-Idp-Claims-Name, X-Vouch-IdP-AccessToken, X-Vouch-IdP-RefreshToken, X-Vouch-IdP-IdToken, X-Vouch-Token'
     nginx.ingress.kubernetes.io/auth-snippet: |
-      auth_request_set $auth_resp_jwt $upstream_http_x_vouch_jwt;
+      auth_request_set $auth_resp_jwt $upstream_http_x_vouch_IdToken;
       auth_request_set $auth_resp_err $upstream_http_x_vouch_err;
       auth_request_set $auth_resp_failcount $upstream_http_x_vouch_failcount;
     nginx.ingress.kubernetes.io/configuration-snippet: |
@@ -33,10 +37,10 @@ spec:
   - host: coact-dev.slac.stanford.edu
     http:
       paths:
-      - path: /
+      - path: /graphql
         pathType: Prefix
         backend:
           service:
-            name: coact
+            name: coact-api
             port:
               name: http

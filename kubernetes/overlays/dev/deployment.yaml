@@ -1,69 +1,50 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: coact
+  name: coact-api
   labels:
-    app: coact
+    app: coact-api
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: coact
+      app: coact-api
   template:
     metadata:
       labels:
-        app: coact
+        app: coact-api
     spec:
       containers:
       - name: coact
         image: slaclab/coact:latest
         env:
+        - name: ADMIN_USERNAMES
+          value: ytl, mshankar
         - name: MONGODB_URL
           value: mongodb://mongo-rs0-0.mongo-rs0:27017,mongo-rs0-1.mongo-rs0:27017,mongo-rs0.mongo-rs0:27017/?replicationSet=rs0
         - name: MONGODB_USER
           valueFrom:
             secretKeyRef:
               name: mongo
-              key: MONGODB_USER_ADMIN_USER
+              key: COACT_USER
         - name: MONGODB_PASSWORD
           valueFrom:
             secretKeyRef:
               name: mongo
-              key: MONGODB_USER_ADMIN_PASSWORD
+              key: COACT_PASSWORD
+        - name: PREFER_EPPN
+          value: 'true'
         - name: USERNAME_FIELD
           value: x-vouch-idp-claims-name
+        - name: EPPN_FIELD
+          value: x-vouch-user
         ports:
         - containerPort: 8000
         volumeMounts:
         - name: code
           mountPath: /app/
-#      - name: git
-#        image: alpine/git
-#        command:
-#        - /bin/sh
-#        - "-ec"
-#        - "while :; do echo >/dev/null; sleep 60 ; done"
-#        volumeMounts:
-#        - name: code
-#          mountPath: /app2/
-      - name: sshd
-        image: panubo/sshd
-        env:
-        - name: SSH_ENABLE_ROOT
-          value: 'true'
-        volumeMounts:
-        - name: ssh-keys
-          mountPath: /root/.ssh/authorized_keys
-          subPath: authorized_keys
-        - name: code
-          mountPath: /app/
       volumes:
       - name: code
         persistentVolumeClaim:
-          claimName: code
-      - name: ssh-keys
-        secret:
-          secretName: ssh-keys
-
-
+          claimName: coact-api-code
 

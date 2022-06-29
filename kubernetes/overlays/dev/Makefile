@@ -9,6 +9,8 @@ passwords:
 	vault kv get -format=table --field=PMM_SERVER_PASSWORD $(SECRET_PATH) > etc/.secrets/PMM_SERVER_PASSWORD
 	vault kv get -format=table --field=S3_ACCESS_KEY $(SECRET_PATH) > etc/.secrets/S3_ACCESS_KEY
 	vault kv get -format=table --field=S3_SECRET_KEY $(SECRET_PATH) > etc/.secrets/S3_SECRET_KEY
+	vault kv get -format=table --field=COACT_USER $(SECRET_PATH) > etc/.secrets/COACT_USER
+	vault kv get -format=table --field=COACT_PASSWORD $(SECRET_PATH) > etc/.secrets/COACT_PASSWORD
 
 clear-passwords:
 	rm -rf etc/.secrets/
@@ -18,4 +20,6 @@ kustomize:
 
 apply: passwords kustomize clear-passwords
 
+bootstrap:
+	
 
