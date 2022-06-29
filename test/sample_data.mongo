@@ -215,14 +215,19 @@ db.getSiblingDB("iris").repos.insertOne({
 db.getSiblingDB("iris").users.createIndex({"username": 1}, unique=true)
 db.getSiblingDB("iris").users.createIndex({"uidnumber": 1}, unique=true)
 db.getSiblingDB("iris").users.createIndex({"eppns": 1}, {unique: true, partialFilterExpression: { eppns: { $type: "array" }}})
-db.getSiblingDB("iris").users.insertOne({ "username": "aquila", "uidnumber": 123 })
-db.getSiblingDB("iris").users.insertOne({ "username": "mcbrowne", "uidnumber": 124 })
-db.getSiblingDB("iris").users.insertOne({ "username": "snelson", "uidnumber": 125 })
-db.getSiblingDB("iris").users.insertOne({ "username": "tmalla", "uidnumber": 126 })
-db.getSiblingDB("iris").users.insertOne({ "username": "yanwen", "uidnumber": 127 })
+db.getSiblingDB("iris").users.insertOne({ "username": "aquila", "uidnumber": 123, "eppns": [ "aquila@slac.stanford.edu" ] })
+db.getSiblingDB("iris").users.insertOne({ "username": "mcbrowne", "uidnumber": 124, "eppns": [ "mcbrowne@slac.stanford.edu" ] })
+db.getSiblingDB("iris").users.insertOne({ "username": "snelson", "uidnumber": 125, "eppns": [ "snelson@slac.stanford.edu" ] })
+db.getSiblingDB("iris").users.insertOne({ "username": "tmalla", "uidnumber": 126, "eppns": [ "tmalla@slac.stanford.edu" ] })
+db.getSiblingDB("iris").users.insertOne({ "username": "yanwen", "uidnumber": 127, "eppns": [ "yanwen@slac.stanford.edu" ] })
 db.getSiblingDB("iris").users.insertOne({ "username": "mshankar", "uidnumber": 128, "eppns": [ "mshankar@slac.stanford.edu", "muralis@stanford.edu" ] })
 db.getSiblingDB("iris").users.insertOne({ "username": "ytl", "uidnumber": 129, "eppns": [ "ytl@slac.stanford.edu", "yee379@stanford.edu" ] })
-db.getSiblingDB("iris").users.insertOne({ "username": "wilko", "uidnumber": 130 })
+db.getSiblingDB("iris").users.insertOne({ "username": "wilko", "uidnumber": 130, "eppns": [ "wilko@slac.stanford.edu" ] })
+
+
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "RepoMembership", "username" : "wilko", "reponame" : "cxi12345"})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "RepoMembership", "username" : "wilko", "reponame" : "CA104"})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "RepoMembership", "username" : "mshankar", "reponame" : "CA104"})
 
 
 // an access class defines an abstraiton of access to some data. as such, by itself it merely defines essentially just a gidnumber. these shoudl be associated with eitehr: (note that all three can apply to all related storage)

@@ -9,6 +9,7 @@ from typing import List, Optional
 import strawberry
 from strawberry.types import Info
 from strawberry.arguments import UNSET
+from bson import ObjectId
 
 from models import \
         MongoId, \
@@ -19,7 +20,7 @@ from models import \
         Resource, Qos, Job, \
         UserAllocationInput, UserAllocation, \
         ClusterInput, Cluster, \
-        SDFRequestInput, SDFRequest
+        SDFRequestInput, SDFRequest, SDFRequestType
 
 import logging
 LOG = logging.getLogger(__name__)
@@ -57,7 +58,17 @@ class Query:
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def requests(self, info: Info) -> List[SDFRequest]:
-        return info.context.db.find_requests( {} )
+        if info.context.is_admin:
+            return info.context.db.find_requests( {} )
+        else:
+            username = info.context.username
+            assert username != None
+            myrepos = info.context.db.find_repos( { '$or': [
+                { "leaders": username },
+                { "principal": username }
+                ] } )
+            reponames = [ x.name for x in myrepos ]
+            return info.context.db.find_requests( { "reponame": {"$in": reponames } } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def facility(self, info: Info, filter: Optional[FacilityInput]) -> Facility:
@@ -129,10 +140,34 @@ class Mutation:
     def newSDFAccountRequest(self, request: SDFRequestInput, info: Info) -> SDFRequest:
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing={ 'reqtype': request.reqtype.name, "eppn": request.eppn } )
 
-    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def repoMembershipRequest(self, request: SDFRequestInput, info: Info) -> SDFRequest:
+        if request.reqtype != SDFRequestType.RepoMembership or not request.reponame:
+            raise Exception()
+        request.username = info.context.username
+        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing={ 'reqtype': request.reqtype.name, "username": request.username, "reponame": request.reponame } )
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def approveRequest(id: str, info: Info) -> bool:
-        info.context.db.remove( 'requests', { "_id": id } )
-        return True
+        LOG.debug(id)
+        thereq = info.context.db.find_request({ "_id": ObjectId(id) })
+        user = info.context.authn()
+        if thereq.reqtype == "RepoMembership":
+            therepo = info.context.db.find_repo({"name": thereq.reponame})
+            isleader = False
+            if user in therepo.leaders or therepo.principal == user:
+                isleader = True
+            if not info.context.is_admin and not isleader:
+                raise Exception("User is not an admin or a leader in the repo.")
+            # These two should be in a transaction.
+            info.context.db.collection("repos").update_one({"_id": therepo._id}, {"$addToSet": {"users": thereq.username}})
+            info.context.db.remove( 'requests', { "_id": id } )
+            return True
+        else:
+            if not info.context.is_admin:
+                raise Exception("User is not an admin")
+            info.context.db.remove( 'requests', { "_id": id } )
+            return True
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def rejectRequest(id: str, info: Info) -> bool:
@@ -205,10 +240,10 @@ class Mutation:
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def toggleUserRole(self, repo: RepoInput, user: UserInput, info: Info, admin_override: bool=False, impersonate: str=None ) -> Repo:
         filter = {"name": repo.name}
-        therepos = info.context.db.find_repo( filter )
+        therepo = info.context.db.find_repo( filter )
         theuser = user.username
         if theuser not in therepo.users:
-            raise Exception(theuser + " is not a user in repo " + repo.name)
+            LOG.warning(theuser + " is not a user in repo " + repo.name)
         info.context.db.collection("repos").update_one({"name": repo.name}, [{ "$set":
             { "leaders": { "$cond": [
                 { "$in": [ user.username, "$leaders" ] },

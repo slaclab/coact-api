@@ -32,11 +32,13 @@ class SDFRequestType(Enum):
     UserAccount = "UserAccount"
     NewRepo = "NewRepo"
     NewFacility = "NewFacility"
+    RepoMembership = "RepoMembership"
 
 @strawberry.input
 class SDFRequestInput:
     reqtype: Optional[SDFRequestType] = UNSET
     eppn: Optional[str] = UNSET
+    username: Optional[str] = UNSET
     reponame: Optional[str] = UNSET
     facilityname: Optional[str] = UNSET
 

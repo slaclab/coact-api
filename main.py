@@ -165,6 +165,8 @@ class DB:
         return self.assert_one( self.find_users( filter ) )
     def find_facilities(self, filter, exclude_fields: Optional[list[str]]=[] ):
         return self.find("facilities", filter, exclude_fields)
+    def find_request(self, filter):
+        return self.assert_one(self.find("requests", filter))
     def find_requests(self, filter, exclude_fields: Optional[list[str]]=[] ):
         return self.find("requests", filter, exclude_fields)
     def find_facility(self, filter, exclude_fields: Optional[list[str]]=[] ):
