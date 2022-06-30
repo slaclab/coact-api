@@ -228,6 +228,22 @@ db.getSiblingDB("iris").users.insertOne({ "username": "wilko", "uidnumber": 130,
 db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "RepoMembership", "username" : "wilko", "reponame" : "cxi12345"})
 db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "RepoMembership", "username" : "wilko", "reponame" : "CA104"})
 db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "RepoMembership", "username" : "mshankar", "reponame" : "CA104"})
+// Two people requesting the same repo/facility
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewRepo", "username" : "wilko",    "reponame" : "cxi23456"})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewRepo", "username" : "mshankar", "reponame" : "cxi23456"})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewFacility", "username" : "wilko",    "facilityname" : "RUBIN"})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewFacility", "username" : "mshankar", "facilityname" : "RUBIN"})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "paul@stanford.edu"})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "george@stanford.edu"})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "john@stanford.edu"})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "ringo@stanford.edu"})
+// These are requests for user account whose username already exists in the system.
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "wilko@stanford.edu"})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "mshankar@stanford.edu"})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "ytl@stanford.edu"})
+
+
+
 
 
 // an access class defines an abstraiton of access to some data. as such, by itself it merely defines essentially just a gidnumber. these shoudl be associated with eitehr: (note that all three can apply to all related storage)
