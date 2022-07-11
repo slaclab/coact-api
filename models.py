@@ -39,6 +39,7 @@ class SDFRequestInput:
     reqtype: Optional[SDFRequestType] = UNSET
     eppn: Optional[str] = UNSET
     username: Optional[str] = UNSET
+    preferredUserName: Optional[str] = UNSET
     reponame: Optional[str] = UNSET
     facilityname: Optional[str] = UNSET
 

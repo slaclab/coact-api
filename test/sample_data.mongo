@@ -233,16 +233,15 @@ db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewRepo", "username" :
 db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewRepo", "username" : "mshankar", "reponame" : "cxi23456"})
 db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewFacility", "username" : "wilko",    "facilityname" : "RUBIN"})
 db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewFacility", "username" : "mshankar", "facilityname" : "RUBIN"})
-db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "paul@stanford.edu"})
-db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "george@stanford.edu"})
-db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "john@stanford.edu"})
-db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "ringo@stanford.edu"})
+
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "paul@stanford.edu", "preferredUserName": "paul"})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "george@stanford.edu", "preferredUserName": "george"})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "john@stanford.edu", "preferredUserName": "john"})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "ringo@stanford.edu", "preferredUserName": "ringo"})
 // These are requests for user account whose username already exists in the system.
-db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "wilko@stanford.edu"})
-db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "mshankar@stanford.edu"})
-db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "ytl@stanford.edu"})
-
-
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "wilko@stanford.edu", "preferredUserName": "wilko"})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "mshankar@stanford.edu", "preferredUserName": "mshankar"})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "ytl@stanford.edu", "preferredUserName": "ytl"})
 
 
 

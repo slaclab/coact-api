@@ -163,6 +163,25 @@ class Mutation:
             info.context.db.collection("repos").update_one({"_id": therepo._id}, {"$addToSet": {"users": thereq.username}})
             info.context.db.remove( 'requests', { "_id": id } )
             return True
+        elif thereq.reqtype == "UserAccount":
+            if not info.context.is_admin:
+                raise Exception("User is not an admin - cannot approve.")
+            theeppn = thereq.eppn
+            if not theeppn:
+                raise Exception("Account request without a eppn - cannot approve.")
+            # Check if the preferredUserName already is in use
+            preferredUserName = thereq.preferredUserName
+            if not preferredUserName:
+                raise Exception("Account request without a preferred user id - cannot approve.")
+            alreadyExistingUser = info.context.db.collection("users").find_one( { "username": preferredUserName} )
+            if alreadyExistingUser:
+                raise Exception("User with username " + preferredUserName + " already exists - cannot approve.")
+            maxuidusr, maxuidnum = info.context.db.collection("users").find({}).sort([("uidnumber", -1)]).limit(1), 0
+            if maxuidusr:
+                maxuidnum = list(maxuidusr)[0].get("uidnumber", 0)
+            info.context.db.collection("users").insert_one({ "username": preferredUserName, "uidnumber": maxuidnum+1, "eppns": [ theeppn ] })
+            info.context.db.remove( 'requests', { "_id": id } )
+            return True
         else:
             if not info.context.is_admin:
                 raise Exception("User is not an admin")
