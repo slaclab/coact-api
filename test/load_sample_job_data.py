@@ -74,7 +74,8 @@ if __name__ == '__main__':
                 principal
                 leaders
                 users
-                allocations(resource: "%s"){
+                currentAllocations(resource: "%s"){
+                    Id
                     resource
                     qoses{
                         name
@@ -96,12 +97,15 @@ if __name__ == '__main__':
     for repo in repos.values():
         qos2resource = {}
         qos2cf = {}
-        for alloc in repo.get("allocations", []):
+        qos2allocid = {}
+        for alloc in repo.get("currentAllocations", []):
             for qos in alloc.get("qoses", []):
                 qos2resource[qos["name"]] = alloc["resource"]
                 qos2cf[qos["name"]] = qos["chargefactor"]
+                qos2allocid[qos["name"]] = alloc["Id"]
         repo["qos2resource"] = qos2resource
         repo["qos2cf"] = qos2cf
+        repo["qos2allocid"] = qos2allocid
         logging.info("found repo {repo}")
 
     nodename2cf = {}
@@ -122,12 +126,13 @@ if __name__ == '__main__':
             job["repo"] = acc_name
             job["facility"] = repos[acc_name]["facility"]
             job["resource"] = repos[acc_name]["qos2resource"][job["qos"]]
+            job["allocationId"] = repos[acc_name]["qos2allocid"][job["qos"]]
             job["priocf"] = repos[acc_name]["qos2cf"][job["qos"]]
             job["hwcf"] = mean(map(lambda x : nodename2cf[x], NodeList(job["nodelist"]).sorted()))
             job["finalcf"] = job["priocf"] * job["hwcf"]
-            job["rawSecs"] = job["elapsedSecs"] * job["allocNodes"] # elapsed seconds * number of nodes
-            job["machineSecs"] = job["rawSecs"] * job["hwcf"] # raw seconds after applying the hardware charge factor
-            job["nodeSecs"] = job["machineSecs"] * job["priocf"] # machineSecs after applying the priority charge factor
+            job["rawsecs"] = job["elapsedSecs"] * job["allocNodes"] # elapsed seconds * number of nodes
+            job["machinesecs"] = job["rawsecs"] * job["hwcf"] # raw seconds after applying the hardware charge factor
+            job["slacsecs"] = job["machinesecs"] * job["priocf"] # machinesecs after applying the priority charge factor
             # TODO we also need to apply a factor if the quota has been exceeded.
             logger.info(f"Mapping {job['jobId']} to {job['repo']} based on account name")
         else:
@@ -147,7 +152,7 @@ if __name__ == '__main__':
         ret = ret + " }"
         return ret
 
- 
+
     if not args.dry_run:
         jobstr = "mutation{importJobs( jobs: [" +  ",\n".join([encodeJob(x) for x in jobs ]) + "])}"
         requests.post(args.url, json={"query": jobstr}).json()

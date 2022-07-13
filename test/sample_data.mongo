@@ -19,42 +19,21 @@ db.getSiblingDB("iris").facilities.createIndex({"name": 1}, unique=true)
 
 db.getSiblingDB("iris").facilities.insertOne({
   "name" : "LCLS",
-  "resources": { // necessary??
-    "compute": {
-      "type": "compute"
-    },
-    "storage": {
-      "type": "storage"
-    }
-  },
+  "resources": ["compute", "storage"],
   "czars": [ "lcls-pcdsdata"], // set primary uid on all volumes
   "access_class": [ "lcls-pcdsmgr" ] // set primary gid on all volumes
 })
 
 db.getSiblingDB("iris").facilities.insertOne({
   "name" : "CryoEM",
-  "resources": { // necessary??
-    "compute": {
-      "type": "compute"
-    },
-    "storage": {
-      "type": "storage"
-    }
-  },
+  "resources": ["compute", "storage"],
   "czars": [ "cryo-daq"], // set primary uid on all volumes
   "access_class": [ "cryo-data" ] // set primary gid on all volumes
 })
 
 db.getSiblingDB("iris").facilities.insertOne({
   "name" : "Suncat",
-  "resources": { // necessary??
-    "compute": {
-      "type": "compute"
-    },
-    "storage": {
-      "type": "storage"
-    }
-  },
+  "resources": ["compute", "storage"],
   "czars": [ "johannes"], // set primary uid on all volumes
   "access_class": [ ] // set primary gid on all volumes
 })
@@ -307,7 +286,7 @@ db.getSiblingDB("iris").volumes.insertOne({
 // as the thing to keep upto date. we use 'active' as a crude of of determine the most upto date version.
 // ?? how to deal with stranded/orphaned volumes?
 
-db.getSiblingDB("iris").allocations.createIndex({"repo": 1, "facility": 1, "resource": 1, "year": -1}, unique=true)
+db.getSiblingDB("iris").allocations.createIndex({"repo": 1, "facility": 1, "resource": 1, "start": -1}, unique=true)
 
 
 db.getSiblingDB("iris").allocations.insertOne({
@@ -389,17 +368,37 @@ db.getSiblingDB("iris").allocations.insertOne({
   "qoses": [
     {
       "name": "cxi12345",
-      "slachours": 100000, // need normlised units?
-      "chargefactor": 1.0
+      "slachours": 500,
+      "chargefactor": 0.7765
     },
     {
       "name": "cxi12345-priority",
-      "slachours": 1000, // need normlised units?
+      "slachours": 500,
       "chargefactor": 1.25
     }
   ]
 })
 
+db.getSiblingDB("iris").allocations.insertOne({
+  "facility": "LCLS",
+  "resource": "compute",
+  "repo": "cxi12345",
+  "active": true,
+  "start": ISODate("2020-05-01T00:00:00-07:00"), // Last years allocations
+  "end": ISODate("2020-12-31T00:00:00Z"),
+  "qoses": [
+    {
+      "name": "cxi12345",
+      "slachours": 100000,
+      "chargefactor": 1.0
+    },
+    {
+      "name": "cxi12345-priority",
+      "slachours": 1000,
+      "chargefactor": 1.25
+    }
+  ]
+})
 
 
 
@@ -439,6 +438,10 @@ db.getSiblingDB("iris").usage.insertOne({
 // Jobs have lots of information from SLURM in addition to the final mapping into repo, year and resource name.
 db.getSiblingDB("iris").jobs.createIndex({"jobId": 1, "startTs": 1, "computeId": 1}, unique=true)
 db.getSiblingDB("iris").jobs.createIndex({"repo": 1, "year": -1, "resource": 1}) // Performance index
+
+// We cache the compute and storage allocation usage in the usagecache collections
+db.getSiblingDB("iris").computeusagecache.createIndex({"allocationId": 1, "qos": 1}, unique=true)
+db.getSiblingDB("iris").storageusagecache.createIndex({"allocationId": 1, "volume": 1}, unique=true)
 
 db.getSiblingDB("iris").diskusage.createIndex({"facility": 1, "resource": 1, "year": -1, "repo": 1, "date": 1}, unique=true)
 for(i=0;i<75;i++) {

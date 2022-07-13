@@ -54,7 +54,7 @@ class Query:
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def facilities(self, info: Info, filter: Optional[FacilityInput]={} ) -> List[Facility]:
-        return info.context.db.find_facilities( filter, exclude_fields=['resources',] )
+        return info.context.db.find_facilities( filter )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def requests(self, info: Info) -> List[SDFRequest]:
@@ -72,7 +72,7 @@ class Query:
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def facility(self, info: Info, filter: Optional[FacilityInput]) -> Facility:
-        return info.context.db.find_facilities( filter, exclude_fields=['resources',] )[0]
+        return info.context.db.find_facilities( filter )[0]
 
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
@@ -292,4 +292,26 @@ class Mutation:
     def importJobs(self, jobs: List[Job], info: Info, admin_override: bool=False) -> str:
         jbs = [dict(j.__dict__.items()) for j in jobs]
         info.context.db.collection("jobs").insert_many(jbs)
+        allocation_ids = list(map(lambda x: x["allocationId"], jbs))
+        usage = info.context.db.collection("jobs").aggregate([
+          { "$match": { "allocationId": {"$in":  allocation_ids } }},
+          { "$group": { "_id": {"allocationId": "$allocationId", "qos": "$qos", "repo": "$repo" },
+              "slacsecs": { "$sum": "$slacsecs" },
+              "rawsecs": { "$sum": "$rawsecs" },
+              "machinesecs": { "$sum": "$machinesecs" },
+              "avgcf": { "$avg": "$finalcf" }
+          }},
+          { "$project": {
+              "_id": 0,
+              "allocationId": "$_id.allocationId",
+              "qos": "$_id.qos",
+              "repo": "$_id.repo",
+              "slacsecs": 1,
+              "rawsecs": 1,
+              "machinesecs": 1,
+              "avgcf": 1,
+          }}
+        ])
+        for usg in usage:
+            info.context.db.collection("computeusagecache").replace_one({"allocationId": usg["allocationId"], "qos": usg["qos"]}, usg, upsert=True)
         return "Done"
