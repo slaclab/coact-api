@@ -107,7 +107,8 @@ class Cluster(ClusterInput):
 class ClusterCapacityInput:
     name: Optional[str] = UNSET
     slachours: Optional[float] = UNSET
-
+    gigabytes: Optional[float] = UNSET
+    inodes: Optional[float] = UNSET
 
 @strawberry.type
 class ClusterCapacity(ClusterCapacityInput):
@@ -138,6 +139,10 @@ class Capacity(CapacityInput):
     def clusters(self, info) -> List[ClusterCapacity]:
         cap = info.context.db.collection("capacity").find_one({"_id": self._id})
         return [ ClusterCapacity(**{ k: c[k] for k in ["name", "slachours"] }) for c in cap.get("clusters", []) ]
+    @strawberry.field
+    def storage(self, info) -> List[ClusterCapacity]:
+        cap = info.context.db.collection("capacity").find_one({"_id": self._id})
+        return [ ClusterCapacity(**{ k: c[k] for k in ["name", "gigabytes", "inodes"] }) for c in cap.get("storage", []) ]
 
 @strawberry.input
 class FacilityInput:
@@ -154,9 +159,13 @@ class Facility( FacilityInput ):
         fac = info.context.db.collection("facilities").find_one({"_id": self._id })
         return [ Resource(**{"name": k, "type": v["type"]}) for k,v in fac.get("resources", {}).items() ]
     @strawberry.field
-    def capacity(self, info) -> Capacity:
-        cap = list(info.context.db.collection("capacity").find({"facility": self.name }).sort([("end", -1)]).limit(1))[0]
-        return Capacity(**{k : cap[k] for k in [ "_id", "start", "end" ]})
+    def capacity(self, info) -> Optional[Capacity]:
+        caps = list(info.context.db.collection("capacity").find({"facility": self.name }).sort([("end", -1)]).limit(1))
+        if caps:
+            cap = caps[0]
+            return Capacity(**{k : cap[k] for k in [ "_id", "start", "end" ]})
+        else:
+            return None
 
 @strawberry.input
 class QosInput:
