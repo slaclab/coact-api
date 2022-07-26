@@ -20,7 +20,8 @@ from models import \
         Resource, Qos, Job, \
         UserAllocationInput, UserAllocation, \
         ClusterInput, Cluster, \
-        SDFRequestInput, SDFRequest, SDFRequestType
+        SDFRequestInput, SDFRequest, SDFRequestType, \
+        RepoFacilityName
 
 import logging
 LOG = logging.getLogger(__name__)
@@ -87,6 +88,13 @@ class Query:
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def repos(self, info: Info, filter: Optional[RepoInput]={} ) -> List[Repo]:
         return info.context.db.find_repos( filter )
+
+    @strawberry.field
+    def allreposandfacility(self, info: Info) -> List[RepoFacilityName]:
+        """
+        All the repo names and their facility. No authentication needed. Just the names
+        """
+        return [ RepoFacilityName(**x) for x in info.context.db.collection("repos").find({}, {"_id": 0, "name": 1, "facility": 1}) ]
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def repo(self, filter: Optional[RepoInput], info: Info) -> Repo:

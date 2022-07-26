@@ -86,6 +86,11 @@ class User(UserInput):
                 ret.append(Eppn(**{ "eppn": x.split("@")[0], "fullname": x, "email": x, "organization": x.split("@")[1] }))
         return ret
 
+@strawberry.type
+class RepoFacilityName:
+    name: str
+    facility: str
+
 @strawberry.input
 class ClusterInput:
     _id: Optional[MongoId] = UNSET
