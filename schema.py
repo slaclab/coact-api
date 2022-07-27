@@ -5,11 +5,16 @@ from auth import IsAuthenticated, \
         IsAdmin, \
         IsValidEPPN
 
-from typing import List, Optional
+import asyncio
+from threading import Thread
+from typing import List, Optional, AsyncGenerator
+import copy
+
 import strawberry
 from strawberry.types import Info
 from strawberry.arguments import UNSET
 from bson import ObjectId
+from bson.json_util import dumps
 
 from models import \
         MongoId, \
@@ -20,7 +25,7 @@ from models import \
         Resource, Qos, Job, \
         UserAllocationInput, UserAllocation, \
         ClusterInput, Cluster, \
-        SDFRequestInput, SDFRequest, SDFRequestType, \
+        SDFRequestInput, SDFRequest, SDFRequestType, SDFRequestEvent, \
         RepoFacilityName
 
 import logging
@@ -323,3 +328,33 @@ class Mutation:
         for usg in usage:
             info.context.db.collection("computeusagecache").replace_one({"allocationId": usg["allocationId"], "qos": usg["qos"]}, usg, upsert=True)
         return "Done"
+
+
+requests_queue = asyncio.Queue()
+
+@strawberry.type
+class Subscription:
+    @strawberry.subscription
+    async def requests(self, info: Info) -> AsyncGenerator[SDFRequestEvent, None]:
+        while True:
+            req = await requests_queue.get()
+            yield req
+
+def start_change_stream_queues(db):
+    """
+    Create a asyncio task to watch for change streams.
+    We create one task per collection for now.
+    """
+    async def __watch_requests__():
+        with db["requests"].watch() as change_stream:
+            while change_stream.alive:
+                change = change_stream.try_next()
+                while change is not None:
+                    LOG.info(dumps(change))
+                    theId = change["documentKey"]["_id"]
+                    theRq = db["requests"].find_one({"_id": theId})
+                    req = SDFRequest(**theRq)
+                    await requests_queue.put(SDFRequestEvent(operationType=change["operationType"], theRequest=req))
+                    change = change_stream.try_next()
+                await asyncio.sleep(1)
+    asyncio.create_task(__watch_requests__())

@@ -47,6 +47,11 @@ class SDFRequestInput:
 class SDFRequest(SDFRequestInput):
     _id: Optional[MongoId] = UNSET
 
+@strawberry.type
+class SDFRequestEvent:
+    operationType: str
+    theRequest: SDFRequest
+
 @strawberry.input
 class EppnInput:
     eppn: Optional[str] = UNSET
@@ -157,6 +162,8 @@ class FacilityInput:
     czars: Optional[List[str]] = UNSET
     access_class: Optional[List[str]] = UNSET
     resources: Optional[List[str]] = UNSET
+    repo_script: Optional[str] = UNSET
+    user_script: Optional[str] = UNSET
 
 @strawberry.type
 class Facility( FacilityInput ):

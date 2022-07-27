@@ -21,7 +21,9 @@ db.getSiblingDB("iris").facilities.insertOne({
   "name" : "LCLS",
   "resources": ["compute", "storage"],
   "czars": [ "lcls-pcdsdata"], // set primary uid on all volumes
-  "access_class": [ "lcls-pcdsmgr" ] // set primary gid on all volumes
+  "access_class": [ "lcls-pcdsmgr" ], // set primary gid on all volumes
+  "repo_script": "/cds/group/lcls/scripts/run_script_on_repo_creation.sh", // Automatic scripts that will be run on repo creation by the backend
+  "user_script": "/cds/group/lcls/scripts/run_script_on_user_creation.sh", // Automatic scripts that will be run on user creation by the backend
 })
 
 db.getSiblingDB("iris").facilities.insertOne({

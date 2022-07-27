@@ -16,7 +16,7 @@ from pymongo import MongoClient
 from bson import ObjectId
 
 
-from schema import Query, Mutation
+from schema import Query, Mutation, Subscription, start_change_stream_queues
 
 import logging
 
@@ -247,7 +247,9 @@ def custom_context_dependency() -> CustomContext:
 async def get_context(custom_context: CustomContext = Depends(custom_context_dependency),):
     return custom_context
 
-schema = Schema(query=Query, mutation=Mutation, config=StrawberryConfig(auto_camel_case=True))
+start_change_stream_queues(mongo[DB_NAME])
+
+schema = Schema(query=Query, mutation=Mutation, subscription=Subscription, config=StrawberryConfig(auto_camel_case=True))
 graphql_app = GraphQLRouter(
   schema,
   context_getter=get_context,
