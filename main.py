@@ -249,9 +249,17 @@ async def get_context(custom_context: CustomContext = Depends(custom_context_dep
 
 start_change_stream_queues(mongo[DB_NAME])
 
-schema = Schema(query=Query, mutation=Mutation, subscription=Subscription, config=StrawberryConfig(auto_camel_case=True))
+# normal graphql api
+schema = Schema(query=Query, mutation=Mutation, config=StrawberryConfig(auto_camel_case=True))
 graphql_app = GraphQLRouter(
   schema,
+  context_getter=get_context,
+)
+
+# duplicate api at different endpoint for service accounts
+service_schema = Schema(query=Query, mutation=Mutation, subscription=Subscription, config=StrawberryConfig(auto_camel_case=True))
+graphql_service_app = GraphQLRouter(
+  service_schema,
   context_getter=get_context,
 )
 
@@ -268,3 +276,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(graphql_app, prefix="/graphql")
+app.include_router(graphql_app, prefix="/graphql-service")
+
