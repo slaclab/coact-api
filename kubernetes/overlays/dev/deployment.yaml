@@ -17,6 +17,8 @@ spec:
       containers:
       - name: coact
         image: slaclab/coact:latest
+        # command: [ "uvicorn", "main:app", "--host", "0.0.0.0", "--reload" ]
+        command: [ "bash", "-c", "sleep infinity" ]
         env:
         - name: ADMIN_USERNAMES
           value: ytl, mshankar
