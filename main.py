@@ -276,5 +276,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(graphql_app, prefix="/graphql")
-app.include_router(graphql_app, prefix="/graphql-service")
+app.include_router(graphql_service_app, prefix="/graphql-service")
 
