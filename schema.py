@@ -350,11 +350,14 @@ def start_change_stream_queues(db):
             while change_stream.alive:
                 change = change_stream.try_next()
                 while change is not None:
-                    LOG.info(dumps(change))
-                    theId = change["documentKey"]["_id"]
-                    theRq = db["requests"].find_one({"_id": theId})
-                    req = SDFRequest(**theRq)
-                    await requests_queue.put(SDFRequestEvent(operationType=change["operationType"], theRequest=req))
-                    change = change_stream.try_next()
+                    try:
+                        LOG.info(dumps(change))
+                        theId = change["documentKey"]["_id"]
+                        theRq = db["requests"].find_one({"_id": theId})
+                        req = SDFRequest(**theRq) if theRq else None
+                        await requests_queue.put(SDFRequestEvent(operationType=change["operationType"], theRequest=req))
+                        change = change_stream.try_next()
+                    except Exception as e:
+                        LOG.exception("Exception processing change")
                 await asyncio.sleep(1)
     asyncio.create_task(__watch_requests__())
