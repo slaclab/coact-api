@@ -50,7 +50,7 @@ class SDFRequest(SDFRequestInput):
 @strawberry.type
 class SDFRequestEvent:
     operationType: str
-    theRequest: SDFRequest
+    theRequest: Optional[SDFRequest] = UNSET
 
 @strawberry.input
 class EppnInput:
