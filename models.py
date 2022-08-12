@@ -1,3 +1,4 @@
+import os
 import dataclasses
 from typing import List, Optional, Dict
 import strawberry
@@ -5,6 +6,7 @@ from strawberry.types import Info
 from strawberry.arguments import UNSET
 from typing import NewType
 from enum import Enum
+import re
 
 from datetime import datetime
 from bson import ObjectId
@@ -90,6 +92,10 @@ class User(UserInput):
             else:
                 ret.append(Eppn(**{ "eppn": x.split("@")[0], "fullname": x, "email": x, "organization": x.split("@")[1] }))
         return ret
+    @strawberry.field
+    def isAdmin(self, info) -> bool:
+        admins = re.sub( "\s", "", os.environ.get("ADMIN_USERNAMES",'')).split(',')
+        return self.username in admins
 
 @strawberry.type
 class RepoFacilityName:

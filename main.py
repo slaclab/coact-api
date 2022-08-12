@@ -85,13 +85,13 @@ class CustomContext(BaseContext):
             if self.origin_username in admins:
                 self.is_admin = True
                 self.LOG.warn(f"admin user {self.username} identified")
-                if 'impersonate' in kwargs and kwargs['impersonate']:
-                    user = self.db.find_user( { 'username': kwargs['impersonate'] } )
+                if 'coactimp' in self.request.headers and self.request.headers['coactimp'] and self.request.headers['coactimp'] != 'null':
+                    user = self.db.find_user( { 'username': self.request.headers['coactimp'] } )
                     self.LOG.warning(f"user {self.username} is impersonating {user.username}")
                     self.username = user.username
-
-        if 'impersonate' in kwargs and kwargs['impersonate'] and self.is_admin == False:
-            raise Exception(f"unauthorised attempt by user {self.username} to impersonate {kwargs['impersonate']}")
+            else:
+                if 'coactimp' in self.request.headers and self.request.headers['coactimp'] and self.request.headers['coactimp'] != 'null':
+                    raise Exception(f"unauthorised attempt by user {self.username} to impersonate {kwargs['impersonate']}")
 
         return self.username
 
@@ -277,4 +277,3 @@ app.add_middleware(
 )
 app.include_router(graphql_app, prefix="/graphql")
 app.include_router(graphql_service_app, prefix="/graphql-service")
-
