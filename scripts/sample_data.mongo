@@ -20,27 +20,26 @@ db.getSiblingDB("iris").facilities.createIndex({"name": 1}, unique=true)
 db.getSiblingDB("iris").facilities.insertOne({
   "name" : "LCLS",
   "resources": ["compute", "storage"],
-  "czars": [ "lcls-pcdsdata"], // set primary uid on all volumes
-  "access_class": [ "lcls-pcdsmgr" ], // set primary gid on all volumes
-  "repo_script": "/cds/group/lcls/scripts/run_script_on_repo_creation.sh", // Automatic scripts that will be run on repo creation by the backend
-  "user_script": "/cds/group/lcls/scripts/run_script_on_user_creation.sh", // Automatic scripts that will be run on user creation by the backend
+  "serviceaccount": "lcls-pcdsdata", // set primary uid on all volumes
+  "servicegroup": "lcls-pcdsmgr", // set primary gid on all volumes
+  "czars": [ "mshankar", "wilko" ]
 })
 
 db.getSiblingDB("iris").facilities.insertOne({
   "name" : "CryoEM",
   "resources": ["compute", "storage"],
-  "czars": [ "cryo-daq"], // set primary uid on all volumes
-  "access_class": [ "cryo-data" ] // set primary gid on all volumes
+  "serviceaccount": "cryo-daq", // set primary uid on all volumes
+  "servicegroup": "cryo-data", // set primary gid on all volumes
+  "czars": [ "ytl"]
 })
 
 db.getSiblingDB("iris").facilities.insertOne({
   "name" : "Suncat",
   "resources": ["compute", "storage"],
+  "serviceaccount": "suncat", // set primary uid on all volumes
+  "servicegroup": "suncat", // set primary gid on all volumes
   "czars": [ "johannes"], // set primary uid on all volumes
-  "access_class": [ ] // set primary gid on all volumes
 })
-
-
 
 
 // define a capacity to be the actual resources provided to each facility
@@ -235,15 +234,15 @@ db.getSiblingDB("iris").access_groups.createIndex({"name": 1}, unique=true)
 db.getSiblingDB("iris").access_groups.createIndex({"gid_number": 1}, unique=true)
 
 // facility service account; use the gid as default and uids from members as primary owners
-db.getSiblingDB("iris").access_class.insertOne({"name": "lcls-pcdsmgr", "gid_number": 808080, "members": [ "pcdmgr" ]})
+db.getSiblingDB("iris").access_groups.insertOne({"name": "lcls-pcdsmgr", "gid_number": 808080, "members": [ "pcdmgr" ]})
 
 // no members means nothing special - use the principal, leaders and users for this group
-db.getSiblingDB("iris").access_class.insertOne({"name": "cxi12345", "gid_number": 12345, "members": null})
+db.getSiblingDB("iris").access_groups.insertOne({"name": "cxi12345", "gid_number": 12345, "members": null})
 
 
-db.getSiblingDB("iris").access_class.insertOne({"name": "cryo-data", "gid_number": 6363, "members": [ "cryo-daq"]})
-db.getSiblingDB("iris").access_class.insertOne({"name": "CS14", "gid_number": 8393, "members": []})
-db.getSiblingDB("iris").access_class.insertOne({"name": "CA104", "gid_number": 8343, "members": []})
+db.getSiblingDB("iris").access_groups.insertOne({"name": "cryo-data", "gid_number": 6363, "members": [ "cryo-daq"]})
+db.getSiblingDB("iris").access_groups.insertOne({"name": "CS14", "gid_number": 8393, "members": []})
+db.getSiblingDB("iris").access_groups.insertOne({"name": "CA104", "gid_number": 8343, "members": []})
 
 
 
@@ -253,14 +252,14 @@ db.getSiblingDB("iris").volumes.insertOne({
   "facility": "LCLS",
   "name": "cxi12345",
   "type": "science-data",
-  "access_class": [ "cxi12345" ],
+  "accessgroup": [ "cxi12345" ],
   "path": "/sdf/data/lcls/cxi/cxi/123456"
 })
 db.getSiblingDB("iris").volumes.insertOne({
   "facility": "LCLS",
   "name": "cxi12345",
   "type": "group",
-  "access_class": [ "cxi12345" ],
+  "accessgroup": [ "cxi12345" ],
   "path": "/sdf/group/lcls/cxi/cxi/123456"
 })
 
@@ -269,14 +268,14 @@ db.getSiblingDB("iris").volumes.insertOne({
   "facility": "LCLS",
   "name": "20211107-CS14",
   "type": "science-data",
-  "access_class": [ "CS14" ],
+  "accessgroup": [ "CS14" ],
   "path": "/sdf/data/cryoem/202111/20211107-CS14_TEM4"
 })
 db.getSiblingDB("iris").volumes.insertOne({
   "facility": "LCLS",
   "name": "20221112_CA104",
   "type": "science-data",
-  "access_class": [ "CA104" ],
+  "accessgroup": [ "CA104" ],
   "path": "/sdf/data/cryoem/202111/20221112_CA104_TEMBETA"
 })
 

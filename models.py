@@ -165,11 +165,10 @@ class FacilityInput:
     _id: Optional[MongoId] = UNSET
     name: Optional[str] = UNSET
     description: Optional[str] = UNSET
-    czars: Optional[List[str]] = UNSET
-    access_class: Optional[List[str]] = UNSET
     resources: Optional[List[str]] = UNSET
-    repo_script: Optional[str] = UNSET
-    user_script: Optional[str] = UNSET
+    serviceaccount: Optional[str] = UNSET
+    servicegroup: Optional[str] = UNSET
+    czars: Optional[List[str]] = UNSET
 
 @strawberry.type
 class Facility( FacilityInput ):
@@ -293,7 +292,7 @@ class VolumeUsage:
     facility: Optional[str] = UNSET
     name: Optional[str] = UNSET
     type: Optional[str] = UNSET
-    access_classes: Optional[List[str]] = UNSET
+    accessgroups: Optional[List[str]] = UNSET
     path: Optional[str] = UNSET # Path object? how about uri for s3?
 
 
