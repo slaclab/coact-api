@@ -89,6 +89,7 @@ class CustomContext(BaseContext):
                     user = self.db.find_user( { 'username': self.request.headers['coactimp'] } )
                     self.LOG.warning(f"user {self.username} is impersonating {user.username}")
                     self.username = user.username
+                    self.is_admin = False
             else:
                 if 'coactimp' in self.request.headers and self.request.headers['coactimp'] and self.request.headers['coactimp'] != 'null':
                     raise Exception(f"unauthorised attempt by user {self.username} to impersonate {kwargs['impersonate']}")
