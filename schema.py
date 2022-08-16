@@ -74,7 +74,7 @@ class Query:
                 { "principal": username }
                 ] } )
             reponames = [ x.name for x in myrepos ]
-            return info.context.db.find_requests( { "reponame": {"$in": reponames } } )
+            return info.context.db.find_requests( {"$and": [{ "reponame": {"$in": reponames } }, {"reqtype": "RepoMembership"}]} )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def facility(self, info: Info, filter: Optional[FacilityInput]) -> Facility:
