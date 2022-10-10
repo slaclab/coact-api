@@ -161,6 +161,13 @@ class Mutation:
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing={ 'reqtype': request.reqtype.name, "username": request.username, "reponame": request.reponame } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def newRepoRequest(self, request: SDFRequestInput, info: Info) -> SDFRequest:
+        if request.reqtype != SDFRequestType.NewRepo or not request.reponame or not request.facilityname or not request.principal:
+            raise Exception()
+        request.username = info.context.username
+        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing={ 'reqtype': request.reqtype.name, "reponame": request.reponame } )
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def approveRequest(id: str, info: Info) -> bool:
         LOG.debug(id)
         thereq = info.context.db.find_request({ "_id": ObjectId(id) })
@@ -195,6 +202,33 @@ class Mutation:
             info.context.db.collection("users").insert_one({ "username": preferredUserName, "uidnumber": maxuidnum+1, "eppns": [ theeppn ] })
             filter = {"name": thereq.reponame}
             info.context.db.collection("repos").update_one(filter, { "$addToSet": {"users": preferredUserName}})
+            info.context.db.remove( 'requests', { "_id": id } )
+            return True
+        elif thereq.reqtype == "NewRepo":
+            if not info.context.is_admin:
+                raise Exception("User is not an admin - cannot approve.")
+            thereponame = thereq.reponame
+            if not thereponame:
+                raise Exception("New repo request without a repo name - cannot approve.")
+            if info.context.db.find_repos( {"name": thereponame} ):
+                raise Exception(f"Repo with name {thereponame} already exists")
+            if not thereq.facilityname:
+                raise Exception(f"When creating a new repo, please specify the facility.")
+            if not thereq.principal:
+                raise Exception(f"When creating a new repo, please specify the principal.")
+            if not info.context.db.find_facility({"name": thereq.facilityname}):
+                raise Exception(f"Facility {thereq.facilityname} does not seem to be a valid facility")
+            if not info.context.db.find_user({"username": thereq.principal}):
+                raise Exception(f"The principal {thereq.principal} does not seem to exist")
+
+            info.context.db.collection("repos").insert_one({
+                  "name": thereponame,
+                  "facility": thereq.facilityname,
+                  "principal": thereq.principal,
+                  "leaders": [  ],
+                  "users": [  ],
+                  "access_groups": []
+              })
             info.context.db.remove( 'requests', { "_id": id } )
             return True
         else:

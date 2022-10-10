@@ -44,6 +44,7 @@ class SDFRequestInput:
     preferredUserName: Optional[str] = UNSET
     reponame: Optional[str] = UNSET
     facilityname: Optional[str] = UNSET
+    principal: Optional[str] = UNSET
 
 @strawberry.type
 class SDFRequest(SDFRequestInput):
