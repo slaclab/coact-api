@@ -200,8 +200,6 @@ class Mutation:
             if maxuidusr:
                 maxuidnum = list(maxuidusr)[0].get("uidnumber", 0)
             info.context.db.collection("users").insert_one({ "username": preferredUserName, "uidnumber": maxuidnum+1, "eppns": [ theeppn ] })
-            filter = {"name": thereq.reponame}
-            info.context.db.collection("repos").update_one(filter, { "$addToSet": {"users": preferredUserName}})
             info.context.db.remove( 'requests', { "_id": id } )
             return True
         elif thereq.reqtype == "NewRepo":
