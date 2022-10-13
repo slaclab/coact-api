@@ -237,7 +237,7 @@ db.getSiblingDB("iris").access_groups.createIndex({"gid_number": 1}, unique=true
 db.getSiblingDB("iris").access_groups.insertOne({"name": "lcls-pcdsmgr", "gid_number": 808080, "members": [ "pcdmgr" ]})
 
 // no members means nothing special - use the principal, leaders and users for this group
-db.getSiblingDB("iris").access_groups.insertOne({"name": "cxi12345", "gid_number": 12345, "members": null})
+db.getSiblingDB("iris").access_groups.insertOne({"name": "cxi12345-analysis", "gid_number": 12345, "members": ["mshankar"]})
 
 
 db.getSiblingDB("iris").access_groups.insertOne({"name": "cryo-data", "gid_number": 6363, "members": [ "cryo-daq"]})

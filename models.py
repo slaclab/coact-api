@@ -101,6 +101,13 @@ class User(UserInput):
     def isAdmin(self, info) -> bool:
         admins = re.sub( "\s", "", os.environ.get("ADMIN_USERNAMES",'')).split(',')
         return self.username in admins
+    @strawberry.field
+    def groups(self, info) -> List[str]:
+        grps = info.context.db.collection("access_groups").find({"members": self.username})
+        if not grps:
+            return []
+        return [ x["name"] for x in grps]
+
 
 @strawberry.type
 class RepoFacilityName:
