@@ -77,6 +77,10 @@ class UserInput:
     username: Optional[str] = UNSET
     uidnumber: Optional[int] = UNSET
     eppns: Optional[List[str]] = UNSET
+    preferredemail: Optional[str] = UNSET
+    shell: Optional[str] = UNSET
+    homequota: Optional[float] = UNSET
+    homeused: Optional[float] = UNSET
 
 @strawberry.type
 class User(UserInput):
