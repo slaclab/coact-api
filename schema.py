@@ -9,6 +9,9 @@ import asyncio
 from threading import Thread
 from typing import List, Optional, AsyncGenerator
 import copy
+import datetime
+import json
+from string import Template
 
 import strawberry
 from strawberry.types import Info
@@ -60,7 +63,7 @@ class Query:
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def facilities(self, info: Info, filter: Optional[FacilityInput]={} ) -> List[Facility]:
-        return info.context.db.find_facilities( filter )
+        return info.context.db.find_facilities( filter, exclude_fields=["policies"])
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def requests(self, info: Info) -> List[SDFRequest]:
@@ -78,7 +81,7 @@ class Query:
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def facility(self, info: Info, filter: Optional[FacilityInput]) -> Facility:
-        return info.context.db.find_facilities( filter )[0]
+        return info.context.db.find_facilities( filter, exclude_fields=["policies"] )[0]
 
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
@@ -147,10 +150,24 @@ class Mutation:
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def userUpdateEppn(self, eppns: List[str], info: Info, admin_override: bool=False) -> User:
-        pass
+        logged_in_user = info.context.username
+        if len(eppns) < 1:
+            raise Exception("A user must have at least one EPPN")
+        existing_users = info.context.db.find_users({"eppns": {"$in": eppns}})
+        if len(existing_users) != 1 or existing_users[0].username != logged_in_user:
+            raise Exception("Some of the eppns are being used by another user")
+        info.context.db.collection("users").update_one({"username": logged_in_user}, {"$set": { "eppns": eppns }})
+        return info.context.db.find_user( {"username": logged_in_user} )
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def changeUserShell(self, newshell: str, info: Info) -> User:
+        LOG.info("Changing shell for user %s to %s", info.context.username, newshell)
+        info.context.db.collection("users").update_one({"username": info.context.username}, {"$set": {"shell": newshell}})
+        return info.context.db.find_user( {"username": info.context.username} )
 
     @strawberry.field( permission_classes=[ IsValidEPPN ] )
     def newSDFAccountRequest(self, request: SDFRequestInput, info: Info) -> SDFRequest:
+        request.timeofrequest = datetime.datetime.utcnow()
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing={ 'reqtype': request.reqtype.name, "eppn": request.eppn } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
@@ -158,6 +175,8 @@ class Mutation:
         if request.reqtype != SDFRequestType.RepoMembership or not request.reponame:
             raise Exception()
         request.username = info.context.username
+        request.requestedby = info.context.username
+        request.timeofrequest = datetime.datetime.utcnow()
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing={ 'reqtype': request.reqtype.name, "username": request.username, "reponame": request.reponame } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
@@ -165,7 +184,27 @@ class Mutation:
         if request.reqtype != SDFRequestType.NewRepo or not request.reponame or not request.facilityname or not request.principal:
             raise Exception()
         request.username = info.context.username
+        request.requestedby = info.context.username
+        request.timeofrequest = datetime.datetime.utcnow()
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing={ 'reqtype': request.reqtype.name, "reponame": request.reponame } )
+
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
+    def repoComputeAllocationRequest(self, request: SDFRequestInput, info: Info) -> SDFRequest:
+        if request.reqtype != SDFRequestType.RepoComputeAllocation or not request.reponame or not request.clustername or not request.slachours:
+            raise Exception()
+        request.username = info.context.username
+        request.requestedby = info.context.username
+        request.timeofrequest = datetime.datetime.utcnow()
+        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing={ 'reqtype': request.reqtype.name, "reponame": request.reponame } )
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def userQuotaRequest(self, request: SDFRequestInput, info: Info) -> SDFRequest:
+        if request.reqtype != SDFRequestType.UserStorageAllocation or not request.volumename or not request.gigabytes or not request.inodes:
+            raise Exception()
+        request.username = info.context.username
+        request.requestedby = info.context.username
+        request.timeofrequest = datetime.datetime.utcnow()
+        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing={ 'reqtype': request.reqtype.name, "username": request.username, "volumename": request.volumename } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def approveRequest(id: str, info: Info) -> bool:
@@ -196,10 +235,48 @@ class Mutation:
             alreadyExistingUser = info.context.db.collection("users").find_one( { "username": preferredUserName} )
             if alreadyExistingUser:
                 raise Exception("User with username " + preferredUserName + " already exists - cannot approve.")
+            thefacility = thereq.facilityname
+            if not thefacility:
+                raise Exception("Account request without a facility - cannot approve.")
+
+            policies = info.context.db.collection("facilities").find_one({"name": thefacility}).get("policies", {}).get("UserAccount", {})
+
             maxuidusr, maxuidnum = info.context.db.collection("users").find({}).sort([("uidnumber", -1)]).limit(1), 0
             if maxuidusr:
                 maxuidnum = list(maxuidusr)[0].get("uidnumber", 0)
-            info.context.db.collection("users").insert_one({ "username": preferredUserName, "uidnumber": maxuidnum+1, "eppns": [ theeppn ] })
+            info.context.db.collection("users").insert_one({ "username": preferredUserName, "uidnumber": maxuidnum+1, "eppns": [ theeppn ], "shell": "/bin/bash", "preferredemail": theeppn })
+            if policies:
+                for collname, plstmtlist in policies.items():
+                    for plstmt in plstmtlist:
+                        LOG.info(json.dumps(plstmt))
+                        fmtedstmt = json.loads(Template(json.dumps(plstmt)).substitute(username=preferredUserName, usernamefirstchar=preferredUserName[0]))
+                        LOG.info(json.dumps(fmtedstmt, indent=4))
+                        info.context.db.collection(collname).insert_one(fmtedstmt)
+
+            info.context.db.remove( 'requests', { "_id": id } )
+            return True
+        elif thereq.reqtype == "UserStorageAllocation":
+            if not info.context.is_admin:
+                raise Exception("User is not an admin - cannot approve.")
+            theuser = thereq.username
+            if not theuser or not info.context.db.collection("users").find_one( { "username": theuser } ):
+                raise Exception(f"Cannot find user object for {theusername}")
+            thevolumename = thereq.volumename
+            if not thevolumename:
+                raise Exception(f"Please specify the volume")
+            theintent = thereq.intent
+            if not theintent:
+                raise Exception(f"Please specify the intent; this is used to identify which allocation to update")
+            if not thereq.gigabytes or not thereq.inodes:
+                raise Exception(f"Please specify the storage request as gigabytes and inodes")
+
+            alloc = info.context.db.collection("user_storage_allocation").find_one( { "username": theuser, "volumename": thevolumename, "intent": theintent } )
+            if not alloc:
+                raise Exception(f"Cannot find an allocation for {theusername} on volume {thevolumename}")
+            info.context.db.collection("user_storage_allocation").update_one(
+                { "username": theuser, "volumename": thevolumename, "intent": theintent },
+                {"$set": {"gigabytes": thereq.gigabytes, "inodes": thereq.inodes }}
+            )
             info.context.db.remove( 'requests', { "_id": id } )
             return True
         elif thereq.reqtype == "NewRepo":
@@ -229,11 +306,42 @@ class Mutation:
               })
             info.context.db.remove( 'requests', { "_id": id } )
             return True
+        elif thereq.reqtype == "RepoComputeAllocation":
+            if not info.context.is_admin:
+                raise Exception("User is not an admin - cannot approve.")
+            thereponame = thereq.reponame
+            if not thereponame:
+                raise Exception("RepoComputeAllocation request without a repo name - cannot approve.")
+            if not info.context.db.find_repos( {"name": thereponame} ):
+                raise Exception(f"Repo with name {thereponame} does not exist")
+            theclustername = thereq.clustername
+            if not theclustername:
+                raise Exception("RepoComputeAllocation request without a cluster name - cannot approve.")
+            if not info.context.db.find_clusters( {"name": theclustername} ):
+                raise Exception(f"Cluster with name {theclustername} does not exist")
+            theqosname = thereq.qosname
+            if not theqosname:
+                raise Exception("RepoComputeAllocation request without a QOS name - cannot approve.")
+            if not thereq.slachours:
+                raise Exception("RepoComputeAllocation without a slachours - cannot approve.")
+
+            clusteralloc = [ x for x in info.context.db.find_repo( {"name": thereponame} ).currentComputeAllocations(info) if x.clustername == theclustername ][0]
+            if not clusteralloc:
+                raise Exception(f"Cannot find an allocation for the cluster with name {theclustername} for repo {thereponame}")
+            theqos = [ q for q in clusteralloc.qoses(info) if q.name == theqosname ][0]
+            if not theqos:
+                raise Exception(f"Cannot find a QOS with the name {theqosname} for the cluster with name {theclustername} for repo {thereponame}")
+
+            info.context.db.collection("repo_compute_allocations").update_one(
+                {"_id": ObjectId(clusteralloc._id)},
+                {"$set": {"qoses."+theqosname+".slachours": thereq.slachours}}
+            )
+            info.context.db.remove( 'requests', { "_id": id } )
+            return True
         else:
             if not info.context.is_admin:
                 raise Exception("User is not an admin")
-            info.context.db.remove( 'requests', { "_id": id } )
-            return True
+            raise Exception("Not implemented")
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def rejectRequest(id: str, info: Info) -> bool:

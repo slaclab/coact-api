@@ -35,7 +35,6 @@ if __name__ == '__main__':
     parser.add_argument("-u", "--url", help="The URL to the CoAct GraphQL API", default="https://coact-dev.slac.stanford.edu/graphql")
     parser.add_argument("-C", "--vouch_cookie_name", help="The cookie name that Vouch expects", default='slac-vouch' )
     parser.add_argument("-c", "--cookie", help="The Vouch cookie for authenticated access to Coact", required=True )
-    parser.add_argument("-r", "--resource_name", help="The name of the resource, typically something like compute", default='compute')
     parser.add_argument("--timezone", help="Timezone to use for analysis", default='America/Los_Angeles' )
     parser.add_argument("--dry_run", help="Do not insert data into Coact", default=False, action='store_true' )
     parser.add_argument("datafile", help="Load slurm jobs data from this (json) file.")
@@ -74,9 +73,9 @@ if __name__ == '__main__':
                 principal
                 leaders
                 users
-                currentAllocations(resource: "%s"){
+                currentComputeAllocations{
                     Id
-                    resource
+                    clustername
                     qoses{
                         name
                         slachours
@@ -91,27 +90,26 @@ if __name__ == '__main__':
             }
         }
     """
-    reporesp = requests.post(args.url, cookies=cookies, json={"query": q % args.resource_name})
+    reporesp = requests.post(args.url, cookies=cookies, json={"query": q})
     reporesp.raise_for_status()
     repos = { x["name"] : x for x in reporesp.json()["data"]["repos"] }
     for repo in repos.values():
-        qos2resource = {}
-        qos2cf = {}
         qos2allocid = {}
-        for alloc in repo.get("currentAllocations", []):
+        qos2cf = {}
+        for alloc in repo.get("currentComputeAllocations", []):
             for qos in alloc.get("qoses", []):
-                qos2resource[qos["name"]] = alloc["resource"]
-                qos2cf[qos["name"]] = qos["chargefactor"]
-                qos2allocid[qos["name"]] = alloc["Id"]
-        repo["qos2resource"] = qos2resource
-        repo["qos2cf"] = qos2cf
+                qos2allocid[(qos["name"], alloc["clustername"])] = alloc["Id"]
+                qos2cf[(qos["name"], alloc["clustername"])] = qos["chargefactor"]
         repo["qos2allocid"] = qos2allocid
+        repo["qos2cf"] = qos2cf
         logging.info("found repo {repo}")
 
     nodename2cf = {}
+    nodename2clustername = {}
     for cluster in reporesp.json()["data"]["clusters"]:
         for member in cluster.get("members", []):
             nodename2cf[member] = cluster["chargefactor"]
+            nodename2clustername[member] = cluster["name"]
 
     for job in jobs:
         # Fix up everything with a "_ts"
@@ -125,10 +123,12 @@ if __name__ == '__main__':
         if acc_name and acc_name in repos.keys():
             job["repo"] = acc_name
             job["facility"] = repos[acc_name]["facility"]
-            job["resource"] = repos[acc_name]["qos2resource"][job["qos"]]
-            job["allocationId"] = repos[acc_name]["qos2allocid"][job["qos"]]
-            job["priocf"] = repos[acc_name]["qos2cf"][job["qos"]]
-            job["hwcf"] = mean(map(lambda x : nodename2cf[x], NodeList(job["nodelist"]).sorted()))
+            nodelist = NodeList(job["nodelist"]).sorted()
+            clustername = nodename2clustername[nodelist[0]]
+            job["clustername"] = clustername
+            job["allocationId"] = repos[acc_name]["qos2allocid"][(job["qos"], clustername)]
+            job["priocf"] = repos[acc_name]["qos2cf"][(job["qos"], clustername)]
+            job["hwcf"] = mean(map(lambda x : nodename2cf[x], nodelist))
             job["finalcf"] = job["priocf"] * job["hwcf"]
             job["rawsecs"] = job["elapsedSecs"] * job["allocNodes"] # elapsed seconds * number of nodes
             job["machinesecs"] = job["rawsecs"] * job["hwcf"] # raw seconds after applying the hardware charge factor

@@ -103,7 +103,7 @@ class DB:
     LOG = logging.getLogger(__name__)
     KLASSES = {
         'users': User,
-        'cluster': Cluster,
+        'clusters': Cluster,
         'access_groups': AccessGroup,
         'repos': Repo,
         'facilities': Facility,
@@ -161,7 +161,7 @@ class DB:
     def find_users(self, filter):
         return self.find("users", filter)
     def find_clusters(self, filter):
-        return self.find("cluster", filter)
+        return self.find("clusters", filter)
     def find_user(self, filter):
         return self.assert_one( self.find_users( filter ) )
     def find_facilities(self, filter, exclude_fields: Optional[list[str]]=[] ):

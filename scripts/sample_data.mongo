@@ -22,7 +22,21 @@ db.getSiblingDB("iris").facilities.insertOne({
   "resources": ["compute", "storage"],
   "serviceaccount": "lcls-pcdsdata", // set primary uid on all volumes
   "servicegroup": "lcls-pcdsmgr", // set primary gid on all volumes
-  "czars": [ "mshankar", "wilko" ]
+  "czars": [ "mshankar", "wilko" ],
+  "policies": {
+    "UserAccount": {
+      "user_storage_allocation": [
+        {
+          "username": "$username",
+          "volumename": "wekassd2022",
+          "intent": "home",
+          "gigabytes": 20,
+          "inodes": 1000,
+          "mount": "nfs://192.168.0.1/homes/$usernamefirstchar/$username"
+        }
+      ]
+    }
+  }
 })
 
 db.getSiblingDB("iris").facilities.insertOne({
@@ -30,7 +44,21 @@ db.getSiblingDB("iris").facilities.insertOne({
   "resources": ["compute", "storage"],
   "serviceaccount": "cryo-daq", // set primary uid on all volumes
   "servicegroup": "cryo-data", // set primary gid on all volumes
-  "czars": [ "ytl"]
+  "czars": [ "ytl"],
+  "policies": {
+    "UserAccount": {
+      "user_storage_allocation": [
+        {
+          "username": "$username",
+          "volumename": "wekassd2022",
+          "intent": "home",
+          "gigabytes": 20,
+          "inodes": 1000,
+          "mount": "nfs://192.168.0.1/homes/$usernamefirstchar/$username"
+        }
+      ]
+    }
+  }
 })
 
 db.getSiblingDB("iris").facilities.insertOne({
@@ -39,7 +67,361 @@ db.getSiblingDB("iris").facilities.insertOne({
   "serviceaccount": "suncat", // set primary uid on all volumes
   "servicegroup": "suncat", // set primary gid on all volumes
   "czars": [ "johannes"], // set primary uid on all volumes
+  "policies": {
+    "UserAccount": {
+      "user_storage_allocation": [
+        {
+          "username": "$username",
+          "volumename": "wekassd2022",
+          "intent": "home",
+          "gigabytes": 20,
+          "inodes": 1000,
+          "mount": "nfs://192.168.0.1/homes/$usernamefirstchar/$username"
+        }
+      ]
+    }
+  }
 })
+
+
+// Clusters are compute resources; a cluster consists of CPU/GPU nodes.
+db.getSiblingDB("iris").clusters.createIndex({"name": 1}, unique=true)
+
+db.getSiblingDB("iris").clusters.insertOne({
+  "name": "rome-b050",
+  "nodecpucount": 128,
+  "nodecpucountdivisor": 64, //?? sockets?
+  "nodememgb": 512,
+  "chargefactor": 0.8,
+  "nodecpusmt": 1, // threads per core
+  "members": [ "rome0001", "rome0002","rome0003","rome0004","rome0005" ] // perhaps use regex?
+})
+
+
+db.getSiblingDB("iris").clusters.insertOne({
+  "name": "milan-srcf",
+  "nodecpucount": 16,
+  "nodecpucountdivisor": 16, //??
+  "nodememgb": 512,
+  "chargefactor": 0.8,
+  "nodecpusmt": 1, // threads per core
+  "members": [ "milan0001", "milan0002","milan0003","milan0004","milan0005" ]
+})
+
+db.getSiblingDB("iris").clusters.insertOne({
+  "name": "ampt",
+  "nodecpucount": 128,
+  "nodecpucountdivisor": 16, //??
+  "nodememgb": 1024,
+  "chargefactor": 0.8,
+  "nodecpusmt": 2, // threads per core
+  "nodegpucount": 4,
+  "nodegpumemgb": 40,
+  "members": [ "ampt001", "ampt002","ampt003","ampt004","ampt005" ]
+})
+
+db.getSiblingDB("iris").clusters.insertOne({
+  "name": "psana",
+  "nodecpucount": 16,
+  "nodecpucountdivisor": 16, //??
+  "nodememgb": 512,
+  "chargefactor": 0.8,
+  "nodecpusmt": 1, // threads per core
+  "members": [ ]
+})
+
+// Too lazy to create all the cluster members for psana
+for(c=1200;c<1600;c++) {   db.getSiblingDB("iris").clusters.updateOne({"name": "psana"}, {"$addToSet": {"members": "psana"+c}})}
+
+
+// Similar to clusters, physical volumes are storage resources.
+// Like Kubernetes, physical volumes are associated with a storage class ( SSD/Disk/Tape ) etc.
+
+db.getSiblingDB("iris").physical_volumes.createIndex({"name": 1}, unique=true)
+
+// User homes first
+db.getSiblingDB("iris").physical_volumes.insertOne({
+  "name": "wekassd2022",
+  "storageclass": "ssd",
+  "intent": "userhome",
+  "gigabytes": 1000000,
+  "inodes": 100000,
+  "mount": "nfs://192.168.0.1/homes"
+})
+
+// End the description of resources....
+
+// Users and groups.
+// Of course, user has other information like full name, email etc. Maybe some of that comes from inCommon?
+db.getSiblingDB("iris").users.createIndex({"username": 1}, unique=true)
+db.getSiblingDB("iris").users.createIndex({"uidnumber": 1}, unique=true)
+db.getSiblingDB("iris").users.createIndex({"eppns": 1}, {unique: true, partialFilterExpression: { eppns: { $type: "array" }}})
+db.getSiblingDB("iris").users.insertOne({ "username": "aquila", "uidnumber": 123, "eppns": [ "aquila@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "aquila@slac.stanford.edu" })
+db.getSiblingDB("iris").users.insertOne({ "username": "mcbrowne", "uidnumber": 124, "eppns": [ "mcbrowne@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "mcbrowne@slac.stanford.edu" })
+db.getSiblingDB("iris").users.insertOne({ "username": "snelson", "uidnumber": 125, "eppns": [ "snelson@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "snelson@slac.stanford.edu" })
+db.getSiblingDB("iris").users.insertOne({ "username": "tmalla", "uidnumber": 126, "eppns": [ "tmalla@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "tmalla@slac.stanford.edu" })
+db.getSiblingDB("iris").users.insertOne({ "username": "yanwen", "uidnumber": 127, "eppns": [ "yanwen@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "yanwen@slac.stanford.edu" })
+db.getSiblingDB("iris").users.insertOne({ "username": "mshankar", "uidnumber": 128, "eppns": [ "mshankar@slac.stanford.edu", "muralis@stanford.edu" ], "shell": "/bin/bash", "preferredemail": "mshankar@slac.stanford.edu" })
+db.getSiblingDB("iris").users.insertOne({ "username": "ytl", "uidnumber": 129, "eppns": [ "ytl@slac.stanford.edu", "yee379@stanford.edu" ], "shell": "/bin/bash", "preferredemail": "ytl@slac.stanford.edu" })
+db.getSiblingDB("iris").users.insertOne({ "username": "wilko", "uidnumber": 130, "eppns": [ "wilko@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "wilko@slac.stanford.edu" })
+db.getSiblingDB("iris").users.insertOne({ "username": "perazzo", "uidnumber": 131, "eppns": [ "perazzo@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "perazzo@slac.stanford.edu" })
+db.getSiblingDB("iris").users.insertOne({ "username": "yemi", "uidnumber": 132, "eppns": [ "yemi@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "yemi@slac.stanford.edu" })
+db.getSiblingDB("iris").users.insertOne({ "username": "richard", "uidnumber": 133, "eppns": [ "richard@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "richard@slac.stanford.edu" })
+
+
+// User_Volume_Storage_Allocation
+db.getSiblingDB("iris").user_storage_allocation.createIndex({"username": 1, "intent": 1}, unique=true)
+db.getSiblingDB("iris").user_storage_allocation.createIndex({"username": 1, "volume_name": 1})
+
+["mshankar", "ytl", "wilko", "perazzo", "yemi", "richard"].forEach(function(u){
+  db.getSiblingDB("iris").user_storage_allocation.insertOne({
+    "username": u,
+    "volumename": "wekassd2022",
+    "intent": "home",
+    "gigabytes": 20,
+    "inodes": 1000,
+    "mount": "nfs://192.168.0.1/homes/" + u[0] + "/" + u
+  })
+})
+
+db.getSiblingDB("iris").user_storage_usage.createIndex({"alloc_id": 1, "date": 1}, unique=true)
+
+["mshankar", "ytl", "wilko", "perazzo", "yemi", "richard"].forEach(function(u){
+  let allocid = db.getSiblingDB("iris").user_storage_allocation.findOne({"username": u, "intent": "home" })["_id"]
+  db.getSiblingDB("iris").user_storage_usage.insertOne({
+    "allocid": allocid,
+    "date": new Date(),
+    "gigabytes": 19.99,
+    "inodes": 976,
+  })
+})
+
+
+// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "RepoMembership", "username" : "wilko", "reponame" : "cxi12345", "requestedby": "wilko", "timeofrequest": new Date()})
+// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "RepoMembership", "username" : "wilko", "reponame" : "CA104", "requestedby": "wilko", "timeofrequest": new Date()})
+// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "RepoMembership", "username" : "mshankar", "reponame" : "CA104", "requestedby": "mshankar", "timeofrequest": new Date()})
+// // Two people requesting the same repo/facility
+// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewRepo", "username" : "wilko",    "reponame" : "cxi23456", "requestedby": "wilko", "timeofrequest": new Date()})
+// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewRepo", "username" : "mshankar", "reponame" : "cxi23456", "requestedby": "mshankar", "timeofrequest": new Date()})
+// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewFacility", "username" : "wilko",    "facilityname" : "RUBIN", "requestedby": "wilko", "timeofrequest": new Date()})
+// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewFacility", "username" : "mshankar", "facilityname" : "RUBIN", "requestedby": "mshankar", "timeofrequest": new Date()})
+//
+// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "paul@stanford.edu", "preferredUserName": "paul", "reponame" : "cxi12345", "facilityname" : "LCLS", "timeofrequest": new Date()})
+// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "george@stanford.edu", "preferredUserName": "george", "reponame" : "cxi12345", "facilityname" : "LCLS", "timeofrequest": new Date()})
+// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "john@stanford.edu", "preferredUserName": "john", "reponame" : "cxi12345", "facilityname" : "LCLS", "timeofrequest": new Date()})
+// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "ringo@stanford.edu", "preferredUserName": "ringo", "reponame" : "cxi12345", "facilityname" : "LCLS", "timeofrequest": new Date()})
+// // These are requests for user account whose username already exists in the system.
+// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "wilko@stanford.edu", "preferredUserName": "wilko", "reponame" : "cxi12345", "facilityname" : "LCLS", "timeofrequest": new Date()})
+// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "mshankar@stanford.edu", "preferredUserName": "mshankar", "reponame" : "cxi12345", "facilityname" : "LCLS", "timeofrequest": new Date()})
+// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "ytl@stanford.edu", "preferredUserName": "ytl", "reponame" : "cxi12345", "facilityname" : "LCLS", "timeofrequest": new Date()})
+
+
+
+// an access class defines an abstraiton of access to some data. as such, by itself it merely defines essentially just a gidnumber. these shoudl be associated with eitehr: (note that all three can apply to all related storage)
+// 1) facility (to have all data under that facility with say the same primiarly group id defined in the access group)
+// 2) to a repo; so that the repo has this gid
+// 3) to a volume so that only that volume has that gid
+
+db.getSiblingDB("iris").access_groups.createIndex({"name": 1}, unique=true)
+db.getSiblingDB("iris").access_groups.createIndex({"gid_number": 1}, unique=true)
+
+// facility service account; use the gid as default and uids from members as primary owners
+db.getSiblingDB("iris").access_groups.insertOne({"name": "lcls-pcdsmgr", "gid_number": 808080, "members": [ "pcdmgr" ]})
+
+// no members means nothing special - use the principal, leaders and users for this group
+db.getSiblingDB("iris").access_groups.insertOne({"name": "cxi12345-analysis", "gid_number": 12345, "members": ["mshankar"]})
+
+
+db.getSiblingDB("iris").access_groups.insertOne({"name": "cryo-data", "gid_number": 6363, "members": [ "cryo-daq"]})
+db.getSiblingDB("iris").access_groups.insertOne({"name": "CS14", "gid_number": 8393, "members": []})
+db.getSiblingDB("iris").access_groups.insertOne({"name": "CA104", "gid_number": 8343, "members": []})
+
+
+// End of users and groups
+
+
+// Repos now - repos are the fundamental unit of allocations of resources
+
+db.getSiblingDB("iris").repos.createIndex({"name": 1}, unique=true)
+db.getSiblingDB("iris").repos.createIndex({"leader": 1}) // For performance
+db.getSiblingDB("iris").repos.insertOne({
+  "name": "cxi12345",
+  "facility": "LCLS",
+  "principal": "aquila",
+  "leaders": [ "snelson" ],
+  "users": [ "aquila", "mcbrowne", "snelson", "tmalla", "yanwen", "mshankar" ],
+  "access_groups": []
+})
+
+db.getSiblingDB("iris").repos.insertOne({
+  "name": "CS14",
+  "facility": "CryoEM",
+  "principal": "ytl",
+  "leaders": [],
+  "users": [ "cszhang" ],
+  "access_groups": [ "CS14" ]
+
+})
+db.getSiblingDB("iris").repos.insertOne({
+  "name": "CA104",
+  "facility": "CryoEM",
+  "principal": "mshankar",
+  "leaders": [ "ytl" ],
+  "users": [ ],
+  "access_groups": [ "CA104" ]
+})
+
+
+// Repo allocations and usage.
+// We separate out compute and storage allocations.
+// Apologies for the long collection names; this makes it easier when building out the model.
+
+// We allocate compute on a specific cluster.
+db.getSiblingDB("iris").repo_compute_allocations.createIndex({"repo": 1, "clustername": 1, "start": -1}, unique=true)
+
+// compute allocations
+// in terms of a compute quota; we assume that slachours already considers things like cpu/gpu and has the
+// calculated weights required for varying cluster performances.
+// Each allocation can be divided up into qos'es
+// This lets you allocate, for example, 500 hours of regular processing and 500 hours of premium high-priority processing.
+
+db.getSiblingDB("iris").repo_compute_allocations.insertOne({
+  "repo": "cxi12345",
+  "clustername": "psana",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "qoses": {
+    "cxi12345": {
+      "slachours": 500,
+      "chargefactor": 0.7765
+    },
+    "cxi12345-priority": {
+      "slachours": 500,
+      "chargefactor": 1.25
+    }
+  }
+})
+
+db.getSiblingDB("iris").repo_compute_allocations.insertOne({
+  "repo": "cxi12345",
+  "clustername": "milan-srcf",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "qoses": {
+    "cxi12345": {
+      "slachours": 600,
+      "chargefactor": 0.7765
+    },
+    "cxi12345-priority": {
+      "slachours": 600,
+      "chargefactor": 1.25
+    }
+  }
+})
+
+// This is last years allocation for the same repo
+db.getSiblingDB("iris").repo_compute_allocations.insertOne({
+  "repo": "cxi12345",
+  "clustername": "psana",
+  "start": ISODate("2020-05-01T00:00:00-07:00"), // Last years allocations
+  "end": ISODate("2020-12-31T00:00:00Z"),
+  "qoses": {
+    "cxi12345": {
+      "slachours": 100000,
+      "chargefactor": 1.0
+    },
+    "cxi12345-priority": {
+      "slachours": 1000,
+      "chargefactor": 1.25
+    }
+  }
+})
+
+db.getSiblingDB("iris").repo_compute_allocations.insertOne({
+  "repo": "CA104",
+  "clustername": "milan-srcf",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "qoses": {
+    "CA104": {
+      "slachours": 400,
+      "chargefactor": 0.7765
+    },
+    "CA104-priority": {
+      "slachours": 400,
+      "chargefactor": 1.25
+    }
+  }
+})
+
+
+db.getSiblingDB("iris").allocations.insertOne({
+  "facility": "LCLS",
+  "resource": "storage",
+  "repo": "cxi12345",
+  "active": true,
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "volumes": {
+    "science-data": [
+      {
+        "name": "cxi12345",
+        "gigabytes": 5544, // gb
+        "inodes": 4455
+      }
+    ],
+    "group": [
+      {
+        "name": "cxi12345",
+        "gigabytes": 1000,
+        "inodes": 100
+      }
+    ]
+  }
+})
+
+// a 'storage' allocation defines all the volumes for that repo
+// the key of each volume is the 'type' of volume defined above (bit suplurfuous perhaps)
+// as the quota of each volume can change, we keep the Volume as a separate document and use this allocation document
+// ?? how to deal with stranded/orphaned volumes?
+
+db.getSiblingDB("iris").allocations.insertOne({
+  "facility": "CryoEM",
+  "resource": "storage",
+  "repo": "CS14",
+  "active": true,
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "volumes": {
+    "science-data": [
+      {
+        "name": "20211107-CS14",
+        "gigabytes": 2000,
+        "inodes": 20000
+      }
+    ]
+  }
+})
+
+db.getSiblingDB("iris").allocations.insertOne({
+  "facility": "CryoEM",
+  "resource": "storage",
+  "repo": "CA104",
+  "active": true,
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "volumes": {
+    "science-data": [
+      {
+        "name": "20221112_CA104",
+        "gigabytes": 2000,
+        "inodes": 20000
+      }
+    ]
+  }
+})
+
+
 
 
 // define a capacity to be the actual resources provided to each facility
@@ -113,136 +495,7 @@ db.getSiblingDB("iris").capacity.insertOne({
 })
 
 
-db.getSiblingDB("iris").cluster.createIndex({"name": 1}, unique=true)
 
-db.getSiblingDB("iris").cluster.insertOne({
-  "name": "rome-b050",
-  "nodecpucount": 128,
-  "nodecpucountdivisor": 64, //?? sockets?
-  "nodememgb": 512,
-  "chargefactor": 0.8,
-  "nodecpusmt": 1, // threads per core
-  "members": [ "rome0001", "rome0002","rome0003","rome0004","rome0005" ] // perhaps use regex?
-})
-
-
-db.getSiblingDB("iris").cluster.insertOne({
-  "name": "milan-srcf",
-  "nodecpucount": 16,
-  "nodecpucountdivisor": 16, //??
-  "nodememgb": 512,
-  "chargefactor": 0.8,
-  "nodecpusmt": 1, // threads per core
-  "members": [ "milan0001", "milan0002","milan0003","milan0004","milan0005" ]
-})
-
-db.getSiblingDB("iris").cluster.insertOne({
-  "name": "ampt",
-  "nodecpucount": 128,
-  "nodecpucountdivisor": 16, //??
-  "nodememgb": 1024,
-  "chargefactor": 0.8,
-  "nodecpusmt": 2, // threads per core
-  "nodegpucount": 4,
-  "nodegpumemgb": 40,
-  "members": [ "ampt001", "ampt002","ampt003","ampt004","ampt005" ]
-})
-
-db.getSiblingDB("iris").cluster.insertOne({
-  "name": "psana",
-  "nodecpucount": 16,
-  "nodecpucountdivisor": 16, //??
-  "nodememgb": 512,
-  "chargefactor": 0.8,
-  "nodecpusmt": 1, // threads per core
-  "members": [ ]
-})
-
-// Too lazy to create all the cluster members for psana
-for(c=1200;c<1600;c++) {   db.getSiblingDB("iris").cluster.updateOne({"name": "psana"}, {"$addToSet": {"members": "psana"+c}})}
-
-db.getSiblingDB("iris").repos.createIndex({"name": 1}, unique=true)
-db.getSiblingDB("iris").repos.createIndex({"leader": 1}) // For performance
-db.getSiblingDB("iris").repos.insertOne({
-  "name": "cxi12345",
-  "facility": "LCLS",
-  "principal": "aquila",
-  "leaders": [ "snelson" ],
-  "users": [ "aquila", "mcbrowne", "snelson", "tmalla", "yanwen", "mshankar" ],
-  "access_groups": []
-})
-
-db.getSiblingDB("iris").repos.insertOne({
-  "name": "CS14",
-  "facility": "CryoEM",
-  "principal": "ytl",
-  "leaders": [],
-  "users": [ "cszhang" ],
-  "access_groups": [ "CS14" ]
-
-})
-db.getSiblingDB("iris").repos.insertOne({
-  "name": "CA104",
-  "facility": "CryoEM",
-  "principal": "mshankar",
-  "leaders": [ "ytl" ],
-  "users": [ ],
-  "access_groups": [ "CA104" ]
-})
-
-
-// Of course, user has other information like full name, email etc. Maybe some of that comes from inCommon?
-db.getSiblingDB("iris").users.createIndex({"username": 1}, unique=true)
-db.getSiblingDB("iris").users.createIndex({"uidnumber": 1}, unique=true)
-db.getSiblingDB("iris").users.createIndex({"eppns": 1}, {unique: true, partialFilterExpression: { eppns: { $type: "array" }}})
-db.getSiblingDB("iris").users.insertOne({ "username": "aquila", "uidnumber": 123, "eppns": [ "aquila@slac.stanford.edu" ] })
-db.getSiblingDB("iris").users.insertOne({ "username": "mcbrowne", "uidnumber": 124, "eppns": [ "mcbrowne@slac.stanford.edu" ] })
-db.getSiblingDB("iris").users.insertOne({ "username": "snelson", "uidnumber": 125, "eppns": [ "snelson@slac.stanford.edu" ] })
-db.getSiblingDB("iris").users.insertOne({ "username": "tmalla", "uidnumber": 126, "eppns": [ "tmalla@slac.stanford.edu" ] })
-db.getSiblingDB("iris").users.insertOne({ "username": "yanwen", "uidnumber": 127, "eppns": [ "yanwen@slac.stanford.edu" ] })
-db.getSiblingDB("iris").users.insertOne({ "username": "mshankar", "uidnumber": 128, "eppns": [ "mshankar@slac.stanford.edu", "muralis@stanford.edu" ] })
-db.getSiblingDB("iris").users.insertOne({ "username": "ytl", "uidnumber": 129, "eppns": [ "ytl@slac.stanford.edu", "yee379@stanford.edu" ] })
-db.getSiblingDB("iris").users.insertOne({ "username": "wilko", "uidnumber": 130, "eppns": [ "wilko@slac.stanford.edu" ] })
-
-
-db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "RepoMembership", "username" : "wilko", "reponame" : "cxi12345"})
-db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "RepoMembership", "username" : "wilko", "reponame" : "CA104"})
-db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "RepoMembership", "username" : "mshankar", "reponame" : "CA104"})
-// Two people requesting the same repo/facility
-db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewRepo", "username" : "wilko",    "reponame" : "cxi23456"})
-db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewRepo", "username" : "mshankar", "reponame" : "cxi23456"})
-db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewFacility", "username" : "wilko",    "facilityname" : "RUBIN"})
-db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewFacility", "username" : "mshankar", "facilityname" : "RUBIN"})
-
-db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "paul@stanford.edu", "preferredUserName": "paul", "reponame" : "cxi12345", "facilityname" : "LCLS"})
-db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "george@stanford.edu", "preferredUserName": "george", "reponame" : "cxi12345", "facilityname" : "LCLS"})
-db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "john@stanford.edu", "preferredUserName": "john", "reponame" : "cxi12345", "facilityname" : "LCLS"})
-db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "ringo@stanford.edu", "preferredUserName": "ringo", "reponame" : "cxi12345", "facilityname" : "LCLS"})
-// These are requests for user account whose username already exists in the system.
-db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "wilko@stanford.edu", "preferredUserName": "wilko", "reponame" : "cxi12345", "facilityname" : "LCLS"})
-db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "mshankar@stanford.edu", "preferredUserName": "mshankar", "reponame" : "cxi12345", "facilityname" : "LCLS"})
-db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "ytl@stanford.edu", "preferredUserName": "ytl", "reponame" : "cxi12345", "facilityname" : "LCLS"})
-
-
-
-// an access class defines an abstraiton of access to some data. as such, by itself it merely defines essentially just a gidnumber. these shoudl be associated with eitehr: (note that all three can apply to all related storage)
-// 1) facility (to have all data under that facility with say the same primiarly group id defined in the access group)
-// 2) to a repo; so that the repo has this gid
-// 3) to a volume so that only that volume has that gid
-
-db.getSiblingDB("iris").access_groups.createIndex({"name": 1}, unique=true)
-db.getSiblingDB("iris").access_groups.createIndex({"gid_number": 1}, unique=true)
-
-// facility service account; use the gid as default and uids from members as primary owners
-db.getSiblingDB("iris").access_groups.insertOne({"name": "lcls-pcdsmgr", "gid_number": 808080, "members": [ "pcdmgr" ]})
-
-// no members means nothing special - use the principal, leaders and users for this group
-db.getSiblingDB("iris").access_groups.insertOne({"name": "cxi12345-analysis", "gid_number": 12345, "members": ["mshankar"]})
-
-
-db.getSiblingDB("iris").access_groups.insertOne({"name": "cryo-data", "gid_number": 6363, "members": [ "cryo-daq"]})
-db.getSiblingDB("iris").access_groups.insertOne({"name": "CS14", "gid_number": 8393, "members": []})
-db.getSiblingDB("iris").access_groups.insertOne({"name": "CA104", "gid_number": 8343, "members": []})
 
 
 
@@ -277,128 +530,6 @@ db.getSiblingDB("iris").volumes.insertOne({
   "type": "science-data",
   "accessgroup": [ "CA104" ],
   "path": "/sdf/data/cryoem/202111/20221112_CA104_TEMBETA"
-})
-
-
-
-// a 'storage' allocation defines all the volumes for that repo
-// the key of each volume is the 'type' of volume defined above (bit suplurfuous perhaps)
-// as the quota of each volume can change, we keep the Volume as a separate document and use this allocation document
-// as the thing to keep upto date. we use 'active' as a crude of of determine the most upto date version.
-// ?? how to deal with stranded/orphaned volumes?
-
-db.getSiblingDB("iris").allocations.createIndex({"repo": 1, "facility": 1, "resource": 1, "start": -1}, unique=true)
-
-
-db.getSiblingDB("iris").allocations.insertOne({
-  "facility": "LCLS",
-  "resource": "storage",
-  "repo": "cxi12345",
-  "active": true,
-  "start": ISODate("2021-05-01T00:00:00-07:00"),
-  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
-  "volumes": {
-    "science-data": [
-      {
-        "name": "cxi12345",
-        "gigabytes": 5544, // gb
-        "inodes": 4455
-      }
-    ],
-    "group": [
-      {
-        "name": "cxi12345",
-        "gigabytes": 1000,
-        "inodes": 100
-      }
-    ]
-  }
-})
-
-
-
-db.getSiblingDB("iris").allocations.insertOne({
-  "facility": "CryoEM",
-  "resource": "storage",
-  "repo": "CS14",
-  "active": true,
-  "start": ISODate("2021-05-01T00:00:00-07:00"),
-  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
-  "volumes": {
-    "science-data": [
-      {
-        "name": "20211107-CS14",
-        "gigabytes": 2000,
-        "inodes": 20000
-      }
-    ]
-  }
-})
-
-db.getSiblingDB("iris").allocations.insertOne({
-  "facility": "CryoEM",
-  "resource": "storage",
-  "repo": "CA104",
-  "active": true,
-  "start": ISODate("2021-05-01T00:00:00-07:00"),
-  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
-  "volumes": {
-    "science-data": [
-      {
-        "name": "20221112_CA104",
-        "gigabytes": 2000,
-        "inodes": 20000
-      }
-    ]
-  }
-})
-
-
-// compute allocations
-// in terms of a compute quota; we assume that slachours already considers things like cpu/gpu and has the
-// calculated weights required for varying cluster performances.
-// do we want to narrow down specific allocations per partition? the current schema only considers the qoses for the repo - is this sufficient to do everythign we want? how does this map to a partition?
-
-db.getSiblingDB("iris").allocations.insertOne({
-  "facility": "LCLS",
-  "resource": "compute",
-  "repo": "cxi12345",
-  "active": true,
-  "start": ISODate("2021-05-01T00:00:00-07:00"),
-  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
-  "qoses": [
-    {
-      "name": "cxi12345",
-      "slachours": 500,
-      "chargefactor": 0.7765
-    },
-    {
-      "name": "cxi12345-priority",
-      "slachours": 500,
-      "chargefactor": 1.25
-    }
-  ]
-})
-
-db.getSiblingDB("iris").allocations.insertOne({
-  "facility": "LCLS",
-  "resource": "compute",
-  "repo": "cxi12345",
-  "active": true,
-  "start": ISODate("2020-05-01T00:00:00-07:00"), // Last years allocations
-  "end": ISODate("2020-12-31T00:00:00Z"),
-  "qoses": [
-    {
-      "name": "cxi12345",
-      "slachours": 100000,
-      "chargefactor": 1.0
-    },
-    {
-      "name": "cxi12345-priority",
-      "slachours": 1000,
-      "chargefactor": 1.25
-    }
-  ]
 })
 
 

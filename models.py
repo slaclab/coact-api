@@ -35,16 +35,31 @@ class SDFRequestType(Enum):
     NewRepo = "NewRepo"
     NewFacility = "NewFacility"
     RepoMembership = "RepoMembership"
+    UserStorageAllocation = "UserStorageAllocation"
+    RepoStorageAllocation = "RepoStorageAllocation"
+    FacilityStorageAllocation = "FacilityStorageAllocation"
+    RepoComputeAllocation = "RepoComputeAllocation"
+    FacilityComputeAllocation = "FacilityComputeAllocation"
 
 @strawberry.input
 class SDFRequestInput:
     reqtype: Optional[SDFRequestType] = UNSET
+    requestedby: Optional[str] = UNSET
+    timeofrequest: Optional[datetime] = UNSET
     eppn: Optional[str] = UNSET
     username: Optional[str] = UNSET
     preferredUserName: Optional[str] = UNSET
     reponame: Optional[str] = UNSET
     facilityname: Optional[str] = UNSET
     principal: Optional[str] = UNSET
+    clustername: Optional[str] = UNSET
+    qosname: Optional[str] = UNSET
+    volumename: Optional[str] = UNSET
+    intent: Optional[str] = UNSET
+    slachours: Optional[float] = 0
+    gigabytes: Optional[float] = 0
+    inodes: Optional[float] = 0
+    notes: Optional[str] = UNSET
 
 @strawberry.type
 class SDFRequest(SDFRequestInput):
@@ -65,6 +80,26 @@ class EppnInput:
 @strawberry.type
 class Eppn(EppnInput):
     pass
+
+@strawberry.type
+class UserStorageUsage:
+    _id: MongoId
+    gigabytes: float
+    inodes: float
+    date: datetime
+    allocid: MongoId
+
+@strawberry.type
+class UserStorage:
+    _id: MongoId
+    username: str
+    intent: str
+    gigabytes: float
+    inodes: float
+    volumename: str
+    mount: str
+    usage: Optional[UserStorageUsage]
+
 
 @strawberry.type
 class UserRegistration(EppnInput):
@@ -107,7 +142,19 @@ class User(UserInput):
         if not grps:
             return []
         return [ x["name"] for x in grps]
-
+    @strawberry.field
+    def storages(self, info) -> List[UserStorage]:
+        storages = list(info.context.db.collection("user_storage_allocation").find({"username": self.username}))
+        if not storages:
+            return []
+        for storage in storages:
+            usages = list(info.context.db.collection("user_storage_usage").find({"allocid": storage["_id"]}).sort([("date", -1)]).limit(1))
+            if usages:
+                storage["usage"] = UserStorageUsage(**usages[0])
+            else:
+                storage["usage"] = UserStorageUsage(**{"_id": None, "allocid": storage["_id"], "gigabytes": 0, "inodes": 0, "date": datetime.utcnow() })
+        print(storages)
+        return [ UserStorage(**storage) for storage in storages ]
 
 @strawberry.type
 class RepoFacilityName:
@@ -142,7 +189,7 @@ class ClusterCapacityInput:
 class ClusterCapacity(ClusterCapacityInput):
     @strawberry.field
     def cluster(self, info) -> Cluster:
-        clusdefn = info.context.db.collection("cluster").find_one({"name": self.name})
+        clusdefn = info.context.db.collection("clusters").find_one({"name": self.name})
         print(clusdefn)
         return Cluster(**clusdefn)
 
@@ -214,40 +261,6 @@ class VolumeInput:
 class Volume(VolumeInput):
     pass
 
-@strawberry.input
-class AllocationInput:
-    _id: Optional[MongoId] = UNSET
-    facility: Optional[str] = UNSET
-    resource: Optional[str] = UNSET
-    repo: Optional[str] = UNSET
-    start: Optional[datetime] = UNSET
-    end: Optional[datetime] = UNSET
-
-@strawberry.type
-class Allocation(AllocationInput):
-    qoses: Optional[List[Qos]] = UNSET
-    @strawberry.field
-    def qoses(self, info) ->List[Qos]:
-        me = info.context.db.collection("allocations").find_one({"_id": self._id})
-        return [ Qos(**x) for x in me.get("qoses", []) ]
-    @strawberry.field
-    def volumes(self, info) ->List[Volume]:
-        me = info.context.db.collection("allocations").find_one({"_id": self._id})
-        vols = [ {"purpose": k} | m for k,v in me.get("volumes", {}).items() for m in v ]
-        return [ Volume(**x) for x in vols ]
-
-@strawberry.input
-class UserAllocationInput():
-    repo: Optional[str] = UNSET
-    resource: Optional[str] = UNSET
-    facility: Optional[str] = UNSET
-    username: Optional[str] = UNSET
-    percent: Optional[float] = UNSET # For now, we use one number for compute and storage..
-
-@strawberry.type
-class UserAllocation(UserAllocationInput):
-    pass
-
 @strawberry.type
 class UsageInput:
     facility: Optional[str] = UNSET
@@ -281,6 +294,120 @@ class PerUserUsage(Usage):
 @strawberry.type
 class PerFolderUsage(Usage):
     folder: Optional[str] = UNSET
+
+@strawberry.input
+class RepoComputeAllocationInput:
+    _id: Optional[MongoId] = UNSET
+    repo: Optional[str] = UNSET
+    clustername: Optional[str] = UNSET
+    start: Optional[datetime] = UNSET
+    end: Optional[datetime] = UNSET
+
+@strawberry.type
+class RepoComputeAllocation(RepoComputeAllocationInput):
+    qoses: Optional[List[Qos]] = UNSET
+    @strawberry.field
+    def qoses(self, info) ->List[Qos]:
+        me = info.context.db.collection("repo_compute_allocations").find_one({"_id": self._id})
+        qoses = []
+        # GraphQL can't really handle nested dicts. So, we maintain dicts in the database and convert to arrays when sending data across.
+        for k,v in me.get("qoses", {}).items():
+            q = { "name": k }
+            q.update(v)
+            qoses.append(q)
+        return [ Qos(**q) for q in qoses ]
+    @strawberry.field
+    def volumes(self, info) ->List[Volume]:
+        me = info.context.db.collection("repo_compute_allocations").find_one({"_id": self._id})
+        vols = [ {"purpose": k} | m for k,v in me.get("volumes", {}).items() for m in v ]
+        return [ Volume(**x) for x in vols ]
+    @strawberry.field
+    def usage(self, info) ->List[Usage]:
+        """
+        Overall usage; so pick up from the cached collections.
+        """
+        LOG.debug("Getting the total usage for repo %s", self.repo)
+        usages = []
+        for qos in self.qoses(info):
+            usg = info.context.db.collection("computeusagecache").find_one({"allocationId": self._id, "qos": qos.name})
+            if not usg:
+                continue
+            usages.append({
+                "repo": self.repo,
+                "resource": self.clustername,
+                "qos": qos.name,
+                "rawsecs": usg["rawsecs"],
+                "machinesecs": usg["machinesecs"],
+                "slacsecs": usg["slacsecs"],
+                "avgcf": usg["avgcf"]
+            })
+        return [ Usage(**x) for x in  usages ]
+    @strawberry.field
+    def perDayUsage(self, info, year: int) ->List[PerDayUsage]:
+        LOG.debug("Getting the per day usage statistics for cluster %s for year %s in for repo %s", self.clustername, year, self.repo)
+        results = info.context.db.collection("jobs").aggregate([
+            { "$match": { "clustername": self.clustername, "year": year, "repo": self.repo }},
+            { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "clustername" : "$clustername", "year" : "$year", "dayOfYear": { "$dayOfYear": {"date": "$startTs", "timezone": "America/Los_Angeles"}}},
+                "slacsecs": { "$sum": "$slacsecs" },
+                "rawsecs": { "$sum": "$rawsecs" },
+                "machinesecs": { "$sum": "$machinesecs" },
+                "avgcf": { "$avg": "$finalcf" }
+            }},
+            { "$project": {
+                "_id": 0,
+                "repo": "$_id.repo",
+                "resource": "$_id.clustername",
+                "facility": "$_id.facility",
+                "year": "$_id.year",
+                "dayOfYear": "$_id.dayOfYear",
+                "slacsecs": 1,
+                "rawsecs": 1,
+                "machinesecs": 1,
+                "avgcf": 1
+            }}
+        ])
+        usage = list(results)
+        LOG.debug(usage)
+        return [ PerDayUsage(**x) for x in  usage ]
+
+    @strawberry.field
+    def perUserUsage(self, info, year: int) ->List[PerUserUsage]:
+        LOG.debug("Getting the per user usage statistics for cluster %s for year %s in for repo %s", self.clustername, year, self.repo)
+        results = info.context.db.collection("jobs").aggregate([
+            { "$match": { "clustername": self.clustername, "year": year, "repo": self.repo }},
+            { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "clustername" : "$clustername", "year" : "$year", "username": "$username"},
+                "slacsecs": { "$sum": "$slacsecs" },
+                "rawsecs": { "$sum": "$rawsecs" },
+                "machinesecs": { "$sum": "$machinesecs" },
+                "avgcf": { "$avg": "$finalcf" }
+            }},
+            { "$project": {
+                "_id": 0,
+                "repo": "$_id.repo",
+                "resource": "$_id.clustername",
+                "facility": "$_id.facility",
+                "username": "$_id.username",
+                "slacsecs": 1,
+                "rawsecs": 1,
+                "machinesecs": 1,
+                "avgcf": 1
+            }}
+        ])
+        usage = list(results)
+        LOG.debug(usage)
+        return [ PerUserUsage(**x) for x in  usage ]
+
+@strawberry.input
+class UserAllocationInput():
+    repo: Optional[str] = UNSET
+    resource: Optional[str] = UNSET
+    facility: Optional[str] = UNSET
+    username: Optional[str] = UNSET
+    percent: Optional[float] = UNSET # For now, we use one number for compute and storage..
+
+@strawberry.type
+class UserAllocation(UserAllocationInput):
+    pass
 
 @strawberry.input
 class AccessGroupInput:
@@ -329,7 +456,7 @@ class RepoInput:
 class Repo( RepoInput ):
     @strawberry.field
     def facilityObj(self, info) -> Facility:
-        return info.context.db.find_facility({"name": self.facility})
+        return info.context.db.find_facility({"name": self.facility}, exclude_fields=["policies"])
 
     @strawberry.field
     def allUsers(self, info) -> List[User]:
@@ -343,109 +470,25 @@ class Repo( RepoInput ):
         return info.context.db.find_access_groups({"name": {"$in": self.access_groups}})
 
     @strawberry.field
-    def currentAllocations(self, info, resource: Optional[str]) ->List[Allocation]:
+    def currentComputeAllocations(self, info) ->List[RepoComputeAllocation]:
         """
-        Each repo has one allocation object per resource that is current.
-        This call should return an array of "current" allocations; one for each resource.
+        Each repo can have multiple allocation objects.
+        This call should return an array of "current" allocations; one for each compute resource.
         """
         rc_filter = { "facility": self.facility, "repo": self.name}
-        if resource:
-            rc_filter["resource"] = resource
-            return [ Allocation(**{k:x.get(k, 0) for k in ["_id", "facility", "resource", "repo", "start", "end" ] }) for x in  info.context.db.collection("allocations").find(rc_filter).sort([("end", -1)]).limit(1) ]
-        else:
-            # More complex; we want to return the "current" per resource type.
-            current_allocs = info.context.db.collection("allocations").aggregate([
-                { "$match": { "facility": self.facility, "repo": self.name }},
-                { "$sort": { "end": -1 }},
-                { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource"}, "origid": {"$first": "$_id"}}},
-            ])
-            current_alloc_ids = list(map(lambda x: x["origid"], current_allocs))
-            return [ Allocation(**{k:x.get(k, 0) for k in ["_id", "facility", "resource", "repo", "start", "end" ] }) for x in  info.context.db.collection("allocations").find({"_id" : {"$in": current_alloc_ids}})]
+        # More complex; we want to return the "current" per resource type.
+        current_allocs = info.context.db.collection("repo_compute_allocations").aggregate([
+            { "$match": { "repo": self.name }},
+            { "$sort": { "end": -1 }},
+            { "$group": { "_id": {"repo": "$repo", "clustername": "$clustername"}, "origid": {"$first": "$_id"}}},
+        ])
+        current_alloc_ids = list(map(lambda x: x["origid"], current_allocs))
+        return [ RepoComputeAllocation(**{k:x.get(k, 0) for k in ["_id", "repo", "clustername", "start", "end" ] }) for x in  info.context.db.collection("repo_compute_allocations").find({"_id" : {"$in": current_alloc_ids}})]
 
     @strawberry.field
     def userAllocations(self, info, resource: str) ->List[UserAllocation]:
         rc_filter = { "facility": self.facility, "resource": resource, "repo": self.name }
         return [ UserAllocation(**{k:x.get(k, 0) for k in ["facility", "resource", "repo", "username", "percent"] }) for x in  info.context.db.collection("user_allocations").find(rc_filter) ]
-
-    @strawberry.field
-    def usage(self, info, resource: Optional[str]) ->List[Usage]:
-        """
-        Overall usage; so pick up from the cached collections.
-        """
-        LOG.debug("Getting the total usage for repo %s", self.name)
-        allocs = self.currentAllocations(info, resource)
-        usages = []
-        for alloc in allocs:
-            for qos in alloc.qoses(info):
-                usg = info.context.db.collection("computeusagecache").find_one({"allocationId": alloc._id, "qos": qos.name})
-                if not usg:
-                    continue
-                usages.append({
-                    "facility": self.facility,
-                    "repo": self.name,
-                    "resource": alloc.resource,
-                    "qos": qos.name,
-                    "rawsecs": usg["rawsecs"],
-                    "machinesecs": usg["machinesecs"],
-                    "slacsecs": usg["slacsecs"],
-                    "avgcf": usg["avgcf"]
-                })
-        return [ Usage(**x) for x in  usages ]
-
-    @strawberry.field
-    def perDayUsage(self, info, resource: str, year: int) ->List[PerDayUsage]:
-        LOG.debug("Getting the per day usage statistics for resource %s for year %s in facility %s for repo %s", resource, year, self.facility, self.name)
-        results = info.context.db.collection("jobs").aggregate([
-            { "$match": { "facility": self.facility, "resource": resource, "year": year, "repo": self.name }},
-            { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year", "dayOfYear": { "$dayOfYear": {"date": "$startTs", "timezone": "America/Los_Angeles"}}},
-                "slacsecs": { "$sum": "$slacsecs" },
-                "rawsecs": { "$sum": "$rawsecs" },
-                "machinesecs": { "$sum": "$machinesecs" },
-                "avgcf": { "$avg": "$finalcf" }
-            }},
-            { "$project": {
-                "_id": 0,
-                "repo": "$_id.repo",
-                "resource": "$_id.resource",
-                "facility": "$_id.facility",
-                "year": "$_id.year",
-                "dayOfYear": "$_id.dayOfYear",
-                "slacsecs": 1,
-                "rawsecs": 1,
-                "machinesecs": 1,
-                "avgcf": 1
-            }}
-        ])
-        usage = list(results)
-        LOG.debug(usage)
-        return [ PerDayUsage(**x) for x in  usage ]
-
-    @strawberry.field
-    def perUserUsage(self, info, resource: str, year: int) ->List[PerUserUsage]:
-        LOG.debug("Getting the per user usage statistics for resource %s for year %s in facility %s for repo %s", resource, year, self.facility, self.name)
-        results = info.context.db.collection("jobs").aggregate([
-            { "$match": { "facility": self.facility, "resource": resource, "year": year, "repo": self.name }},
-            { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year", "username": "$username"},
-                "slacsecs": { "$sum": "$slacsecs" },
-                "rawsecs": { "$sum": "$rawsecs" },
-                "machinesecs": { "$sum": "$machinesecs" },
-                "avgcf": { "$avg": "$finalcf" }
-            }},
-            { "$project": {
-                "_id": 0,
-                "repo": "$_id.repo",
-                "resource": "$_id.resource",
-                "facility": "$_id.facility",
-                "username": "$_id.username",
-                "slacsecs": 1,
-                "rawsecs": 1,
-                "machinesecs": 1,
-                "avgcf": 1
-            }}
-        ])
-        usage = list(results)
-        LOG.debug(usage)
-        return [ PerUserUsage(**x) for x in  usage ]
 
     @strawberry.field
     def storageUsage(self, info, resource: str, year: int) ->List[Usage]:
@@ -555,7 +598,7 @@ class Job:
     repo: str
     year: int
     facility: str
-    resource: str
+    clustername: str
 
 @strawberry.type
 class StorageUsageInput:
