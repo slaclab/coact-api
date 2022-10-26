@@ -126,13 +126,13 @@ if __name__ == '__main__':
             nodelist = NodeList(job["nodelist"]).sorted()
             clustername = nodename2clustername[nodelist[0]]
             job["clustername"] = clustername
-            job["allocationId"] = repos[acc_name]["qos2allocid"][(job["qos"], clustername)]
+            job["allocationid"] = repos[acc_name]["qos2allocid"][(job["qos"], clustername)]
             job["priocf"] = repos[acc_name]["qos2cf"][(job["qos"], clustername)]
             job["hwcf"] = mean(map(lambda x : nodename2cf[x], nodelist))
             job["finalcf"] = job["priocf"] * job["hwcf"]
             job["rawsecs"] = job["elapsedSecs"] * job["allocNodes"] # elapsed seconds * number of nodes
             job["machinesecs"] = job["rawsecs"] * job["hwcf"] # raw seconds after applying the hardware charge factor
-            job["slacsecs"] = job["machinesecs"] * job["priocf"] # machinesecs after applying the priority charge factor
+            job["slachours"] = (job["machinesecs"] * job["priocf"])/3600.0 # machinesecs after applying the priority charge factor
             # TODO we also need to apply a factor if the quota has been exceeded.
             logger.info(f"Mapping {job['jobId']} to {job['repo']} based on account name")
         else:

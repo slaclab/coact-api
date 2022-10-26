@@ -41,6 +41,7 @@ class CustomContext(BaseContext):
     LOG = logging.getLogger(__name__)
 
     username: str = None
+    fullname: str = None
     origin_username: str = None
     is_admin: bool = False
 
@@ -57,6 +58,7 @@ class CustomContext(BaseContext):
             if eppn:
                 users = self.db.find_users( { 'eppns': eppn } )
                 self.LOG.debug(f"found eppn {eppn} as user {users}")
+                self.fullname = self.request.headers.get(environ.get('FULLNAME_FIELD','REMOTE_GECOS'), None)
                 return len(users) > 0, eppn
 
         username = self.request.headers.get(USER_FIELD_IN_HEADER, None)
@@ -81,6 +83,7 @@ class CustomContext(BaseContext):
 
         if self.origin_username:
             self.username = self.origin_username
+            self.fullname = self.request.headers.get(environ.get('FULLNAME_FIELD','REMOTE_GECOS'), None)
             admins = re.sub( "\s", "", environ.get("ADMIN_USERNAMES",'')).split(',')
             if self.origin_username in admins:
                 self.is_admin = True
@@ -89,6 +92,7 @@ class CustomContext(BaseContext):
                     user = self.db.find_user( { 'username': self.request.headers['coactimp'] } )
                     self.LOG.warning(f"user {self.username} is impersonating {user.username}")
                     self.username = user.username
+                    self.fullname = "N/A (Impersonating)"
                     self.is_admin = False
             else:
                 if 'coactimp' in self.request.headers and self.request.headers['coactimp'] and self.request.headers['coactimp'] != 'null':
@@ -97,7 +101,7 @@ class CustomContext(BaseContext):
         return self.username
 
 
-from models import User, AccessGroup, Repo, Facility, Qos, Cluster, SDFRequest
+from models import User, AccessGroup, Repo, Facility, Cluster, SDFRequest
 
 class DB:
     LOG = logging.getLogger(__name__)
@@ -107,7 +111,6 @@ class DB:
         'access_groups': AccessGroup,
         'repos': Repo,
         'facilities': Facility,
-        "qos": Qos,
         'requests': SDFRequest,
     }
     def __init__(self, mongo, db_name):
@@ -118,7 +121,8 @@ class DB:
     def collection(self, collection: str):
         return self._db[self.db_name][collection]
 
-    def to_dict(self, obj ):
+    @classmethod
+    def to_dict(cls, obj ):
         d = {}
         if isinstance(obj,dict):
             for k, v in obj.items():
@@ -135,51 +139,50 @@ class DB:
                     del d[k]
         return d
 
-    def find(self, thing: str, filter, exclude_fields=[] ):
-        search = self.to_dict(filter)
-        self.LOG.debug(f"searching for {thing} using {filter} -> {search} (excluding fields {exclude_fields})")
-        cursor = self.collection(thing).find(search)
+    @classmethod
+    def cursor_to_objlist(cls, cursor, klass, exclude_fields):
         items = []
-        klass = self.KLASSES[thing]
         for item in cursor:
-            self.LOG.debug(f" found {klass} {item}")
+            LOG.debug(f" found {klass} {item}")
             for x in exclude_fields:
                 if x in item:
                     del item[x]
             items.append( klass(**item) )
         return items
-    def assert_one(self, items):
+    def find(self, thing: str, filter, exclude_fields=[] ):
+        search = self.to_dict(filter)
+        self.LOG.debug(f"searching for {thing} using {filter} -> {search} (excluding fields {exclude_fields})")
+        cursor = self.collection(thing).find(search)
+        klass = self.KLASSES[thing]
+        return self.cursor_to_objlist(cursor, klass, exclude_fields)
+    def assert_one(self, items, filter):
         if len(items) == 0:
-            raise AssertionError( f"did not find any matching items" )
+            raise AssertionError( f"did not find any matching items using filter {filter}" )
         elif len(items) > 1:
-            raise AssertionError( f"found too many items, only expecting one" )
+            raise AssertionError( f"found too many items using filter {filter}, only expecting one" )
         return items[0]
     def find_repos(self, filter):
         return self.find("repos", filter)
     def find_repo(self, filter):
-        return self.assert_one( self.find_repos( filter ) )
+        return self.assert_one( self.find_repos( filter ), filter )
     def find_users(self, filter):
         return self.find("users", filter)
     def find_clusters(self, filter):
         return self.find("clusters", filter)
     def find_user(self, filter):
-        return self.assert_one( self.find_users( filter ) )
+        return self.assert_one( self.find_users( filter ), filter )
     def find_facilities(self, filter, exclude_fields: Optional[list[str]]=[] ):
         return self.find("facilities", filter, exclude_fields)
     def find_request(self, filter):
-        return self.assert_one(self.find("requests", filter))
+        return self.assert_one(self.find("requests", filter), filter)
     def find_requests(self, filter, exclude_fields: Optional[list[str]]=[] ):
         return self.find("requests", filter, exclude_fields)
     def find_facility(self, filter, exclude_fields: Optional[list[str]]=[] ):
-        return self.assert_one( self.find_facilities( filter, exclude_fields ) )
-    def find_qoses(self):
-        return self.find("qos", {})
-    def find_qos(self, filter):
-        return self.assert_one( self.find_qoses( filter ) )
+        return self.assert_one( self.find_facilities( filter, exclude_fields ), filter )
     def find_access_groups(self, filter):
         return self.find("access_groups", filter)
     def find_access_group(self, filter):
-        return self.assert_one( self.find_access_groups( filter ) )
+        return self.assert_one( self.find_access_groups( filter ), filter )
 
     def create( self, thing, data, required_fields=[], find_existing={} ):
         klass = self.KLASSES[thing]
@@ -202,7 +205,7 @@ class DB:
         self.LOG.info(f"adding {thing} with {data} -> {the_thing}")
         db = self.collection(thing)
         self.LOG.debug(f'checking {thing} does not already exist witih {find_existing}')
-        if db.find_one( find_existing ):
+        if find_existing and db.find_one( find_existing ):
             raise Exception(f"{thing} already exists with {find_existing}!")
         x = db.insert_one( self.to_dict(the_thing) )
         v = vars(data)

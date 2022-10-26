@@ -5,10 +5,11 @@ import strawberry
 from strawberry.types import Info
 from strawberry.arguments import UNSET
 from typing import NewType
-from enum import Enum
+from enum import Enum, IntEnum
 import re
+import json
 
-from datetime import datetime
+from datetime import datetime, date
 from bson import ObjectId
 
 import logging
@@ -36,10 +37,10 @@ class SDFRequestType(Enum):
     NewFacility = "NewFacility"
     RepoMembership = "RepoMembership"
     UserStorageAllocation = "UserStorageAllocation"
-    RepoStorageAllocation = "RepoStorageAllocation"
-    FacilityStorageAllocation = "FacilityStorageAllocation"
     RepoComputeAllocation = "RepoComputeAllocation"
+    RepoStorageAllocation = "RepoStorageAllocation"
     FacilityComputeAllocation = "FacilityComputeAllocation"
+    FacilityStorageAllocation = "FacilityStorageAllocation"
 
 @strawberry.input
 class SDFRequestInput:
@@ -53,17 +54,36 @@ class SDFRequestInput:
     facilityname: Optional[str] = UNSET
     principal: Optional[str] = UNSET
     clustername: Optional[str] = UNSET
+    storagename: Optional[str] = UNSET
     qosname: Optional[str] = UNSET
-    volumename: Optional[str] = UNSET
-    intent: Optional[str] = UNSET
+    purpose: Optional[str] = UNSET
+    allocationid: Optional[MongoId] = UNSET
     slachours: Optional[float] = 0
     gigabytes: Optional[float] = 0
     inodes: Optional[float] = 0
     notes: Optional[str] = UNSET
 
+@strawberry.enum
+class SDFRequestStatus(IntEnum):
+    NotActedOn = 0
+    Approved = 1
+    Rejected = -1
+
+
 @strawberry.type
 class SDFRequest(SDFRequestInput):
     _id: Optional[MongoId] = UNSET
+    approvalstatus: Optional[SDFRequestStatus] = SDFRequestStatus.NotActedOn
+    actedby: Optional[str] = UNSET
+    actedat: Optional[datetime] = UNSET
+
+    def approve(self, info) -> bool:
+        info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": SDFRequestStatus.Approved.value, "actedby": info.context.username, "actedat": datetime.utcnow() }})
+        return True
+    def reject(self, info) -> bool:
+        info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": SDFRequestStatus.Rejected.value, "actedby": info.context.username, "actedat": datetime.utcnow() }})
+        return True
+
 
 @strawberry.type
 class SDFRequestEvent:
@@ -93,11 +113,11 @@ class UserStorageUsage:
 class UserStorage:
     _id: MongoId
     username: str
-    intent: str
+    purpose: str
     gigabytes: float
     inodes: float
-    volumename: str
-    mount: str
+    storagename: str
+    rootfolder: str
     usage: Optional[UserStorageUsage]
 
 
@@ -105,17 +125,18 @@ class UserStorage:
 class UserRegistration(EppnInput):
     isRegistered: Optional[bool] = UNSET
     isRegistrationPending: Optional[bool] = UNSET
+    fullname: Optional[str] = UNSET
 
 @strawberry.input
 class UserInput:
     _id: Optional[MongoId] = UNSET
     username: Optional[str] = UNSET
+    fullname: Optional[str] = UNSET
     uidnumber: Optional[int] = UNSET
     eppns: Optional[List[str]] = UNSET
     preferredemail: Optional[str] = UNSET
     shell: Optional[str] = UNSET
-    homequota: Optional[float] = UNSET
-    homeused: Optional[float] = UNSET
+    publichtml: bool = False
 
 @strawberry.type
 class User(UserInput):
@@ -136,6 +157,12 @@ class User(UserInput):
     def isAdmin(self, info) -> bool:
         admins = re.sub( "\s", "", os.environ.get("ADMIN_USERNAMES",'')).split(',')
         return self.username in admins
+    @strawberry.field
+    def isCzar(self, info) -> bool:
+        myfacs = list(info.context.db.find_facilities({"czars": self.username}, exclude_fields=["policies"]))
+        if myfacs:
+            return True
+        return False
     @strawberry.field
     def groups(self, info) -> List[str]:
         grps = info.context.db.collection("access_groups").find({"members": self.username})
@@ -179,45 +206,44 @@ class Cluster(ClusterInput):
     pass
 
 @strawberry.input
-class ClusterCapacityInput:
-    name: Optional[str] = UNSET
+class ComputeAllocationInput:
+    _id: Optional[MongoId] = UNSET
+    start: Optional[datetime] = UNSET
+    end: Optional[datetime] = UNSET
+    clustername: Optional[str] = UNSET
     slachours: Optional[float] = UNSET
+
+@strawberry.input
+class StorageAllocationInput:
+    _id: Optional[MongoId] = UNSET
+    start: Optional[datetime] = UNSET
+    end: Optional[datetime] = UNSET
+    storagename: Optional[str] = UNSET
     gigabytes: Optional[float] = UNSET
     inodes: Optional[float] = UNSET
 
 @strawberry.type
-class ClusterCapacity(ClusterCapacityInput):
-    @strawberry.field
-    def cluster(self, info) -> Cluster:
-        clusdefn = info.context.db.collection("clusters").find_one({"name": self.name})
-        print(clusdefn)
-        return Cluster(**clusdefn)
-
-@strawberry.input
-class ResourceInput:
-    name: Optional[str] = UNSET
-    type: Optional[str] = UNSET
-
-@strawberry.type
-class Resource(ResourceInput):
+class FacilityComputeAllocation(ComputeAllocationInput):
     pass
 
-@strawberry.input
-class CapacityInput:
-    _id: Optional[MongoId] = UNSET
-    start: Optional[datetime] = UNSET
-    end: Optional[datetime] = UNSET
-
 @strawberry.type
-class Capacity(CapacityInput):
-    @strawberry.field
-    def clusters(self, info) -> List[ClusterCapacity]:
-        cap = info.context.db.collection("capacity").find_one({"_id": self._id})
-        return [ ClusterCapacity(**{ k: c[k] for k in ["name", "slachours"] }) for c in cap.get("clusters", []) ]
-    @strawberry.field
-    def storage(self, info) -> List[ClusterCapacity]:
-        cap = info.context.db.collection("capacity").find_one({"_id": self._id})
-        return [ ClusterCapacity(**{ k: c[k] for k in ["name", "gigabytes", "inodes"] }) for c in cap.get("storage", []) ]
+class FacilityStorageAllocation(StorageAllocationInput):
+    pass
+
+# Types for the FAcilities list view page.
+@strawberry.type
+class FacilityComputePurchases:
+    clustername: Optional[str] = UNSET
+    purchased: Optional[float] = UNSET
+    allocated: Optional[float] = UNSET
+    used: Optional[float] = UNSET
+@strawberry.type
+class FacilityStoragePurchases:
+    storagename: Optional[str] = UNSET
+    purpose: Optional[str] = UNSET
+    purchased: Optional[float] = UNSET
+    allocated: Optional[float] = UNSET
+    used: Optional[float] = UNSET
 
 @strawberry.input
 class FacilityInput:
@@ -232,13 +258,91 @@ class FacilityInput:
 @strawberry.type
 class Facility( FacilityInput ):
     @strawberry.field
-    def capacity(self, info) -> Optional[Capacity]:
-        caps = list(info.context.db.collection("capacity").find({"facility": self.name }).sort([("end", -1)]).limit(1))
-        if caps:
-            cap = caps[0]
-            return Capacity(**{k : cap[k] for k in [ "_id", "start", "end" ]})
-        else:
-            return None
+    def computepurchases(self, info) -> Optional[List[FacilityComputePurchases]]:
+        # More complex; we want to return the "current" per resource type.
+        todaysdate = datetime.utcnow()
+        aggs = info.context.db.collection("facility_compute_purchases").aggregate([
+            { "$match": { "facility": self.name, "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }},
+            { "$sort": { "end": -1 }},
+            { "$group": { "_id": {"clustername": "$clustername"}, "slachours": {"$sum": "$slachours"}}},
+        ])
+        purchases = { x["_id"]["clustername"]: { "purchased": x["slachours"] } for x in aggs }
+        aaggs = info.context.db.collection("repos").aggregate([
+            { "$match": { "facility": self.name}},
+            { "$lookup": { "from": "repo_compute_allocations", "localField": "name", "foreignField": "repo", "as": "allocation"}},
+            { "$unwind": "$allocation" },
+            { "$replaceRoot": { "newRoot": "$allocation" } },
+            { "$match": { "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }}
+        ])
+        allocs = { x["clustername"]: sum([y["slachours"] for y in x["qoses"].values()]) for x in aaggs }
+        uaggs = info.context.db.collection("repos").aggregate([
+            { "$match": { "facility": self.name}},
+            { "$lookup": { "from": "repo_compute_allocations", "localField": "name", "foreignField": "repo", "as": "allocation"}},
+            { "$unwind": "$allocation" },
+            { "$replaceRoot": { "newRoot": "$allocation" } },
+            { "$match": { "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }}, # This gives us current allocations
+            { "$lookup": { "from": "repo_overall_compute_usage", "localField": "_id", "foreignField": "allocationid", "as": "usage"}},
+            { "$unwind": "$usage" },
+            { "$group": { "_id": {"clustername": "$clustername"}, "slachours": {"$sum": "$usage.slachours"}}},
+        ])
+        used = { x["_id"]["clustername"]: x["slachours"] for x in uaggs }
+        for k,v in purchases.items():
+            v["clustername"] = k
+            v["allocated"] = allocs.get(k, 0)
+            v["used"] = used.get(k, 0)
+        return [ FacilityComputePurchases(**{k:x.get(k, 0) for k in ["clustername", "purchased", "allocated", "used" ] }) for x in purchases.values()]
+    @strawberry.field
+    def computeallocations(self, info) -> Optional[List[FacilityComputeAllocation]]:
+        # More complex; we want to return the "current" per resource type.
+        todaysdate = datetime.utcnow()
+        current_allocs = info.context.db.collection("repos").aggregate([
+            { "$match": { "facility": self.name}},
+            { "$lookup": { "from": "repo_compute_allocations", "localField": "name", "foreignField": "repo", "as": "allocation"}},
+            { "$unwind": "$allocation" },
+            { "$replaceRoot": { "newRoot": "$allocation" } },
+            { "$match": { "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }},
+            { "$group": { "_id": {"clustername": "$clustername"}, "slachours": {"$sum": "$slachours"}}},
+        ])
+        return [ FacilityComputeAllocation(**{k:x.get(k, 0) for k in ["_id", "clustername", "slachours" ] }) for x in current_allocs]
+    @strawberry.field
+    def storagepurchases(self, info) -> Optional[List[FacilityStoragePurchases]]:
+        # More complex; we want to return the "current" per resource type.
+        todaysdate = datetime.utcnow()
+        aggs = info.context.db.collection("facility_storage_purchases").aggregate([
+            { "$match": { "facility": self.name, "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }},
+            { "$sort": { "end": -1 }},
+            { "$group": { "_id": {"storagename": "$storagename", "purpose": "$purpose"}, "gigabytes": {"$sum": "$gigabytes"}}},
+        ])
+        purchases = { (x["_id"]["storagename"], x["_id"]["purpose"]): { "purchased": x["gigabytes"] } for x in aggs }
+        LOG.error("Purchases for %s is %s", self.name, purchases)
+        aaggs = info.context.db.collection("repos").aggregate([
+            { "$match": { "facility": self.name}},
+            { "$lookup": { "from": "repo_storage_allocations", "localField": "name", "foreignField": "repo", "as": "allocation"}},
+            { "$unwind": "$allocation" },
+            { "$replaceRoot": { "newRoot": "$allocation" } },
+            { "$match": { "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }},
+            { "$group": { "_id": {"storagename": "$storagename", "purpose": "$purpose"}, "gigabytes": {"$sum": "$gigabytes"}}},
+        ])
+        allocs = { (x["_id"]["storagename"], x["_id"]["purpose"]): x["gigabytes"] for x in aaggs }
+        LOG.error("Allocations for %s is %s", self.name, allocs)
+        uaggs = info.context.db.collection("repos").aggregate([
+            { "$match": { "facility": self.name}},
+            { "$lookup": { "from": "repo_storage_allocations", "localField": "name", "foreignField": "repo", "as": "allocation"}},
+            { "$unwind": "$allocation" },
+            { "$replaceRoot": { "newRoot": "$allocation" } },
+            { "$match": { "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }},
+            { "$lookup": { "from": "repo_overall_storage_usage", "localField": "_id", "foreignField": "allocationid", "as": "usage"}},
+            { "$unwind": "$usage" },
+            { "$group": { "_id": {"storagename": "$storagename", "purpose": "$purpose"}, "gigabytes": {"$sum": "$usage.gigabytes"}}},
+        ])
+        used = { (x["_id"]["storagename"], x["_id"]["purpose"]): x["gigabytes"] for x in uaggs }
+        LOG.error("Used for %s is %s", self.name, used)
+        for k,v in purchases.items():
+            v["storagename"] = k[0]
+            v["purpose"] = k[1]
+            v["allocated"] = allocs.get(k, 0)
+            v["used"] = used.get(k, 0)
+        return [ FacilityStoragePurchases(**{k:x.get(k, 0) for k in ["storagename", "purpose", "purchased", "allocated", "used" ] }) for x in purchases.values()]
 
 @strawberry.input
 class QosInput:
@@ -251,37 +355,23 @@ class Qos(QosInput):
     pass
 
 @strawberry.input
-class VolumeInput:
-    name: Optional[str] = UNSET
-    purpose: Optional[str] = UNSET # science-data, group etc
+class UsageInput:
+    facility: Optional[str] = UNSET
+    repo: Optional[str] = UNSET
+    qos: Optional[str] = UNSET
+    clustername: Optional[str] = UNSET
+    storagename: Optional[str] = UNSET
+    purpose: Optional[str] = UNSET
+    rawsecs: Optional[float] = UNSET
+    machinesecs: Optional[float] = UNSET
+    slachours: Optional[float] = UNSET
+    avgcf: Optional[float] = UNSET
     gigabytes: Optional[float] = UNSET
     inodes: Optional[float] = UNSET
 
 @strawberry.type
-class Volume(VolumeInput):
-    pass
-
-@strawberry.type
-class UsageInput:
-    facility: Optional[str] = UNSET
-    resource: Optional[str] = UNSET
-    repo: Optional[str] = UNSET
-    qos: Optional[str] = UNSET
-    rawsecs: Optional[float] = UNSET
-    machinesecs: Optional[float] = UNSET
-    slacsecs: Optional[float] = UNSET
-    avgcf: Optional[float] = UNSET
-    totalStorage: Optional[float] = UNSET
-    totalInodes: Optional[float] = UNSET
-
-@strawberry.type
 class Usage(UsageInput):
     pass
-
-@strawberry.type
-class PerDayUsage(Usage):
-    year: Optional[int] = UNSET
-    dayOfYear: Optional[int] = UNSET
 
 @strawberry.type
 class PerDateUsage(Usage):
@@ -294,6 +384,21 @@ class PerUserUsage(Usage):
 @strawberry.type
 class PerFolderUsage(Usage):
     folder: Optional[str] = UNSET
+
+@strawberry.input
+class ReportRangeInput:
+    start: Optional[datetime] = UNSET
+    end: Optional[datetime] = UNSET
+
+@strawberry.input
+class UserAllocationInput():
+    allocationid: Optional[MongoId] = UNSET
+    username: Optional[str] = UNSET
+    percent: Optional[float] = UNSET
+
+@strawberry.type
+class UserAllocation(UserAllocationInput):
+    pass
 
 @strawberry.input
 class RepoComputeAllocationInput:
@@ -317,10 +422,9 @@ class RepoComputeAllocation(RepoComputeAllocationInput):
             qoses.append(q)
         return [ Qos(**q) for q in qoses ]
     @strawberry.field
-    def volumes(self, info) ->List[Volume]:
-        me = info.context.db.collection("repo_compute_allocations").find_one({"_id": self._id})
-        vols = [ {"purpose": k} | m for k,v in me.get("volumes", {}).items() for m in v ]
-        return [ Volume(**x) for x in vols ]
+    def userAllocations(self, info) ->List[UserAllocation]:
+        rc_filter = { "allocationid": self._id }
+        return [ UserAllocation(**{k:x.get(k, 0) for k in ["username", "percent"] }) for x in  info.context.db.collection("user_allocations").find(rc_filter) ]
     @strawberry.field
     def usage(self, info) ->List[Usage]:
         """
@@ -329,85 +433,70 @@ class RepoComputeAllocation(RepoComputeAllocationInput):
         LOG.debug("Getting the total usage for repo %s", self.repo)
         usages = []
         for qos in self.qoses(info):
-            usg = info.context.db.collection("computeusagecache").find_one({"allocationId": self._id, "qos": qos.name})
+            usg = info.context.db.collection("repo_overall_compute_usage").find_one({"allocationid": self._id, "qos": qos.name})
             if not usg:
                 continue
             usages.append({
                 "repo": self.repo,
-                "resource": self.clustername,
+                "clustername": self.clustername,
                 "qos": qos.name,
                 "rawsecs": usg["rawsecs"],
                 "machinesecs": usg["machinesecs"],
-                "slacsecs": usg["slacsecs"],
+                "slachours": usg["slachours"],
                 "avgcf": usg["avgcf"]
             })
         return [ Usage(**x) for x in  usages ]
     @strawberry.field
-    def perDayUsage(self, info, year: int) ->List[PerDayUsage]:
-        LOG.debug("Getting the per day usage statistics for cluster %s for year %s in for repo %s", self.clustername, year, self.repo)
-        results = info.context.db.collection("jobs").aggregate([
-            { "$match": { "clustername": self.clustername, "year": year, "repo": self.repo }},
-            { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "clustername" : "$clustername", "year" : "$year", "dayOfYear": { "$dayOfYear": {"date": "$startTs", "timezone": "America/Los_Angeles"}}},
-                "slacsecs": { "$sum": "$slacsecs" },
-                "rawsecs": { "$sum": "$rawsecs" },
-                "machinesecs": { "$sum": "$machinesecs" },
-                "avgcf": { "$avg": "$finalcf" }
-            }},
-            { "$project": {
-                "_id": 0,
-                "repo": "$_id.repo",
-                "resource": "$_id.clustername",
-                "facility": "$_id.facility",
-                "year": "$_id.year",
-                "dayOfYear": "$_id.dayOfYear",
-                "slacsecs": 1,
-                "rawsecs": 1,
-                "machinesecs": 1,
-                "avgcf": 1
-            }}
-        ])
-        usage = list(results)
-        LOG.debug(usage)
-        return [ PerDayUsage(**x) for x in  usage ]
+    def perDateUsage(self, info) ->List[PerDateUsage]:
+        results = info.context.db.collection("repo_daily_compute_usage").find({"allocationid": self._id})
+        return info.context.db.cursor_to_objlist(results, PerDateUsage, exclude_fields={"_id", "allocationid"})
 
     @strawberry.field
-    def perUserUsage(self, info, year: int) ->List[PerUserUsage]:
-        LOG.debug("Getting the per user usage statistics for cluster %s for year %s in for repo %s", self.clustername, year, self.repo)
-        results = info.context.db.collection("jobs").aggregate([
-            { "$match": { "clustername": self.clustername, "year": year, "repo": self.repo }},
-            { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "clustername" : "$clustername", "year" : "$year", "username": "$username"},
-                "slacsecs": { "$sum": "$slacsecs" },
-                "rawsecs": { "$sum": "$rawsecs" },
-                "machinesecs": { "$sum": "$machinesecs" },
-                "avgcf": { "$avg": "$finalcf" }
-            }},
-            { "$project": {
-                "_id": 0,
-                "repo": "$_id.repo",
-                "resource": "$_id.clustername",
-                "facility": "$_id.facility",
-                "username": "$_id.username",
-                "slacsecs": 1,
-                "rawsecs": 1,
-                "machinesecs": 1,
-                "avgcf": 1
-            }}
-        ])
-        usage = list(results)
-        LOG.debug(usage)
-        return [ PerUserUsage(**x) for x in  usage ]
+    def perUserUsage(self, info) ->List[PerUserUsage]:
+        results = info.context.db.collection("repo_peruser_compute_usage").find({"allocationid": self._id})
+        return info.context.db.cursor_to_objlist(results, PerUserUsage, exclude_fields={"_id", "allocationid"})
 
 @strawberry.input
-class UserAllocationInput():
+class RepoStorageAllocationInput:
+    _id: Optional[MongoId] = UNSET
     repo: Optional[str] = UNSET
-    resource: Optional[str] = UNSET
-    facility: Optional[str] = UNSET
-    username: Optional[str] = UNSET
-    percent: Optional[float] = UNSET # For now, we use one number for compute and storage..
+    storagename: Optional[str] = UNSET
+    purpose: Optional[str] = UNSET
+    rootfolder: Optional[str] = UNSET
+    start: Optional[datetime] = UNSET
+    end: Optional[datetime] = UNSET
+    gigabytes: Optional[float] = UNSET
+    inodes: Optional[float] = UNSET
 
 @strawberry.type
-class UserAllocation(UserAllocationInput):
-    pass
+class RepoStorageAllocation(RepoStorageAllocationInput):
+    @strawberry.field
+    def usage(self, info) -> Optional[Usage]:
+        """
+        Overall usage; so pick up from the cached collections.
+        """
+        LOG.debug("Getting the total storage usage for repo %s", self.repo)
+        usgs = info.context.db.collection("repo_overall_storage_usage").find({"allocationid": self._id}).sort([("date", -1)]).limit(1)
+        if not usgs:
+            return None
+        usg = usgs[0]
+        return Usage(**{
+            "repo": self.repo,
+            "storagename": self.storagename,
+            "gigabytes": usg["gigabytes"],
+            "inodes": usg["inodes"]
+        })
+    @strawberry.field
+    def perDateUsage(self, info, year: int) -> List[PerDateUsage]:
+        """
+        Return all the daily usages for this allocation for the specified year
+        """
+        jan1thisyear = datetime.now().replace(year=year,month=1, day=1)
+        jan1nextyear = jan1thisyear.replace(year=year+1)
+        usgs = info.context.db.collection("repo_daily_storage_usage").find({"allocationid": self._id, "date": {"$gte": jan1thisyear, "$lt": jan1nextyear}}, {"_id": 0, "date": 1, "gigabytes": 1, "inodes": 1}).sort([("date", -1)])
+        if not usgs:
+            return []
+        return [ PerDateUsage(**x) for x in  usgs ]
 
 @strawberry.input
 class AccessGroupInput:
@@ -424,16 +513,6 @@ class AccessGroup( AccessGroupInput ):
         if self.members is UNSET:
             return []
         return info.context.db.find_users({"username": {"$in": self.members}})
-
-@strawberry.input
-class VolumeUsage:
-    _id: Optional[MongoId] = UNSET
-    facility: Optional[str] = UNSET
-    name: Optional[str] = UNSET
-    type: Optional[str] = UNSET
-    accessgroups: Optional[List[str]] = UNSET
-    path: Optional[str] = UNSET # Path object? how about uri for s3?
-
 
 @strawberry.input
 class RepoInput:
@@ -476,9 +555,10 @@ class Repo( RepoInput ):
         This call should return an array of "current" allocations; one for each compute resource.
         """
         rc_filter = { "facility": self.facility, "repo": self.name}
+        todaysdate = datetime.utcnow()
         # More complex; we want to return the "current" per resource type.
         current_allocs = info.context.db.collection("repo_compute_allocations").aggregate([
-            { "$match": { "repo": self.name }},
+            { "$match": { "repo": self.name, "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }},
             { "$sort": { "end": -1 }},
             { "$group": { "_id": {"repo": "$repo", "clustername": "$clustername"}, "origid": {"$first": "$_id"}}},
         ])
@@ -486,85 +566,44 @@ class Repo( RepoInput ):
         return [ RepoComputeAllocation(**{k:x.get(k, 0) for k in ["_id", "repo", "clustername", "start", "end" ] }) for x in  info.context.db.collection("repo_compute_allocations").find({"_id" : {"$in": current_alloc_ids}})]
 
     @strawberry.field
-    def userAllocations(self, info, resource: str) ->List[UserAllocation]:
-        rc_filter = { "facility": self.facility, "resource": resource, "repo": self.name }
-        return [ UserAllocation(**{k:x.get(k, 0) for k in ["facility", "resource", "repo", "username", "percent"] }) for x in  info.context.db.collection("user_allocations").find(rc_filter) ]
+    def computeAllocation(self, info, allocationid: MongoId) -> Optional[RepoComputeAllocation]:
+        """
+        Return the specific storage allocation for this repo
+        """
+        rc_filter = { "_id": allocationid, "repo": self.name}
+        alloc = info.context.db.collection("repo_compute_allocations").find_one(rc_filter)
+        if not alloc:
+            return None
+        del alloc["qoses"]
+        return RepoComputeAllocation(**alloc)
 
     @strawberry.field
-    def storageUsage(self, info, resource: str, year: int) ->List[Usage]:
-        LOG.debug("Getting the storage usage statistics for resource %s for year %s in facility %s for repo %s", resource, year, self.facility, self.name)
-        results = info.context.db.collection("diskusage").aggregate([
-            { "$match": { "facility": self.facility, "resource": resource, "year": year, "repo": self.name }},
-            { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year", "date": "$date"},
-                "totalStorage": { "$sum": "$storage" },
-                "totalInodes": { "$sum": "$inodes" }
-            }},
-            {"$sort": {"_id.date": -1}},
-            {"$limit": 1},
-            { "$project": {
-                "_id": 0,
-                "repo": "$_id.repo",
-                "resource": "$_id.resource",
-                "facility": "$_id.facility",
-                "year": "$_id.year",
-                "totalStorage": 1,
-                "totalInodes": 1
-            }}
+    def currentStorageAllocations(self, info) ->List[RepoStorageAllocation]:
+        """
+        Each repo can have multiple allocation objects.
+        This call should return an array of "current" allocations; one for each compute resource.
+        """
+        rc_filter = { "facility": self.facility, "repo": self.name}
+        todaysdate = datetime.utcnow()
+        # More complex; we want to return the "current" per resource type.
+        current_allocs = info.context.db.collection("repo_storage_allocations").aggregate([
+            { "$match": { "repo": self.name, "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }},
+            { "$sort": { "end": -1 }},
+            { "$group": { "_id": {"repo": "$repo", "purpose": "$purpose"}, "origid": {"$first": "$_id"}}},
         ])
-        usage = list(results)
-        LOG.debug(usage)
-        return [ Usage(**x) for x in  usage ]
+        current_alloc_ids = list(map(lambda x: x["origid"], current_allocs))
+        return [ RepoStorageAllocation(**{k:x.get(k, 0) for k in ["_id", "repo", "storagename", "purpose", "rootfolder", "start", "end", "gigabytes", "inodes" ] }) for x in  info.context.db.collection("repo_storage_allocations").find({"_id" : {"$in": current_alloc_ids}})]
 
     @strawberry.field
-    def perDayStorageUsage(self, info, resource: str, year: int) ->List[PerDateUsage]:
-        LOG.debug("Getting the per day storage usage statistics for resource %s for year %s in facility %s for repo %s", resource, year, self.facility, self.name)
-        results = info.context.db.collection("diskusage").aggregate([
-            { "$match": { "facility": self.facility, "resource": resource, "year": year, "repo": self.name }},
-            { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year", "date": "$date"},
-                "totalStorage": { "$sum": "$storage" },
-                "totalInodes": { "$sum": "$inodes" }
-            }},
-            { "$project": {
-                "_id": 0,
-                "repo": "$_id.repo",
-                "type": "$_id.type",
-                "year": "$_id.year",
-                "date": "$_id.date",
-                "totalStorage": 1,
-                "totalInodes": 1
-            }},
-            { "$sort": { "dayOfYear": 1 }}
-        ])
-        usage = list(results)
-        LOG.debug(usage)
-        return [ PerDateUsage(**x) for x in  usage ]
-
-    @strawberry.field
-    def perFolderStorageUsage(self, info, resource: str, year: int) ->List[PerFolderUsage]:
-        LOG.debug("Getting the per folder storage usage statistics for resource %s for year %s in facility %s for repo %s", resource, year, self.facility, self.name)
-        results = info.context.db.collection("diskusage").aggregate([
-            { "$match": { "facility": self.facility, "resource": resource, "year": year, "repo": self.name }},
-            { "$group": { "_id": {"repo": "$repo", "facility": "$facility", "resource" : "$resource", "year" : "$year", "date": "$date", "folder": "$folder" },
-                "totalStorage": { "$sum": "$storage" },
-                "totalInodes": { "$sum": "$inodes" }
-            }},
-            {"$sort": {"_id.date": -1}},
-            {"$limit": 1},
-            { "$project": {
-                "_id": 0,
-                "repo": "$_id.repo",
-                "type": "$_id.type",
-                "pool": "$_id.pool",
-                "year": "$_id.year",
-                "folder": "$_id.folder",
-                "totalStorage": 1,
-                "totalInodes": 1
-            }},
-            { "$sort": { "date": 1 }}
-        ])
-        usage = list(results)
-        LOG.debug(usage)
-        return [ PerFolderUsage(**x) for x in  usage ]
+    def storageAllocation(self, info, allocationid: MongoId) -> Optional[RepoStorageAllocation]:
+        """
+        Return the specific storage allocation for this repo
+        """
+        rc_filter = { "_id": allocationid, "repo": self.name}
+        alloc = info.context.db.collection("repo_storage_allocations").find_one(rc_filter)
+        if not alloc:
+            return None
+        return RepoStorageAllocation(**alloc)
 
 @strawberry.input
 class Job:
@@ -574,7 +613,7 @@ class Job:
     accountName: str
     partitionName: str
     qos: str
-    allocationId: MongoId
+    allocationid: MongoId
     startTs: datetime
     endTs: datetime
     ncpus: int
@@ -594,24 +633,19 @@ class Job:
     finalcf: float
     rawsecs: float # elapsed seconds * number of nodes
     machinesecs: float # raw seconds after applying the hardware charge factor
-    slacsecs: float # machinesecs after applying the priority charge factor
+    slachours: float # machinesecs after applying the priority charge factor
     repo: str
     year: int
     facility: str
     clustername: str
 
-@strawberry.type
-class StorageUsageInput:
-    _id: Optional[MongoId] = UNSET
-    facility: Optional[str] = UNSET
-    resource: Optional[str] = UNSET
-    repo: Optional[str] = UNSET
-    year: Optional[int] = UNSET
-    folder: Optional[int] = UNSET
-    storage: Optional[float] = UNSET
+@strawberry.input
+class StorageDailyUsageInput:
+    allocationid: Optional[MongoId] = UNSET
+    date: Optional[datetime] = UNSET
+    gigabytes: Optional[float] = UNSET
     inodes: Optional[float] = UNSET
-    report_date: Optional[datetime] = UNSET
 
 @strawberry.type
-class StorageUsage(StorageUsageInput):
+class StorageDailyUsage(StorageDailyUsageInput):
     pass

@@ -28,11 +28,11 @@ db.getSiblingDB("iris").facilities.insertOne({
       "user_storage_allocation": [
         {
           "username": "$username",
-          "volumename": "wekassd2022",
-          "intent": "home",
+          "storagename": "wekassd2022",
+          "purpose": "home",
           "gigabytes": 20,
           "inodes": 1000,
-          "mount": "nfs://192.168.0.1/homes/$usernamefirstchar/$username"
+          "rootfolder": "<prefix>/homes/$usernamefirstchar/$username"
         }
       ]
     }
@@ -50,11 +50,11 @@ db.getSiblingDB("iris").facilities.insertOne({
       "user_storage_allocation": [
         {
           "username": "$username",
-          "volumename": "wekassd2022",
-          "intent": "home",
+          "storagename": "wekassd2022",
+          "purpose": "home",
           "gigabytes": 20,
           "inodes": 1000,
-          "mount": "nfs://192.168.0.1/homes/$usernamefirstchar/$username"
+          "rootfolder": "<prefix>/homes/$usernamefirstchar/$username"
         }
       ]
     }
@@ -72,11 +72,11 @@ db.getSiblingDB("iris").facilities.insertOne({
       "user_storage_allocation": [
         {
           "username": "$username",
-          "volumename": "wekassd2022",
-          "intent": "home",
+          "storagename": "wekassd2022",
+          "purpose": "home",
           "gigabytes": 20,
           "inodes": 1000,
-          "mount": "nfs://192.168.0.1/homes/$usernamefirstchar/$username"
+          "rootfolder": "<prefix>/homes/$usernamefirstchar/$username"
         }
       ]
     }
@@ -143,13 +143,108 @@ db.getSiblingDB("iris").physical_volumes.createIndex({"name": 1}, unique=true)
 db.getSiblingDB("iris").physical_volumes.insertOne({
   "name": "wekassd2022",
   "storageclass": "ssd",
-  "intent": "userhome",
   "gigabytes": 1000000,
-  "inodes": 100000,
-  "mount": "nfs://192.168.0.1/homes"
+  "inodes": 100000
 })
 
 // End the description of resources....
+
+// Facilities purchase compute and storage on various clusters and volumes.
+db.getSiblingDB("iris").facility_compute_purchases.createIndex({"facility": 1, "clustername": 1, "start": -1}, unique=true)
+db.getSiblingDB("iris").facility_storage_purchases.createIndex({"facility": 1, "storagename": 1, "purpose": 1, "start": -1}, unique=true)
+
+db.getSiblingDB("iris").facility_compute_purchases.insertOne({
+  "facility": "LCLS",
+  "clustername": "rome-b050",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "slachours": 100000
+})
+db.getSiblingDB("iris").facility_compute_purchases.insertOne({
+  "facility": "LCLS",
+  "clustername": "milan-srcf",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "slachours": 200000
+})
+db.getSiblingDB("iris").facility_compute_purchases.insertOne({
+  "facility": "LCLS",
+  "clustername": "psana",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "slachours": 300000
+})
+
+db.getSiblingDB("iris").facility_compute_purchases.insertOne({
+  "facility": "CryoEM",
+  "clustername": "rome-b050",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "slachours": 200000
+})
+db.getSiblingDB("iris").facility_compute_purchases.insertOne({
+  "facility": "CryoEM",
+  "clustername": "milan-srcf",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "slachours": 100000
+})
+
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility": "LCLS",
+  "storagename": "wekassd2022",
+  "purpose": "science-data",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 20000000,
+  "inodes": 100000000,
+})
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility": "LCLS",
+  "storagename": "wekassd2022",
+  "purpose": "group",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 200000,
+  "inodes": 100000,
+})
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility": "LCLS",
+  "storagename": "wekassd2022",
+  "purpose": "scratch",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 200000,
+  "inodes": 100000,
+})
+
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility": "CryoEM",
+  "storagename": "wekassd2022",
+  "purpose": "science-data",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 40000000,
+  "inodes": 400000000,
+})
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility": "CryoEM",
+  "storagename": "wekassd2022",
+  "purpose": "group",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 5500000,
+  "inodes": 7600000,
+})
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility": "CryoEM",
+  "storagename": "wekassd2022",
+  "purpose": "scratch",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 5500000,
+  "inodes": 7600000,
+})
 
 // Users and groups.
 // Of course, user has other information like full name, email etc. Maybe some of that comes from inCommon?
@@ -168,26 +263,28 @@ db.getSiblingDB("iris").users.insertOne({ "username": "perazzo", "uidnumber": 13
 db.getSiblingDB("iris").users.insertOne({ "username": "yemi", "uidnumber": 132, "eppns": [ "yemi@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "yemi@slac.stanford.edu" })
 db.getSiblingDB("iris").users.insertOne({ "username": "richard", "uidnumber": 133, "eppns": [ "richard@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "richard@slac.stanford.edu" })
 
+// User compute allocation percent
+db.getSiblingDB("iris").user_allocations.createIndex({"username": 1, "allocationid": 1}, unique=true)
 
 // User_Volume_Storage_Allocation
-db.getSiblingDB("iris").user_storage_allocation.createIndex({"username": 1, "intent": 1}, unique=true)
+db.getSiblingDB("iris").user_storage_allocation.createIndex({"username": 1, "purpose": 1}, unique=true)
 db.getSiblingDB("iris").user_storage_allocation.createIndex({"username": 1, "volume_name": 1})
 
 ["mshankar", "ytl", "wilko", "perazzo", "yemi", "richard"].forEach(function(u){
   db.getSiblingDB("iris").user_storage_allocation.insertOne({
     "username": u,
-    "volumename": "wekassd2022",
-    "intent": "home",
+    "storagename": "wekassd2022",
+    "purpose": "home",
     "gigabytes": 20,
     "inodes": 1000,
-    "mount": "nfs://192.168.0.1/homes/" + u[0] + "/" + u
+    "rootfolder": "<prefix>/homes/" + u[0] + "/" + u
   })
 })
 
 db.getSiblingDB("iris").user_storage_usage.createIndex({"alloc_id": 1, "date": 1}, unique=true)
 
 ["mshankar", "ytl", "wilko", "perazzo", "yemi", "richard"].forEach(function(u){
-  let allocid = db.getSiblingDB("iris").user_storage_allocation.findOne({"username": u, "intent": "home" })["_id"]
+  let allocid = db.getSiblingDB("iris").user_storage_allocation.findOne({"username": u, "purpose": "home" })["_id"]
   db.getSiblingDB("iris").user_storage_usage.insertOne({
     "allocid": allocid,
     "date": new Date(),
@@ -197,23 +294,25 @@ db.getSiblingDB("iris").user_storage_usage.createIndex({"alloc_id": 1, "date": 1
 })
 
 
-// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "RepoMembership", "username" : "wilko", "reponame" : "cxi12345", "requestedby": "wilko", "timeofrequest": new Date()})
-// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "RepoMembership", "username" : "wilko", "reponame" : "CA104", "requestedby": "wilko", "timeofrequest": new Date()})
-// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "RepoMembership", "username" : "mshankar", "reponame" : "CA104", "requestedby": "mshankar", "timeofrequest": new Date()})
+
+
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "RepoMembership", "username" : "wilko", "reponame" : "cxi12345", "requestedby": "wilko", "timeofrequest": new Date()})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "RepoMembership", "username" : "wilko", "reponame" : "CA104", "requestedby": "wilko", "timeofrequest": new Date()})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "RepoMembership", "username" : "mshankar", "reponame" : "CA104", "requestedby": "mshankar", "timeofrequest": new Date()})
 // // Two people requesting the same repo/facility
-// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewRepo", "username" : "wilko",    "reponame" : "cxi23456", "requestedby": "wilko", "timeofrequest": new Date()})
-// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewRepo", "username" : "mshankar", "reponame" : "cxi23456", "requestedby": "mshankar", "timeofrequest": new Date()})
-// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewFacility", "username" : "wilko",    "facilityname" : "RUBIN", "requestedby": "wilko", "timeofrequest": new Date()})
-// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewFacility", "username" : "mshankar", "facilityname" : "RUBIN", "requestedby": "mshankar", "timeofrequest": new Date()})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewRepo", "username" : "wilko",    "reponame" : "cxi23456", "requestedby": "wilko", "timeofrequest": new Date()})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewRepo", "username" : "mshankar", "reponame" : "cxi23456", "requestedby": "mshankar", "timeofrequest": new Date()})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewFacility", "username" : "wilko",    "facilityname" : "RUBIN", "requestedby": "wilko", "timeofrequest": new Date()})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "NewFacility", "username" : "mshankar", "facilityname" : "RUBIN", "requestedby": "mshankar", "timeofrequest": new Date()})
 //
-// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "paul@stanford.edu", "preferredUserName": "paul", "reponame" : "cxi12345", "facilityname" : "LCLS", "timeofrequest": new Date()})
-// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "george@stanford.edu", "preferredUserName": "george", "reponame" : "cxi12345", "facilityname" : "LCLS", "timeofrequest": new Date()})
-// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "john@stanford.edu", "preferredUserName": "john", "reponame" : "cxi12345", "facilityname" : "LCLS", "timeofrequest": new Date()})
-// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "ringo@stanford.edu", "preferredUserName": "ringo", "reponame" : "cxi12345", "facilityname" : "LCLS", "timeofrequest": new Date()})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "paul@stanford.edu", "preferredUserName": "paul", "reponame" : "cxi12345", "facilityname" : "LCLS", "timeofrequest": new Date()})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "george@stanford.edu", "preferredUserName": "george", "reponame" : "cxi12345", "facilityname" : "LCLS", "timeofrequest": new Date()})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "john@stanford.edu", "preferredUserName": "john", "reponame" : "cxi12345", "facilityname" : "LCLS", "timeofrequest": new Date()})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "ringo@stanford.edu", "preferredUserName": "ringo", "reponame" : "cxi12345", "facilityname" : "LCLS", "timeofrequest": new Date()})
 // // These are requests for user account whose username already exists in the system.
-// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "wilko@stanford.edu", "preferredUserName": "wilko", "reponame" : "cxi12345", "facilityname" : "LCLS", "timeofrequest": new Date()})
-// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "mshankar@stanford.edu", "preferredUserName": "mshankar", "reponame" : "cxi12345", "facilityname" : "LCLS", "timeofrequest": new Date()})
-// db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "ytl@stanford.edu", "preferredUserName": "ytl", "reponame" : "cxi12345", "facilityname" : "LCLS", "timeofrequest": new Date()})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "wilko@stanford.edu", "preferredUserName": "wilko", "reponame" : "cxi12345", "facilityname" : "LCLS", "timeofrequest": new Date()})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "mshankar@stanford.edu", "preferredUserName": "mshankar", "reponame" : "cxi12345", "facilityname" : "LCLS", "timeofrequest": new Date()})
+db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" : "ytl@stanford.edu", "preferredUserName": "ytl", "reponame" : "cxi12345", "facilityname" : "LCLS", "timeofrequest": new Date()})
 
 
 
@@ -327,11 +426,11 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
   "end": ISODate("2020-12-31T00:00:00Z"),
   "qoses": {
     "cxi12345": {
-      "slachours": 100000,
+      "slachours": 7865320,
       "chargefactor": 1.0
     },
     "cxi12345-priority": {
-      "slachours": 1000,
+      "slachours": 1,
       "chargefactor": 1.25
     }
   }
@@ -355,246 +454,52 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
 })
 
 
-db.getSiblingDB("iris").allocations.insertOne({
-  "facility": "LCLS",
-  "resource": "storage",
+// We allocate compute on a specific physical volume for a particular purpose.
+// For example, we'd allocate 10TB for data, 10GB for scratch etc.
+db.getSiblingDB("iris").repo_storage_allocations.createIndex({"repo": 1, "storagename": 1, "purpose": 1, "start": -1}, unique=true)
+db.getSiblingDB("iris").repo_storage_allocations.insertOne({
   "repo": "cxi12345",
-  "active": true,
+  "storagename": "wekassd2022",
+  "purpose": "science-data",
   "start": ISODate("2021-05-01T00:00:00-07:00"),
   "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
-  "volumes": {
-    "science-data": [
-      {
-        "name": "cxi12345",
-        "gigabytes": 5544, // gb
-        "inodes": 4455
-      }
-    ],
-    "group": [
-      {
-        "name": "cxi12345",
-        "gigabytes": 1000,
-        "inodes": 100
-      }
-    ]
-  }
+  "gigabytes": 200000,
+  "inodes": 1000,
+  "rootfolder": "<prefix>/cxi/cxi12345/xtc"
 })
-
-// a 'storage' allocation defines all the volumes for that repo
-// the key of each volume is the 'type' of volume defined above (bit suplurfuous perhaps)
-// as the quota of each volume can change, we keep the Volume as a separate document and use this allocation document
-// ?? how to deal with stranded/orphaned volumes?
-
-db.getSiblingDB("iris").allocations.insertOne({
-  "facility": "CryoEM",
-  "resource": "storage",
-  "repo": "CS14",
-  "active": true,
-  "start": ISODate("2021-05-01T00:00:00-07:00"),
-  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
-  "volumes": {
-    "science-data": [
-      {
-        "name": "20211107-CS14",
-        "gigabytes": 2000,
-        "inodes": 20000
-      }
-    ]
-  }
-})
-
-db.getSiblingDB("iris").allocations.insertOne({
-  "facility": "CryoEM",
-  "resource": "storage",
-  "repo": "CA104",
-  "active": true,
-  "start": ISODate("2021-05-01T00:00:00-07:00"),
-  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
-  "volumes": {
-    "science-data": [
-      {
-        "name": "20221112_CA104",
-        "gigabytes": 2000,
-        "inodes": 20000
-      }
-    ]
-  }
-})
-
-
-
-
-// define a capacity to be the actual resources provided to each facility
-// keep a count of the number of units of each type of cluster - this shoudl make it simple for admins to add new resrouces to each facility
-
-db.getSiblingDB("iris").capacity.createIndex({"facility": 1, "start": 1})
-
-
-db.getSiblingDB("iris").capacity.insertOne({
-  "facility": "LCLS",
-  "start": ISODate("2020-01-01T00:00:00-07:00"),
-  "end": ISODate("2021-05-01T00:00:00-07:00"),
-  "clusters": [
-    {
-      "name": "rome-b050",
-      "slachours": 23.5, // Can this be computed from the cluster itself?
-    },
-    {
-      "name": "milan-srcf",
-      "slachours": 10.0
-    }
-  ],
-  "storage": [
-    {
-      "name": "science-data",
-      "gigabytes": 1000000,
-      "inodes": 100000
-    },
-    {
-      "name": "group",
-      "gigabytes": 100000,
-      "inodes": 10000
-    }
-  ]
-})
-
-db.getSiblingDB("iris").capacity.insertOne({
-  "facility": "LCLS",
-  "start": ISODate("2021-05-01T00:00:00-07:00"),
-  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
-  "clusters": [
-    {
-      "name": "rome-b050",
-      "slachours": 23.5, // Can this be computed from the cluster itself?
-    },
-    {
-      "name": "milan-srcf",
-      "slachours": 10.0
-    },
-    {
-      "name": "ampt",
-      "slachours": 1.0
-    },
-    {
-      "name": "psana",
-      "slachours": 100.0
-    }
-  ],
-  "storage": [
-    {
-      "name": "science-data",
-      "gigabytes": 40000000,
-      "inodes": 200000
-    },
-    {
-      "name": "group",
-      "gigabytes": 600000,
-      "inodes": 20000
-    }
-  ]
-})
-
-
-
-
-
-
-// ?? do we need like a basePath Prefix definition in the Facility level?
-// a Volume merely defines some storage somewhere which is associated with teh access class to deteremine access permissions (gids)
-db.getSiblingDB("iris").volumes.insertOne({
-  "facility": "LCLS",
-  "name": "cxi12345",
-  "type": "science-data",
-  "accessgroup": [ "cxi12345" ],
-  "path": "/sdf/data/lcls/cxi/cxi/123456"
-})
-db.getSiblingDB("iris").volumes.insertOne({
-  "facility": "LCLS",
-  "name": "cxi12345",
-  "type": "group",
-  "accessgroup": [ "cxi12345" ],
-  "path": "/sdf/group/lcls/cxi/cxi/123456"
-})
-
-
-db.getSiblingDB("iris").volumes.insertOne({
-  "facility": "LCLS",
-  "name": "20211107-CS14",
-  "type": "science-data",
-  "accessgroup": [ "CS14" ],
-  "path": "/sdf/data/cryoem/202111/20211107-CS14_TEM4"
-})
-db.getSiblingDB("iris").volumes.insertOne({
-  "facility": "LCLS",
-  "name": "20221112_CA104",
-  "type": "science-data",
-  "accessgroup": [ "CA104" ],
-  "path": "/sdf/data/cryoem/202111/20221112_CA104_TEMBETA"
-})
-
-
-
-
-
-// usage collection to store information about post processed units of resources that have been consumed by the Repo.
-// keep the data in a raw format to reduce the amount of processing to get the data to teh client. would tehre be limits to teh size of the data as a result of keeping it like this?
-db.getSiblingDB("iris").usage.insertOne({
-  "facility": "LCLS",
-  "resource": "storage",
+db.getSiblingDB("iris").repo_storage_allocations.insertOne({
   "repo": "cxi12345",
-  "name": "cxi12345",
-  "class": "science-data",
-  "history": [
-    ["20220101",56320,3456], // date, gigabutes, inodes
-    ["20220102",56330,3452], // date, gigabutes, inodes
-    ["20220103",57530,3552], // date, gigabutes, inodes
-  ]
+  "storagename": "wekassd2022",
+  "purpose": "scratch",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 2000,
+  "inodes": 10000,
+  "rootfolder": "<prefix>/cxi/cxi12345/scratch"
 })
-
-
-db.getSiblingDB("iris").usage.insertOne({
-  "facility": "LCLS",
-  "resource": "compute",
+db.getSiblingDB("iris").repo_storage_allocations.insertOne({
   "repo": "cxi12345",
-  "name": "cxi12345",
-  "history": [
-    ["20220101",1202], // date, slachours
-    ["20220102",1842], // date, slachours
-    ["20220103",2349], // date, slachours
-  ]
+  "storagename": "wekassd2022",
+  "purpose": "group",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 20,
+  "inodes": 100,
+  "rootfolder": "<prefix>/cxi/cxi12345/results"
 })
-
-
 
 
 // Jobs have lots of information from SLURM in addition to the final mapping into repo, year and resource name.
-db.getSiblingDB("iris").jobs.createIndex({"jobId": 1, "startTs": 1, "computeId": 1}, unique=true)
-db.getSiblingDB("iris").jobs.createIndex({"repo": 1, "year": -1, "resource": 1}) // Performance index
+db.getSiblingDB("iris").jobs.createIndex({"jobId": 1, "startTs": 1, "clustername": 1}, unique=true)
+db.getSiblingDB("iris").jobs.createIndex({"repo": 1, "year": -1, "clustername": 1})  // Performance index
+
 
 // We cache the compute and storage allocation usage in the usagecache collections
-db.getSiblingDB("iris").computeusagecache.createIndex({"allocationId": 1, "qos": 1}, unique=true)
-db.getSiblingDB("iris").storageusagecache.createIndex({"allocationId": 1, "volume": 1}, unique=true)
+db.getSiblingDB("iris").repo_overall_compute_usage.createIndex({"allocationid": 1, "qos": 1}, unique=true)
+db.getSiblingDB("iris").repo_overall_storage_usage.createIndex({"allocationid": 1}, unique=true)
 
-db.getSiblingDB("iris").diskusage.createIndex({"facility": 1, "resource": 1, "year": -1, "repo": 1, "date": 1}, unique=true)
-for(i=0;i<75;i++) {
-  db.getSiblingDB("iris").diskusage.insertOne({
-    "facility": "LCLS",
-    "resource": "data",
-    "year": 2022,
-    "repo": "cxi12345",
-    "folder": "/reg/data/ana01/cxi/cxi12345",
-    "storage": 56320,
-    "inodes": 3456,
-    "date": new Date(1640995200000 + i*86400*1000)
-  })
-  db.getSiblingDB("iris").diskusage.insertOne({
-    "facility": "LCLS",
-    "resource": "scratch",
-    "year": 2022,
-    "repo": "cxi12345",
-    "folder": "/reg/scratch/ana01/cxi/cxi12345",
-    "storage": 56320,
-    "inodes": 100000000,
-    "date": new Date(1640995200000 + i*86400*1000)
-  })
-}
+db.getSiblingDB("iris").repo_daily_compute_usage.createIndex({"allocationid": 1, "date": 1}, unique=true)
+db.getSiblingDB("iris").repo_peruser_compute_usage.createIndex({"allocationid": 1, "username": 1}, unique=true)
+
+// For storage updates, we already have the allocation ID
+db.getSiblingDB("iris").repo_daily_storage_usage.createIndex({"allocationid": 1, "date": 1}, unique=true)

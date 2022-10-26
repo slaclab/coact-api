@@ -24,12 +24,13 @@ from models import \
         User, UserInput, UserRegistration, \
         AccessGroup, AccessGroupInput, \
         Repo, RepoInput, \
-        Facility, FacilityInput, \
-        Resource, Qos, Job, \
+        Facility, FacilityInput, Job, \
         UserAllocationInput, UserAllocation, \
         ClusterInput, Cluster, \
         SDFRequestInput, SDFRequest, SDFRequestType, SDFRequestEvent, \
-        RepoFacilityName
+        RepoFacilityName, \
+        Usage, UsageInput, StorageDailyUsageInput, \
+        ReportRangeInput, PerDateUsage, PerUserUsage
 
 import logging
 LOG = logging.getLogger(__name__)
@@ -43,11 +44,13 @@ class Query:
         regis_pending = False
         if not isRegis:
             regis_pending = len(info.context.db.find("requests", {"reqtype" : "UserAccount", "eppn" : eppn})) == 1
-        return UserRegistration(**{ "isRegistered": isRegis, "eppn": eppn, "isRegistrationPending": regis_pending })
+        return UserRegistration(**{ "isRegistered": isRegis, "eppn": eppn, "isRegistrationPending": regis_pending, "fullname": info.context.fullname })
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def whoami(self, info: Info) -> User:
-        return info.context.db.find_user( { "username": info.context.username } )
+        user = info.context.db.find_user( { "username": info.context.username } )
+        user.fullname = info.context.fullname
+        return user
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def users(self, info: Info, filter: Optional[UserInput]={} ) -> List[User]:
@@ -66,18 +69,47 @@ class Query:
         return info.context.db.find_facilities( filter, exclude_fields=["policies"])
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def requests(self, info: Info) -> List[SDFRequest]:
+    def requests(self, info: Info, fetchprocessed: Optional[bool]=False, showmine: Optional[bool]=True) -> Optional[List[SDFRequest]]:
+        """
+        Separate queries for admin/czar/leader/user
+        """
+        queryterms = []
+        if showmine:
+            username = info.context.username
+            if not username:
+                return []
+            queryterms.append({ "requestedby": username })
+            crsr = info.context.db.collection("requests").find( {"$or": queryterms } ).sort([("timeofrequest", -1)])
+            return info.context.db.cursor_to_objlist(crsr, SDFRequest, exclude_fields={})
+        if not fetchprocessed:
+            queryterms.append({"approvalstatus": {"$exists": False}})
         if info.context.is_admin:
-            return info.context.db.find_requests( {} )
+            queryterms.append({"reqtype": {"$not": {"$in": [ "RepoMembership" ]}}})
         else:
+            queryterms.append({"reqtype": "RepoMembership"})
             username = info.context.username
             assert username != None
-            myrepos = info.context.db.find_repos( { '$or': [
-                { "leaders": username },
-                { "principal": username }
-                ] } )
-            reponames = [ x.name for x in myrepos ]
-            return info.context.db.find_requests( {"$and": [{ "reponame": {"$in": reponames } }, {"reqtype": "RepoMembership"}]} )
+            myfacs = list(info.context.db.find_facilities({"czars": username}, exclude_fields=["policies"]))
+            if myfacs:
+                myfacnms = [ x.name for x in myfacs ]
+                myrepos = info.context.db.find_repos( { '$or': [
+                    { "leaders": username },
+                    { "principal": username },
+                    { "facility": {"$in": myfacnms }}
+                    ] } )
+                reponames = [ x.name for x in myrepos ]
+                queryterms.append({ "reponame": {"$in": reponames } })
+            else:
+                myrepos = info.context.db.find_repos( { '$or': [
+                    { "leaders": username },
+                    { "principal": username }
+                    ] } )
+                if myrepos:
+                    reponames = [ x.name for x in myrepos ]
+                    queryterms.append({ "reponame": {"$in": reponames } })
+
+        crsr = info.context.db.collection("requests").find({"$and": queryterms }).sort([("timeofrequest", -1)])
+        return info.context.db.cursor_to_objlist(crsr, SDFRequest, exclude_fields={})
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def facility(self, info: Info, filter: Optional[FacilityInput]) -> Facility:
@@ -105,7 +137,7 @@ class Query:
         return [ RepoFacilityName(**x) for x in info.context.db.collection("repos").find({}, {"_id": 0, "name": 1, "facility": 1}) ]
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def repo(self, filter: Optional[RepoInput], info: Info) -> Repo:
+    def repo(self, filter: RepoInput, info: Info) -> Repo:
         return info.context.db.find_repo( filter )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
@@ -131,25 +163,70 @@ class Query:
     def reposWithPrincipal( self, info: Info, username: str ) -> List[Repo]:
         return info.context.db.find_repos( { "principal": username } )
 
-    @strawberry.field
-    def qos(self, info: Info) -> List[Qos]:
-        return info.context.db.find_qoses()
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def reportFacilityComputeByDay( self, info: Info, clustername: str, range: ReportRangeInput, group: str ) -> List[PerDateUsage]:
+        LOG.debug("Getting compute daily data for cluster %s from %s to %s grouped by %s", clustername, range.start, range.end, group)
+        if group == "Day":
+            timegrp = "$date"
+        elif group == "Month":
+            timegrp = { "$dateTrunc": {"date": "$date", "unit": "month", "timezone": "America/Los_Angeles"}}
+        else:
+            raise Exception(f"Unsupported group by {group}")
+        usgs = info.context.db.collection("repo_daily_compute_usage").aggregate([
+          { "$lookup": { "from": "repo_compute_allocations", "localField": "allocationid", "foreignField": "_id", "as": "allocation"}},
+          { "$unwind": "$allocation" },
+          { "$match": { "allocation.clustername": clustername, "date": {"$gte": range.start, "$lte": range.end} } },
+          { "$group": { "_id": {"repo": "$allocation.repo", "date" : timegrp }, "slachours": {"$sum":  "$slachours"}} },
+          { "$project": { "_id": 0, "repo": "$_id.repo", "date": "$_id.date", "slachours": 1 }},
+          { "$sort": { "date": -1 }}
+        ])
+        return info.context.db.cursor_to_objlist(usgs, PerDateUsage, {})
 
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def reportFacilityComputeByUser( self, info: Info, clustername: str, range: ReportRangeInput ) -> List[PerUserUsage]:
+        LOG.debug("Getting compute user data for cluster %s from %s to %s ", clustername, range.start, range.end)
+        usgs = info.context.db.collection("jobs").aggregate([
+          { "$match": { "startTs": {"$gte": range.start, "$lte": range.end} } },
+          { "$lookup": { "from": "repo_compute_allocations", "localField": "allocationid", "foreignField": "_id", "as": "allocation"}},
+          { "$unwind": "$allocation" },
+          { "$match": { "allocation.clustername": clustername } },
+          { "$group": { "_id": {"repo": "$allocation.repo", "username" : "$username" }, "slachours": {"$sum":  "$slachours"}} },
+          { "$project": { "_id": 0, "repo": "$_id.repo", "username": "$_id.username", "slachours": 1 }},
+          { "$sort": { "slachours": -1 }}
+        ])
+        return info.context.db.cursor_to_objlist(usgs, PerUserUsage, {})
 
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def reportFacilityStorage( self, info: Info, storagename: str, purpose: Optional[str] = UNSET ) -> List[Usage]:
+        LOG.debug("Storage report for storage %s for purpose %s ", storagename, purpose)
+        groupby = {"repo": "$allocation.repo" }
+        project = { "_id": 0, "repo": "$_id.repo", "gigabytes": 1, "inodes": 1 }
+        if purpose:
+            groupby["purpose"] = purpose
+            project["purpose"] = "$_id.purpose"
+        usgs = info.context.db.collection("repo_overall_storage_usage").aggregate([
+          { "$lookup": { "from": "repo_storage_allocations", "localField": "allocationid", "foreignField": "_id", "as": "allocation"}},
+          { "$unwind": "$allocation" },
+          { "$match": { "allocation.storagename": storagename } },
+          { "$group": { "_id": groupby, "gigabytes": {"$sum":  "$gigabytes"}, "inodes": {"$sum":  "$inodes"} }},
+          { "$project": project },
+          { "$sort": { "gigabytes": -1 }}
+        ])
+        return info.context.db.cursor_to_objlist(usgs, Usage, {})
 
 @strawberry.type
 class Mutation:
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def userCreate(self, user: UserInput, info: Info, admin_override: bool=False) -> User:
+    def userCreate(self, user: UserInput, info: Info) -> User:
         return info.context.db.create( 'users', user, required_fields=[ 'username', 'uidnumber', 'eppns' ], find_existing={ 'username': user.username } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def userUpdate(self, user: UserInput, info: Info, admin_override: bool=False) -> User:
+    def userUpdate(self, user: UserInput, info: Info) -> User:
         return info.context.db.update( 'users', user, required_fields=[ '_id' ], find_existing={ '_id': user._id } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def userUpdateEppn(self, eppns: List[str], info: Info, admin_override: bool=False) -> User:
+    def userUpdateEppn(self, eppns: List[str], info: Info) -> User:
         logged_in_user = info.context.username
         if len(eppns) < 1:
             raise Exception("A user must have at least one EPPN")
@@ -168,7 +245,7 @@ class Mutation:
     @strawberry.field( permission_classes=[ IsValidEPPN ] )
     def newSDFAccountRequest(self, request: SDFRequestInput, info: Info) -> SDFRequest:
         request.timeofrequest = datetime.datetime.utcnow()
-        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing={ 'reqtype': request.reqtype.name, "eppn": request.eppn } )
+        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def repoMembershipRequest(self, request: SDFRequestInput, info: Info) -> SDFRequest:
@@ -177,7 +254,7 @@ class Mutation:
         request.username = info.context.username
         request.requestedby = info.context.username
         request.timeofrequest = datetime.datetime.utcnow()
-        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing={ 'reqtype': request.reqtype.name, "username": request.username, "reponame": request.reponame } )
+        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def newRepoRequest(self, request: SDFRequestInput, info: Info) -> SDFRequest:
@@ -186,7 +263,7 @@ class Mutation:
         request.username = info.context.username
         request.requestedby = info.context.username
         request.timeofrequest = datetime.datetime.utcnow()
-        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing={ 'reqtype': request.reqtype.name, "reponame": request.reponame } )
+        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def repoComputeAllocationRequest(self, request: SDFRequestInput, info: Info) -> SDFRequest:
@@ -195,16 +272,25 @@ class Mutation:
         request.username = info.context.username
         request.requestedby = info.context.username
         request.timeofrequest = datetime.datetime.utcnow()
-        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing={ 'reqtype': request.reqtype.name, "reponame": request.reponame } )
+        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
 
-    @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def userQuotaRequest(self, request: SDFRequestInput, info: Info) -> SDFRequest:
-        if request.reqtype != SDFRequestType.UserStorageAllocation or not request.volumename or not request.gigabytes or not request.inodes:
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
+    def repoStorageAllocationRequest(self, request: SDFRequestInput, info: Info) -> SDFRequest:
+        if request.reqtype != SDFRequestType.RepoStorageAllocation or not request.reponame or not request.allocationid or not request.gigabytes:
             raise Exception()
         request.username = info.context.username
         request.requestedby = info.context.username
         request.timeofrequest = datetime.datetime.utcnow()
-        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing={ 'reqtype': request.reqtype.name, "username": request.username, "volumename": request.volumename } )
+        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype', "allocationid", "gigabytes", "inodes" ], find_existing=None)
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def userQuotaRequest(self, request: SDFRequestInput, info: Info) -> SDFRequest:
+        if request.reqtype != SDFRequestType.UserStorageAllocation or not request.storagename or not request.gigabytes or not request.inodes:
+            raise Exception()
+        request.username = info.context.username
+        request.requestedby = info.context.username
+        request.timeofrequest = datetime.datetime.utcnow()
+        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def approveRequest(id: str, info: Info) -> bool:
@@ -220,7 +306,7 @@ class Mutation:
                 raise Exception("User is not an admin or a leader in the repo.")
             # These two should be in a transaction.
             info.context.db.collection("repos").update_one({"_id": therepo._id}, {"$addToSet": {"users": thereq.username}})
-            info.context.db.remove( 'requests', { "_id": id } )
+            thereq.approve(info)
             return True
         elif thereq.reqtype == "UserAccount":
             if not info.context.is_admin:
@@ -253,7 +339,7 @@ class Mutation:
                         LOG.info(json.dumps(fmtedstmt, indent=4))
                         info.context.db.collection(collname).insert_one(fmtedstmt)
 
-            info.context.db.remove( 'requests', { "_id": id } )
+            thereq.approve(info)
             return True
         elif thereq.reqtype == "UserStorageAllocation":
             if not info.context.is_admin:
@@ -261,23 +347,23 @@ class Mutation:
             theuser = thereq.username
             if not theuser or not info.context.db.collection("users").find_one( { "username": theuser } ):
                 raise Exception(f"Cannot find user object for {theusername}")
-            thevolumename = thereq.volumename
-            if not thevolumename:
+            thestoragename = thereq.storagename
+            if not thestoragename:
                 raise Exception(f"Please specify the volume")
-            theintent = thereq.intent
-            if not theintent:
-                raise Exception(f"Please specify the intent; this is used to identify which allocation to update")
+            thepurpose = thereq.purpose
+            if not thepurpose:
+                raise Exception(f"Please specify the purpose; this is used to identify which allocation to update")
             if not thereq.gigabytes or not thereq.inodes:
                 raise Exception(f"Please specify the storage request as gigabytes and inodes")
 
-            alloc = info.context.db.collection("user_storage_allocation").find_one( { "username": theuser, "volumename": thevolumename, "intent": theintent } )
+            alloc = info.context.db.collection("user_storage_allocation").find_one( { "username": theuser, "storagename": thestoragename, "purpose": thepurpose } )
             if not alloc:
-                raise Exception(f"Cannot find an allocation for {theusername} on volume {thevolumename}")
+                raise Exception(f"Cannot find an allocation for {theusername} on volume {thestoragename}")
             info.context.db.collection("user_storage_allocation").update_one(
-                { "username": theuser, "volumename": thevolumename, "intent": theintent },
+                { "username": theuser, "storagename": thestoragename, "purpose": thepurpose },
                 {"$set": {"gigabytes": thereq.gigabytes, "inodes": thereq.inodes }}
             )
-            info.context.db.remove( 'requests', { "_id": id } )
+            thereq.approve(info)
             return True
         elif thereq.reqtype == "NewRepo":
             if not info.context.is_admin:
@@ -304,7 +390,7 @@ class Mutation:
                   "users": [  ],
                   "access_groups": []
               })
-            info.context.db.remove( 'requests', { "_id": id } )
+            thereq.approve(info)
             return True
         elif thereq.reqtype == "RepoComputeAllocation":
             if not info.context.is_admin:
@@ -336,71 +422,92 @@ class Mutation:
                 {"_id": ObjectId(clusteralloc._id)},
                 {"$set": {"qoses."+theqosname+".slachours": thereq.slachours}}
             )
-            info.context.db.remove( 'requests', { "_id": id } )
+            thereq.approve(info)
+            return True
+        elif thereq.reqtype == "RepoStorageAllocation":
+            if not info.context.is_admin:
+                raise Exception("User is not an admin - cannot approve.")
+            thereponame = thereq.reponame
+            if not thereponame:
+                raise Exception("RepoComputeAllocation request without a repo name - cannot approve.")
+            therepo = info.context.db.find_repo( {"name": thereponame} )
+            if not therepo:
+                raise Exception(f"Repo with name {thereponame} does not exist")
+
+            storagealloc = therepo.storageAllocation(info, thereq.allocationid)
+            if not storagealloc:
+                raise Exception(f"Could not find the allocation with id " + thereq.allocationid)
+
+            info.context.db.collection("repo_storage_allocations").update_one(
+                {"_id": ObjectId(storagealloc._id)},
+                {"$set": {"gigabytes": thereq.gigabytes, "inodes": thereq.inodes}}
+            )
+            thereq.approve(info)
             return True
         else:
             if not info.context.is_admin:
                 raise Exception("User is not an admin")
-            raise Exception("Not implemented")
+            raise Exception("Approval of requests of type " + thereq.reqtype + " is not yet implemented")
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def rejectRequest(id: str, info: Info) -> bool:
-        info.context.db.remove( 'requests', { "_id": id } )
+        thereq = info.context.db.find_request({ "_id": ObjectId(id) })
+        thereq.reject(info)
         return True
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def facilityCreate(self, facility: FacilityInput, info: Info, admin_override: bool=False) -> Facility:
+    def facilityCreate(self, facility: FacilityInput, info: Info) -> Facility:
         return info.context.db.create( 'facilities', facility, required_fields=[ 'name' ], find_existing={ 'name': facility.name } )
 
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def accessGroupCreate(self, access_group: AccessGroupInput, info: Info, admin_override: bool=False) -> AccessGroup:
+    def accessGroupCreate(self, access_group: AccessGroupInput, info: Info) -> AccessGroup:
         return info.context.db.create( 'access_groups', access_group, required_fields=[ 'gid_number', 'name' ], find_existing={ 'gid_number': access_group.gid_number } )
 
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def accessGroupUpdate(self, access_group: AccessGroupInput, info: Info, admin_override: bool=False) -> AccessGroup:
+    def accessGroupUpdate(self, access_group: AccessGroupInput, info: Info) -> AccessGroup:
         return info.context.db.update( 'access_groups', info, access_group, required_fields=[ 'Id', ], find_existing={ '_id': accesss_group._id } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def repoCreate(self, repo: RepoInput, info: Info, admin_override: bool=False) -> Repo:
+    def repoCreate(self, repo: RepoInput, info: Info) -> Repo:
         return info.context.db.create( 'repos', repo, required_fields=[ 'name', 'facility' ], find_existing={ 'name': repo.name, 'facility': repo.facility } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def repoUpdate(self, repo: RepoInput, info: Info, admin_override: bool=False) -> Repo:
+    def repoUpdate(self, repo: RepoInput, info: Info) -> Repo:
         return info.context.db.update( 'repos', info, repo, required_fields=[ 'Id' ], find_existing={ '_id': repo._id } )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def updateUserAllocation(self, repo: RepoInput, data: List[UserAllocationInput], info: Info, admin_override: bool=False, impersonate: str=None) -> Repo:
+    def updateUserAllocation(self, repo: RepoInput, data: List[UserAllocationInput], info: Info) -> Repo:
         filter = {"name": repo.name}
         therepos =  info.context.db.find_repo( filter )
         uas = [dict(j.__dict__.items()) for j in data]
-        keys = ["facility", "repo", "resource", "year", "username"]
+        keys = ["username", "allocationid", ]
         for ua in uas:
             nua = {k: v for k,v in ua.items() if not v is UNSET}
             info.context.db.collection("user_allocations").replace_one({k: v for k,v in nua.items() if k in keys}, nua, upsert=True)
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def addUserToRepo(self, repo: RepoInput, user: UserInput, info: Info, admin_override: bool=False, impersonate: str=None ) -> Repo:
+    def addUserToRepo(self, repo: RepoInput, user: UserInput, info: Info ) -> Repo:
         filter = {"name": repo.name}
         info.context.db.collection("repos").update_one(filter, { "$addToSet": {"users": user.username}})
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def addLeaderToRepo(self, repo: RepoInput, user: UserInput, info: Info, admin_override: Optional[bool]=False, impersonate: str=None ) -> Repo:
+    def addLeaderToRepo(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
         filter = {"name": repo.name}
         info.context.db.collection("repos").update_one(filter, { "$addToSet": {"leaders": user.username}})
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipal ] )
-    def changePrincipalForRepo(self, repo: RepoInput, user: UserInput, info: Info, admin_override: bool=False, impersonate: str=None ) -> Repo:
+    def changePrincipalForRepo(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
         filter = {"name": repo.name}
         info.context.db.collection("repos").update_one(filter, { "$set": {"principal": user.username}})
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def removeUserFromRepo(self, repo: RepoInput, user: UserInput, info: Info, admin_override: bool=False, impersonate: str=None ) -> Repo:
+    def removeUserFromRepo(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
         filter = {"name": repo.name}
         therepo =  info.context.db.find_repo( filter )
         theuser = user.username
@@ -412,7 +519,7 @@ class Mutation:
         return info.context.db.find_repo( filter )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def toggleUserRole(self, repo: RepoInput, user: UserInput, info: Info, admin_override: bool=False, impersonate: str=None ) -> Repo:
+    def toggleUserRole(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
         filter = {"name": repo.name}
         therepo = info.context.db.find_repo( filter )
         theuser = user.username
@@ -427,7 +534,7 @@ class Mutation:
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def toggleGroupMembership(self, repo: RepoInput, user: UserInput, group: AccessGroupInput, info: Info, admin_override: bool=False, impersonate: str=None ) -> AccessGroup:
+    def toggleGroupMembership(self, repo: RepoInput, user: UserInput, group: AccessGroupInput, info: Info) -> AccessGroup:
         filter = {"name": repo.name}
         therepo = info.context.db.find_repo( filter )
         theuser = user.username
@@ -444,33 +551,88 @@ class Mutation:
         return info.context.db.find_access_group( grpfilter )
 
     @strawberry.mutation
-    def importJobs(self, jobs: List[Job], info: Info, admin_override: bool=False) -> str:
+    def importJobs(self, jobs: List[Job], info: Info) -> str:
         jbs = [dict(j.__dict__.items()) for j in jobs]
         info.context.db.collection("jobs").insert_many(jbs)
-        allocation_ids = list(map(lambda x: x["allocationId"], jbs))
-        usage = info.context.db.collection("jobs").aggregate([
-          { "$match": { "allocationId": {"$in":  allocation_ids } }},
-          { "$group": { "_id": {"allocationId": "$allocationId", "qos": "$qos", "repo": "$repo" },
-              "slacsecs": { "$sum": "$slacsecs" },
+        allocation_ids = list(map(lambda x: x["allocationid"], jbs))
+        info.context.db.collection("jobs").aggregate([
+          { "$match": { "allocationid": {"$in":  allocation_ids } }},
+          { "$group": { "_id": {"allocationid": "$allocationid", "qos": "$qos", "repo": "$repo" },
+              "slachours": { "$sum": "$slachours" },
               "rawsecs": { "$sum": "$rawsecs" },
               "machinesecs": { "$sum": "$machinesecs" },
               "avgcf": { "$avg": "$finalcf" }
           }},
           { "$project": {
               "_id": 0,
-              "allocationId": "$_id.allocationId",
+              "allocationid": "$_id.allocationid",
               "qos": "$_id.qos",
               "repo": "$_id.repo",
-              "slacsecs": 1,
+              "slachours": 1,
               "rawsecs": 1,
               "machinesecs": 1,
               "avgcf": 1,
-          }}
+          }},
+          { "$merge": { "into": "repo_overall_compute_usage", "whenMatched": "replace" } }
         ])
-        for usg in usage:
-            info.context.db.collection("computeusagecache").replace_one({"allocationId": usg["allocationId"], "qos": usg["qos"]}, usg, upsert=True)
+
+        info.context.db.collection("jobs").aggregate([
+          { "$match": { "allocationid": {"$in":  allocation_ids } }},
+          { "$group":
+            { "_id": {"allocationid": "$allocationid", "username": "$username", "repo": "$repo"},
+                "slachours": { "$sum": "$slachours" },
+                "rawsecs": { "$sum": "$rawsecs" },
+                "machinesecs": { "$sum": "$machinesecs" },
+                "avgcf": { "$avg": "$finalcf" }
+            }},
+            { "$project": {
+                "_id": 0,
+                "allocationid": "$_id.allocationid",
+                "username": "$_id.username",
+                "repo": "$_id.repo",
+                "slachours": 1,
+                "rawsecs": 1,
+                "machinesecs": 1,
+                "avgcf": 1
+            }},
+            { "$merge": { "into": "repo_peruser_compute_usage", "whenMatched": "replace" } }
+        ])
+
+        info.context.db.collection("jobs").aggregate([
+          { "$match": { "allocationid": {"$in":  allocation_ids } }},
+          { "$group":
+            { "_id": { "allocationid": "$allocationid", "repo": "$repo", "date" : { "$dateTrunc": {"date": "$startTs", "unit": "day", "timezone": "America/Los_Angeles"}}},
+                "slachours": { "$sum": "$slachours" },
+                "rawsecs": { "$sum": "$rawsecs" },
+                "machinesecs": { "$sum": "$machinesecs" },
+                "avgcf": { "$avg": "$finalcf" }
+            }
+           },
+           { "$project": {
+                "_id": 0,
+                "allocationid": "$_id.allocationid",
+                "repo": "$_id.repo",
+                "date": "$_id.date",
+                "slachours": 1,
+                "rawsecs": 1,
+                "machinesecs": 1,
+                "avgcf": 1
+            }},
+            { "$merge": { "into": "repo_daily_compute_usage", "whenMatched": "replace" } }
+        ])
+
         return "Done"
 
+    @strawberry.mutation
+    def importRepoStorageUsage(self, usages: List[StorageDailyUsageInput], info: Info) -> str:
+        usgs = [dict(j.__dict__.items()) for j in usages]
+        info.context.db.collection("repo_daily_storage_usage").insert_many(usgs)
+        info.context.db.collection("repo_daily_storage_usage").aggregate([
+            { "$sort": { "date": -1 }},
+            { "$group": { "_id": "$allocationid", "allocationid": {"$first": "$allocationid"}, "date": {"$first": "$date"}, "gigabytes": {"$first": "$gigabytes"}, "inodes": {"$first": "$inodes"}}},
+            { "$merge": { "into": "repo_overall_storage_usage", "whenMatched": "replace" } }
+        ])
+        return "Done"
 
 requests_queue = asyncio.Queue()
 
