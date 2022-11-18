@@ -4,3 +4,6 @@ uvicorn
 uvicorn[standard]
 pymongo
 pydantic
+python-dateutil
+pytz
+requests
