@@ -155,4 +155,4 @@ if __name__ == '__main__':
 
     if not args.dry_run:
         jobstr = "mutation{importJobs( jobs: [" +  ",\n".join([encodeJob(x) for x in jobs ]) + "])}"
-        requests.post(args.url, json={"query": jobstr}).json()
+        requests.post(args.url, cookies=cookies, json={"query": jobstr}).json()

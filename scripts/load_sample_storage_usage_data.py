@@ -112,5 +112,5 @@ if __name__ == '__main__':
 
         if not args.dry_run:
             jobstr = "mutation{importRepoStorageUsage( usages: [" +  ",\n".join([encodeUsage(x) for x in updates ]) + "])}"
-            mutresp = requests.post(args.url, json={"query": jobstr})
+            mutresp = requests.post(args.url, cookies=cookies, json={"query": jobstr})
             mutresp.raise_for_status()
