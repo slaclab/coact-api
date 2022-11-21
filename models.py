@@ -479,9 +479,14 @@ class RepoStorageAllocation(RepoStorageAllocationInput):
         Overall usage; so pick up from the cached collections.
         """
         LOG.debug("Getting the total storage usage for repo %s", self.repo)
-        usgs = info.context.db.collection("repo_overall_storage_usage").find({"allocationid": self._id}).sort([("date", -1)]).limit(1)
+        usgs = list(info.context.db.collection("repo_overall_storage_usage").find({"allocationid": self._id}).sort([("date", -1)]).limit(1))
         if not usgs:
-            return None
+            return Usage(**{
+                "repo": self.repo,
+                "storagename": self.storagename,
+                "gigabytes": 0,
+                "inodes": 0
+            })
         usg = usgs[0]
         return Usage(**{
             "repo": self.repo,
