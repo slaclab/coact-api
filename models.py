@@ -365,12 +365,12 @@ class UsageInput:
     clustername: Optional[str] = UNSET
     storagename: Optional[str] = UNSET
     purpose: Optional[str] = UNSET
-    rawsecs: Optional[float] = UNSET
-    machinesecs: Optional[float] = UNSET
-    slachours: Optional[float] = UNSET
-    avgcf: Optional[float] = UNSET
-    gigabytes: Optional[float] = UNSET
-    inodes: Optional[float] = UNSET
+    rawsecs: Optional[float] = 0
+    machinesecs: Optional[float] = 0
+    slachours: Optional[float] = 0
+    avgcf: Optional[float] = 0
+    gigabytes: Optional[float] = 0
+    inodes: Optional[float] = 0
 
 @strawberry.type
 class Usage(UsageInput):
@@ -481,12 +481,7 @@ class RepoStorageAllocation(RepoStorageAllocationInput):
         LOG.debug("Getting the total storage usage for repo %s", self.repo)
         usgs = list(info.context.db.collection("repo_overall_storage_usage").find({"allocationid": self._id}).sort([("date", -1)]).limit(1))
         if not usgs:
-            return Usage(**{
-                "repo": self.repo,
-                "storagename": self.storagename,
-                "gigabytes": 0,
-                "inodes": 0
-            })
+            return Usage(**{ "repo": self.repo, "storagename": self.storagename })
         usg = usgs[0]
         return Usage(**{
             "repo": self.repo,
