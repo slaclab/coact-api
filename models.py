@@ -164,6 +164,9 @@ class User(UserInput):
             return True
         return False
     @strawberry.field
+    def isImpersonating(self, info) -> bool:
+        return info.context.is_impersonating
+    @strawberry.field
     def groups(self, info) -> List[str]:
         grps = info.context.db.collection("access_groups").find({"members": self.username})
         if not grps:

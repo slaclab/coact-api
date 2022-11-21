@@ -44,6 +44,7 @@ class CustomContext(BaseContext):
     fullname: str = None
     origin_username: str = None
     is_admin: bool = False
+    is_impersonating: bool = False
 
     def __init__(self, *args, **kwargs):
         self.db = DB(mongo,DB_NAME)
@@ -94,6 +95,7 @@ class CustomContext(BaseContext):
                     self.username = user.username
                     self.fullname = "N/A (Impersonating)"
                     self.is_admin = False
+                    self.is_impersonating = True
             else:
                 if 'coactimp' in self.request.headers and self.request.headers['coactimp'] and self.request.headers['coactimp'] != 'null':
                     raise Exception(f"unauthorised attempt by user {self.username} to impersonate {kwargs['impersonate']}")
