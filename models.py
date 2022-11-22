@@ -507,6 +507,7 @@ class AccessGroupInput:
     state: Optional[str] = UNSET
     gidnumber: Optional[int] = UNSET # perhaps we should use a linux non-specific name?
     name: Optional[str] = UNSET
+    repo: Optional[str] = UNSET
     members: Optional[List[str]] = UNSET
 
 @strawberry.type
@@ -520,12 +521,9 @@ class AccessGroup( AccessGroupInput ):
 @strawberry.input
 class RepoInput:
     _id: Optional[MongoId] = UNSET
-
     state: Optional[str] = UNSET
     name: Optional[str] = UNSET
     facility: Optional[str] = UNSET
-    #gidnumber: Optional[int] = UNSET
-    access_groups: Optional[List[str]] = UNSET
 
     principal: Optional[str] = UNSET
     leaders: Optional[List[str]] = UNSET
@@ -547,9 +545,7 @@ class Repo( RepoInput ):
 
     @strawberry.field
     def accessGroupObjs(self, info) ->List[AccessGroup]:
-        if self.access_groups is UNSET:
-            return []
-        return info.context.db.find_access_groups({"name": {"$in": self.access_groups}})
+        return info.context.db.find_access_groups({"repo": self.name})
 
     @strawberry.field
     def currentComputeAllocations(self, info) ->List[RepoComputeAllocation]:

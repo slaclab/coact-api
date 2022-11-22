@@ -325,15 +325,14 @@ db.getSiblingDB("iris").access_groups.createIndex({"name": 1}, unique=true)
 db.getSiblingDB("iris").access_groups.createIndex({"gidnumber": 1}, unique=true)
 
 // facility service account; use the gid as default and uids from members as primary owners
+// These do not belong to a repo.
 db.getSiblingDB("iris").access_groups.insertOne({"name": "lcls-pcdsmgr", "gidnumber": 808080, "members": [ "pcdmgr" ]})
+db.getSiblingDB("iris").access_groups.insertOne({"name": "cryo-data", "gidnumber": 6363, "members": [ "cryo-daq"]})
 
 // no members means nothing special - use the principal, leaders and users for this group
-db.getSiblingDB("iris").access_groups.insertOne({"name": "cxi12345-analysis", "gidnumber": 12345, "members": ["mshankar"]})
-
-
-db.getSiblingDB("iris").access_groups.insertOne({"name": "cryo-data", "gidnumber": 6363, "members": [ "cryo-daq"]})
-db.getSiblingDB("iris").access_groups.insertOne({"name": "CS14", "gidnumber": 8393, "members": []})
-db.getSiblingDB("iris").access_groups.insertOne({"name": "CA104", "gidnumber": 8343, "members": []})
+db.getSiblingDB("iris").access_groups.insertOne({"name": "cxi12345-analysis", "repo": "cxi12345", "gidnumber": 12345, "members": ["mshankar"]})
+db.getSiblingDB("iris").access_groups.insertOne({"name": "CS14", "gidnumber": "repo": "CS14", 8393, "members": []})
+db.getSiblingDB("iris").access_groups.insertOne({"name": "CA104", "gidnumber": "repo": "CA104", 8343, "members": []})
 
 
 // End of users and groups
@@ -348,8 +347,7 @@ db.getSiblingDB("iris").repos.insertOne({
   "facility": "LCLS",
   "principal": "aquila",
   "leaders": [ "snelson" ],
-  "users": [ "aquila", "mcbrowne", "snelson", "tmalla", "yanwen", "mshankar" ],
-  "access_groups": []
+  "users": [ "aquila", "mcbrowne", "snelson", "tmalla", "yanwen", "mshankar" ]
 })
 
 db.getSiblingDB("iris").repos.insertOne({
@@ -357,8 +355,7 @@ db.getSiblingDB("iris").repos.insertOne({
   "facility": "CryoEM",
   "principal": "ytl",
   "leaders": [],
-  "users": [ "cszhang" ],
-  "access_groups": [ "CS14" ]
+  "users": [ "cszhang" ]
 
 })
 db.getSiblingDB("iris").repos.insertOne({
@@ -366,8 +363,7 @@ db.getSiblingDB("iris").repos.insertOne({
   "facility": "CryoEM",
   "principal": "mshankar",
   "leaders": [ "ytl" ],
-  "users": [ ],
-  "access_groups": [ "CA104" ]
+  "users": [ ]
 })
 
 

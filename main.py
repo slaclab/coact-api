@@ -137,8 +137,9 @@ class DB:
                 d[k] = v
                 if v is UNSET:
                     del d[k]
-                if isinstance(v,list) and len(v) == 0:
-                    del d[k]
+                # We should permit empty lists; these are perfectly acceptable values and are necessary for the in operator.
+                # if isinstance(v,list) and len(v) == 0:
+                #     del d[k]
         return d
 
     @classmethod
@@ -182,7 +183,7 @@ class DB:
     def find_facility(self, filter, exclude_fields: Optional[list[str]]=[] ):
         return self.assert_one( self.find_facilities( filter, exclude_fields ), filter )
     def find_access_groups(self, filter):
-        return self.find("access_groups", filter)
+        return self.find("access_groups", filter, exclude_fields=["repo"])
     def find_access_group(self, filter):
         return self.assert_one( self.find_access_groups( filter ), filter )
 
