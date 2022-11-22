@@ -462,8 +462,11 @@ class Mutation:
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def accessGroupCreate(self, access_group: AccessGroupInput, info: Info) -> AccessGroup:
-        return info.context.db.create( 'access_groups', access_group, required_fields=[ 'gid_number', 'name' ], find_existing={ 'gid_number': access_group.gid_number } )
-
+        maxgidgrp, maxgidnum = info.context.db.collection("access_groups").find({}).sort([("gidnumber", -1)]).limit(1), 0
+        if maxgidgrp:
+            maxgidnum = list(maxgidgrp)[0].get("gidnumber", 0)
+        access_group.gidnumber = maxgidnum + 1
+        return info.context.db.create( 'access_groups', access_group, required_fields=[ 'gidnumber', 'name' ], find_existing={ 'gidnumber': access_group.gidnumber } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def accessGroupUpdate(self, access_group: AccessGroupInput, info: Info) -> AccessGroup:

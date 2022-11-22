@@ -505,7 +505,7 @@ class RepoStorageAllocation(RepoStorageAllocationInput):
 class AccessGroupInput:
     _id: Optional[MongoId] = UNSET
     state: Optional[str] = UNSET
-    gid_number: Optional[int] = UNSET # perhaps we should use a linux non-specific name?
+    gidnumber: Optional[int] = UNSET # perhaps we should use a linux non-specific name?
     name: Optional[str] = UNSET
     members: Optional[List[str]] = UNSET
 
@@ -524,7 +524,7 @@ class RepoInput:
     state: Optional[str] = UNSET
     name: Optional[str] = UNSET
     facility: Optional[str] = UNSET
-    #gid_number: Optional[int] = UNSET
+    #gidnumber: Optional[int] = UNSET
     access_groups: Optional[List[str]] = UNSET
 
     principal: Optional[str] = UNSET
