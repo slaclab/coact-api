@@ -1,0 +1,43 @@
+db.getSiblingDB("iris").facilities.createIndex({"name": 1}, unique=true)
+
+db.getSiblingDB("iris").clusters.createIndex({"name": 1}, unique=true)
+
+db.getSiblingDB("iris").physical_volumes.createIndex({"name": 1}, unique=true)
+
+db.getSiblingDB("iris").facility_compute_purchases.createIndex({"facility": 1, "clustername": 1, "start": -1}, unique=true)
+db.getSiblingDB("iris").facility_storage_purchases.createIndex({"facility": 1, "storagename": 1, "purpose": 1, "start": -1}, unique=true)
+
+
+db.getSiblingDB("iris").users.createIndex({"username": 1}, unique=true)
+db.getSiblingDB("iris").users.createIndex({"uidnumber": 1}, unique=true)
+db.getSiblingDB("iris").users.createIndex({"eppns": 1}, {unique: true, partialFilterExpression: { eppns: { $type: "array" }}})
+
+db.getSiblingDB("iris").user_allocations.createIndex({"username": 1, "allocationid": 1}, unique=true)
+
+// User_Volume_Storage_Allocation
+db.getSiblingDB("iris").user_storage_allocation.createIndex({"username": 1, "purpose": 1}, unique=true)
+db.getSiblingDB("iris").user_storage_allocation.createIndex({"username": 1, "volume_name": 1})
+
+
+db.getSiblingDB("iris").user_storage_usage.createIndex({"alloc_id": 1, "date": 1}, unique=true)
+
+db.getSiblingDB("iris").access_groups.createIndex({"name": 1}, unique=true)
+db.getSiblingDB("iris").access_groups.createIndex({"gidnumber": 1}, unique=true)
+
+db.getSiblingDB("iris").repos.createIndex({"name": 1}, unique=true)
+db.getSiblingDB("iris").repos.createIndex({"leader": 1}) // For performance
+
+db.getSiblingDB("iris").repo_compute_allocations.createIndex({"repo": 1, "clustername": 1, "start": -1}, unique=true)
+
+db.getSiblingDB("iris").repo_storage_allocations.createIndex({"repo": 1, "storagename": 1, "purpose": 1, "start": -1}, unique=true)
+
+db.getSiblingDB("iris").jobs.createIndex({"jobId": 1, "startTs": 1, "clustername": 1}, unique=true)
+db.getSiblingDB("iris").jobs.createIndex({"repo": 1, "year": -1, "clustername": 1})  // Performance index
+
+db.getSiblingDB("iris").repo_overall_compute_usage.createIndex({"allocationid": 1, "qos": 1}, unique=true)
+db.getSiblingDB("iris").repo_overall_storage_usage.createIndex({"allocationid": 1}, unique=true)
+
+db.getSiblingDB("iris").repo_daily_compute_usage.createIndex({"allocationid": 1, "date": 1}, unique=true)
+db.getSiblingDB("iris").repo_peruser_compute_usage.createIndex({"allocationid": 1, "username": 1}, unique=true)
+
+db.getSiblingDB("iris").repo_daily_storage_usage.createIndex({"allocationid": 1, "date": 1}, unique=true)

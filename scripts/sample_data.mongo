@@ -13,7 +13,6 @@
 
 // is this backwards? on one hand we have the Facility with a total Capacity, and we provide percentage Allocations of compute to each Repo; but with storage we have a an absolute quota per volume in a Repo; but don't actually keep anything yet in the Facility regarding storage.
 
-db.getSiblingDB("iris").facilities.createIndex({"name": 1}, unique=true)
 // Facilities have compute classes and storage classes associated with them.
 
 
@@ -85,7 +84,6 @@ db.getSiblingDB("iris").facilities.insertOne({
 
 
 // Clusters are compute resources; a cluster consists of CPU/GPU nodes.
-db.getSiblingDB("iris").clusters.createIndex({"name": 1}, unique=true)
 
 db.getSiblingDB("iris").clusters.insertOne({
   "name": "rome-b050",
@@ -137,7 +135,6 @@ for(c=1200;c<1600;c++) {   db.getSiblingDB("iris").clusters.updateOne({"name": "
 // Similar to clusters, physical volumes are storage resources.
 // Like Kubernetes, physical volumes are associated with a storage class ( SSD/Disk/Tape ) etc.
 
-db.getSiblingDB("iris").physical_volumes.createIndex({"name": 1}, unique=true)
 
 // User homes first
 db.getSiblingDB("iris").physical_volumes.insertOne({
@@ -150,8 +147,6 @@ db.getSiblingDB("iris").physical_volumes.insertOne({
 // End the description of resources....
 
 // Facilities purchase compute and storage on various clusters and volumes.
-db.getSiblingDB("iris").facility_compute_purchases.createIndex({"facility": 1, "clustername": 1, "start": -1}, unique=true)
-db.getSiblingDB("iris").facility_storage_purchases.createIndex({"facility": 1, "storagename": 1, "purpose": 1, "start": -1}, unique=true)
 
 db.getSiblingDB("iris").facility_compute_purchases.insertOne({
   "facility": "LCLS",
@@ -248,9 +243,6 @@ db.getSiblingDB("iris").facility_storage_purchases.insertOne({
 
 // Users and groups.
 // Of course, user has other information like full name, email etc. Maybe some of that comes from inCommon?
-db.getSiblingDB("iris").users.createIndex({"username": 1}, unique=true)
-db.getSiblingDB("iris").users.createIndex({"uidnumber": 1}, unique=true)
-db.getSiblingDB("iris").users.createIndex({"eppns": 1}, {unique: true, partialFilterExpression: { eppns: { $type: "array" }}})
 db.getSiblingDB("iris").users.insertOne({ "username": "aquila", "uidnumber": 123, "eppns": [ "aquila@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "aquila@slac.stanford.edu" })
 db.getSiblingDB("iris").users.insertOne({ "username": "mcbrowne", "uidnumber": 124, "eppns": [ "mcbrowne@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "mcbrowne@slac.stanford.edu" })
 db.getSiblingDB("iris").users.insertOne({ "username": "snelson", "uidnumber": 125, "eppns": [ "snelson@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "snelson@slac.stanford.edu" })
@@ -264,11 +256,8 @@ db.getSiblingDB("iris").users.insertOne({ "username": "yemi", "uidnumber": 132, 
 db.getSiblingDB("iris").users.insertOne({ "username": "richard", "uidnumber": 133, "eppns": [ "richard@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "richard@slac.stanford.edu" })
 
 // User compute allocation percent
-db.getSiblingDB("iris").user_allocations.createIndex({"username": 1, "allocationid": 1}, unique=true)
 
 // User_Volume_Storage_Allocation
-db.getSiblingDB("iris").user_storage_allocation.createIndex({"username": 1, "purpose": 1}, unique=true)
-db.getSiblingDB("iris").user_storage_allocation.createIndex({"username": 1, "volume_name": 1})
 
 ["mshankar", "ytl", "wilko", "perazzo", "yemi", "richard"].forEach(function(u){
   db.getSiblingDB("iris").user_storage_allocation.insertOne({
@@ -281,7 +270,6 @@ db.getSiblingDB("iris").user_storage_allocation.createIndex({"username": 1, "vol
   })
 })
 
-db.getSiblingDB("iris").user_storage_usage.createIndex({"alloc_id": 1, "date": 1}, unique=true)
 
 ["mshankar", "ytl", "wilko", "perazzo", "yemi", "richard"].forEach(function(u){
   let allocid = db.getSiblingDB("iris").user_storage_allocation.findOne({"username": u, "purpose": "home" })["_id"]
@@ -321,9 +309,6 @@ db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "UserAccount", "eppn" :
 // 2) to a repo; so that the repo has this gid
 // 3) to a volume so that only that volume has that gid
 
-db.getSiblingDB("iris").access_groups.createIndex({"name": 1}, unique=true)
-db.getSiblingDB("iris").access_groups.createIndex({"gidnumber": 1}, unique=true)
-
 // facility service account; use the gid as default and uids from members as primary owners
 // These do not belong to a repo.
 db.getSiblingDB("iris").access_groups.insertOne({"name": "lcls-pcdsmgr", "gidnumber": 808080, "members": [ "pcdmgr" ]})
@@ -340,8 +325,6 @@ db.getSiblingDB("iris").access_groups.insertOne({"name": "CA104", "gidnumber": "
 
 // Repos now - repos are the fundamental unit of allocations of resources
 
-db.getSiblingDB("iris").repos.createIndex({"name": 1}, unique=true)
-db.getSiblingDB("iris").repos.createIndex({"leader": 1}) // For performance
 db.getSiblingDB("iris").repos.insertOne({
   "name": "cxi12345",
   "facility": "LCLS",
@@ -372,7 +355,6 @@ db.getSiblingDB("iris").repos.insertOne({
 // Apologies for the long collection names; this makes it easier when building out the model.
 
 // We allocate compute on a specific cluster.
-db.getSiblingDB("iris").repo_compute_allocations.createIndex({"repo": 1, "clustername": 1, "start": -1}, unique=true)
 
 // compute allocations
 // in terms of a compute quota; we assume that slachours already considers things like cpu/gpu and has the
@@ -452,7 +434,6 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
 
 // We allocate compute on a specific physical volume for a particular purpose.
 // For example, we'd allocate 10TB for data, 10GB for scratch etc.
-db.getSiblingDB("iris").repo_storage_allocations.createIndex({"repo": 1, "storagename": 1, "purpose": 1, "start": -1}, unique=true)
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
   "repo": "cxi12345",
   "storagename": "wekassd2022",
@@ -486,16 +467,3 @@ db.getSiblingDB("iris").repo_storage_allocations.insertOne({
 
 
 // Jobs have lots of information from SLURM in addition to the final mapping into repo, year and resource name.
-db.getSiblingDB("iris").jobs.createIndex({"jobId": 1, "startTs": 1, "clustername": 1}, unique=true)
-db.getSiblingDB("iris").jobs.createIndex({"repo": 1, "year": -1, "clustername": 1})  // Performance index
-
-
-// We cache the compute and storage allocation usage in the usagecache collections
-db.getSiblingDB("iris").repo_overall_compute_usage.createIndex({"allocationid": 1, "qos": 1}, unique=true)
-db.getSiblingDB("iris").repo_overall_storage_usage.createIndex({"allocationid": 1}, unique=true)
-
-db.getSiblingDB("iris").repo_daily_compute_usage.createIndex({"allocationid": 1, "date": 1}, unique=true)
-db.getSiblingDB("iris").repo_peruser_compute_usage.createIndex({"allocationid": 1, "username": 1}, unique=true)
-
-// For storage updates, we already have the allocation ID
-db.getSiblingDB("iris").repo_daily_storage_usage.createIndex({"allocationid": 1, "date": 1}, unique=true)
