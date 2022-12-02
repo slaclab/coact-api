@@ -7,31 +7,6 @@ db.getSiblingDB("iris").users.insertOne({ "username": "yanwen", "uidnumber": 127
 
 // User compute allocation percent
 
-// User_Volume_Storage_Allocation
-
-["mshankar", "ytl", "wilko", "perazzo", "yemi", "richard"].forEach(function(u){
-  db.getSiblingDB("iris").user_storage_allocation.insertOne({
-    "username": u,
-    "storagename": "wekassd2022",
-    "purpose": "home",
-    "gigabytes": 20,
-    "inodes": 1000,
-    "rootfolder": "<prefix>/homes/" + u[0] + "/" + u
-  })
-})
-
-
-["mshankar", "ytl", "wilko", "perazzo", "yemi", "richard"].forEach(function(u){
-  let allocid = db.getSiblingDB("iris").user_storage_allocation.findOne({"username": u, "purpose": "home" })["_id"]
-  db.getSiblingDB("iris").user_storage_usage.insertOne({
-    "allocid": allocid,
-    "date": new Date(),
-    "gigabytes": 19.99,
-    "inodes": 976,
-  })
-})
-
-
 
 
 db.getSiblingDB("iris").requests.insertOne({ "reqtype" : "RepoMembership", "username" : "wilko", "reponame" : "cxi12345", "requestedby": "wilko", "timeofrequest": new Date()})
