@@ -1,0 +1,250 @@
+//
+// At a top level, we have a Facility. A Facility contains Repos.
+
+// A Facility will have Capacities that define the amount of resource that is available to that Facility.
+// At the moment, we only have a count of the compute resource that is available to the Facility. This is defined as
+// a count of the number of compute servers from each Cluster.
+
+// We only currently associate storage with a Repo.
+// We have different classes of storage (science-data, group, etc). and each Repo may have none or many of each
+// type. We want to keep tabs of the Quota ie the Repo's storage Capacity.
+// We keep the permissions model of the storage with an Access Class and associate them to Volumes. It is the Volumes
+// that are associated with the Repos.
+
+// is this backwards? on one hand we have the Facility with a total Capacity, and we provide percentage Allocations of compute to each Repo; but with storage we have a an absolute quota per volume in a Repo; but don't actually keep anything yet in the Facility regarding storage.
+
+// Facilities have compute classes and storage classes associated with them.
+
+
+db.getSiblingDB("iris").facilities.insertOne({
+  "name" : "LCLS",
+  "resources": ["compute", "storage"],
+  "serviceaccount": "lcls-pcdsdata", // set primary uid on all volumes
+  "servicegroup": "lcls-pcdsmgr", // set primary gid on all volumes
+  "czars": [ "mshankar", "wilko" ],
+  "policies": {
+    "UserAccount": {
+      "user_storage_allocation": [
+        {
+          "username": "$username",
+          "storagename": "wekassd2022",
+          "purpose": "home",
+          "gigabytes": 20,
+          "inodes": 1000,
+          "rootfolder": "<prefix>/homes/$usernamefirstchar/$username"
+        }
+      ]
+    }
+  }
+})
+
+db.getSiblingDB("iris").facilities.insertOne({
+  "name" : "CryoEM",
+  "resources": ["compute", "storage"],
+  "serviceaccount": "cryo-daq", // set primary uid on all volumes
+  "servicegroup": "cryo-data", // set primary gid on all volumes
+  "czars": [ "ytl"],
+  "policies": {
+    "UserAccount": {
+      "user_storage_allocation": [
+        {
+          "username": "$username",
+          "storagename": "wekassd2022",
+          "purpose": "home",
+          "gigabytes": 20,
+          "inodes": 1000,
+          "rootfolder": "<prefix>/homes/$usernamefirstchar/$username"
+        }
+      ]
+    }
+  }
+})
+
+db.getSiblingDB("iris").facilities.insertOne({
+  "name" : "Suncat",
+  "resources": ["compute", "storage"],
+  "serviceaccount": "suncat", // set primary uid on all volumes
+  "servicegroup": "suncat", // set primary gid on all volumes
+  "czars": [ "johannes"], // set primary uid on all volumes
+  "policies": {
+    "UserAccount": {
+      "user_storage_allocation": [
+        {
+          "username": "$username",
+          "storagename": "wekassd2022",
+          "purpose": "home",
+          "gigabytes": 20,
+          "inodes": 1000,
+          "rootfolder": "<prefix>/homes/$usernamefirstchar/$username"
+        }
+      ]
+    }
+  }
+})
+
+
+// Clusters are compute resources; a cluster consists of CPU/GPU nodes.
+
+db.getSiblingDB("iris").clusters.insertOne({
+  "name": "rome-b050",
+  "nodecpucount": 128,
+  "nodecpucountdivisor": 64, //?? sockets?
+  "nodememgb": 512,
+  "chargefactor": 0.8,
+  "nodecpusmt": 1, // threads per core
+  "members": [ "rome0001", "rome0002","rome0003","rome0004","rome0005" ] // perhaps use regex?
+})
+
+
+db.getSiblingDB("iris").clusters.insertOne({
+  "name": "milan-srcf",
+  "nodecpucount": 16,
+  "nodecpucountdivisor": 16, //??
+  "nodememgb": 512,
+  "chargefactor": 0.8,
+  "nodecpusmt": 1, // threads per core
+  "members": [ "milan0001", "milan0002","milan0003","milan0004","milan0005" ]
+})
+
+db.getSiblingDB("iris").clusters.insertOne({
+  "name": "ampt",
+  "nodecpucount": 128,
+  "nodecpucountdivisor": 16, //??
+  "nodememgb": 1024,
+  "chargefactor": 0.8,
+  "nodecpusmt": 2, // threads per core
+  "nodegpucount": 4,
+  "nodegpumemgb": 40,
+  "members": [ "ampt001", "ampt002","ampt003","ampt004","ampt005" ]
+})
+
+db.getSiblingDB("iris").clusters.insertOne({
+  "name": "psana",
+  "nodecpucount": 16,
+  "nodecpucountdivisor": 16, //??
+  "nodememgb": 512,
+  "chargefactor": 0.8,
+  "nodecpusmt": 1, // threads per core
+  "members": [ ]
+})
+
+// Too lazy to create all the cluster members for psana
+for(c=1200;c<1600;c++) {   db.getSiblingDB("iris").clusters.updateOne({"name": "psana"}, {"$addToSet": {"members": "psana"+c}})}
+
+
+// Similar to clusters, physical volumes are storage resources.
+// Like Kubernetes, physical volumes are associated with a storage class ( SSD/Disk/Tape ) etc.
+
+
+// User homes first
+db.getSiblingDB("iris").physical_volumes.insertOne({
+  "name": "wekassd2022",
+  "storageclass": "ssd",
+  "gigabytes": 1000000,
+  "inodes": 100000
+})
+
+// End the description of resources....
+
+// Facilities purchase compute and storage on various clusters and volumes.
+
+db.getSiblingDB("iris").facility_compute_purchases.insertOne({
+  "facility": "LCLS",
+  "clustername": "rome-b050",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "slachours": 100000
+})
+db.getSiblingDB("iris").facility_compute_purchases.insertOne({
+  "facility": "LCLS",
+  "clustername": "milan-srcf",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "slachours": 200000
+})
+db.getSiblingDB("iris").facility_compute_purchases.insertOne({
+  "facility": "LCLS",
+  "clustername": "psana",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "slachours": 300000
+})
+
+db.getSiblingDB("iris").facility_compute_purchases.insertOne({
+  "facility": "CryoEM",
+  "clustername": "rome-b050",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "slachours": 200000
+})
+db.getSiblingDB("iris").facility_compute_purchases.insertOne({
+  "facility": "CryoEM",
+  "clustername": "milan-srcf",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "slachours": 100000
+})
+
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility": "LCLS",
+  "storagename": "wekassd2022",
+  "purpose": "science-data",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 20000000,
+  "inodes": 100000000,
+})
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility": "LCLS",
+  "storagename": "wekassd2022",
+  "purpose": "group",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 200000,
+  "inodes": 100000,
+})
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility": "LCLS",
+  "storagename": "wekassd2022",
+  "purpose": "scratch",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 200000,
+  "inodes": 100000,
+})
+
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility": "CryoEM",
+  "storagename": "wekassd2022",
+  "purpose": "science-data",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 40000000,
+  "inodes": 400000000,
+})
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility": "CryoEM",
+  "storagename": "wekassd2022",
+  "purpose": "group",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 5500000,
+  "inodes": 7600000,
+})
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility": "CryoEM",
+  "storagename": "wekassd2022",
+  "purpose": "scratch",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 5500000,
+  "inodes": 7600000,
+})
+
+// Admin users
+db.getSiblingDB("iris").users.insertOne({ "username": "mshankar", "uidnumber": 128, "eppns": [ "mshankar@slac.stanford.edu", "muralis@stanford.edu" ], "shell": "/bin/bash", "preferredemail": "mshankar@slac.stanford.edu" })
+db.getSiblingDB("iris").users.insertOne({ "username": "ytl", "uidnumber": 129, "eppns": [ "ytl@slac.stanford.edu", "yee379@stanford.edu" ], "shell": "/bin/bash", "preferredemail": "ytl@slac.stanford.edu" })
+db.getSiblingDB("iris").users.insertOne({ "username": "wilko", "uidnumber": 130, "eppns": [ "wilko@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "wilko@slac.stanford.edu" })
+db.getSiblingDB("iris").users.insertOne({ "username": "perazzo", "uidnumber": 131, "eppns": [ "perazzo@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "perazzo@slac.stanford.edu" })
+db.getSiblingDB("iris").users.insertOne({ "username": "yemi", "uidnumber": 132, "eppns": [ "yemi@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "yemi@slac.stanford.edu" })
+db.getSiblingDB("iris").users.insertOne({ "username": "richard", "uidnumber": 133, "eppns": [ "richard@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "richard@slac.stanford.edu" })
