@@ -130,6 +130,13 @@ class Query:
         return info.context.db.find_repos( filter )
 
     @strawberry.field
+    def facilityNames(self, info: Info) -> List[str]:
+        """
+        Just the facility names. No authentication needed.
+        """
+        return [ x["name"] for x in info.context.db.collection("facilities").find({}, {"_id": 0, "name": 1}) ]
+
+    @strawberry.field
     def allreposandfacility(self, info: Info) -> List[RepoFacilityName]:
         """
         All the repo names and their facility. No authentication needed. Just the names
