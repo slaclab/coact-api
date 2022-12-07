@@ -153,3 +153,4 @@ ssl/
 
 # vi
 .*.swp
+.DS_Store
