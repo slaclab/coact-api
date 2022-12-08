@@ -27,11 +27,11 @@ db.getSiblingDB("iris").facilities.insertOne({
       "user_storage_allocation": [
         {
           "username": "$username",
-          "storagename": "wekassd2022",
+          "storagename": "sdfhome",
           "purpose": "home",
           "gigabytes": 20,
           "inodes": 1000,
-          "rootfolder": "<prefix>/homes/$usernamefirstchar/$username"
+          "rootfolder": "<prefix>/home/$usernamefirstchar/$username"
         }
       ]
     }
@@ -49,11 +49,11 @@ db.getSiblingDB("iris").facilities.insertOne({
       "user_storage_allocation": [
         {
           "username": "$username",
-          "storagename": "wekassd2022",
+          "storagename": "sdfhome",
           "purpose": "home",
           "gigabytes": 20,
           "inodes": 1000,
-          "rootfolder": "<prefix>/homes/$usernamefirstchar/$username"
+          "rootfolder": "<prefix>/home/$usernamefirstchar/$username"
         }
       ]
     }
@@ -61,7 +61,7 @@ db.getSiblingDB("iris").facilities.insertOne({
 })
 
 db.getSiblingDB("iris").facilities.insertOne({
-  "name" : "Suncat",
+  "name" : "SUNCAT",
   "resources": ["compute", "storage"],
   "serviceaccount": "suncat", // set primary uid on all volumes
   "servicegroup": "suncat", // set primary gid on all volumes
@@ -71,11 +71,11 @@ db.getSiblingDB("iris").facilities.insertOne({
       "user_storage_allocation": [
         {
           "username": "$username",
-          "storagename": "wekassd2022",
+          "storagename": "sdfhome",
           "purpose": "home",
           "gigabytes": 20,
           "inodes": 1000,
-          "rootfolder": "<prefix>/homes/$usernamefirstchar/$username"
+          "rootfolder": "<prefix>/home/$usernamefirstchar/$username"
         }
       ]
     }
@@ -86,25 +86,27 @@ db.getSiblingDB("iris").facilities.insertOne({
 // Clusters are compute resources; a cluster consists of CPU/GPU nodes.
 
 db.getSiblingDB("iris").clusters.insertOne({
-  "name": "rome-b050",
+  "name": "roma",
   "nodecpucount": 128,
   "nodecpucountdivisor": 64, //?? sockets?
   "nodememgb": 512,
   "chargefactor": 0.8,
   "nodecpusmt": 1, // threads per core
-  "members": [ "rome0001", "rome0002","rome0003","rome0004","rome0005" ] // perhaps use regex?
+  "members": [ ] // perhaps use regex?
 })
+for(c=0;c<32;c++) {   db.getSiblingDB("iris").clusters.updateOne({"name": "roma"}, {"$addToSet": {"members": "sdfrome"+String(c).padStart(4,'0')}})}
 
 
 db.getSiblingDB("iris").clusters.insertOne({
-  "name": "milan-srcf",
-  "nodecpucount": 16,
+  "name": "milano",
+  "nodecpucount": 128,
   "nodecpucountdivisor": 16, //??
   "nodememgb": 512,
   "chargefactor": 0.8,
   "nodecpusmt": 1, // threads per core
-  "members": [ "milan0001", "milan0002","milan0003","milan0004","milan0005" ]
+  "members": [ ]
 })
+for(c=0;c<28;c++) {   db.getSiblingDB("iris").clusters.updateOne({"name": "roma"}, {"$addToSet": {"members": "sdfmilan"+String(c).padStart(4,'0')}})}
 
 db.getSiblingDB("iris").clusters.insertOne({
   "name": "ampt",
@@ -115,30 +117,20 @@ db.getSiblingDB("iris").clusters.insertOne({
   "nodecpusmt": 2, // threads per core
   "nodegpucount": 4,
   "nodegpumemgb": 40,
-  "members": [ "ampt001", "ampt002","ampt003","ampt004","ampt005" ]
+  "members": [ "sdfampt001", "sdfampt002","sdfampt003","sdfampt004","sdfampt005" ]
 })
 
-db.getSiblingDB("iris").clusters.insertOne({
-  "name": "psana",
-  "nodecpucount": 16,
-  "nodecpucountdivisor": 16, //??
-  "nodememgb": 512,
-  "chargefactor": 0.8,
-  "nodecpusmt": 1, // threads per core
-  "members": [ ]
-})
 
 // Too lazy to create all the cluster members for psana
-for(c=1200;c<1600;c++) {   db.getSiblingDB("iris").clusters.updateOne({"name": "psana"}, {"$addToSet": {"members": "psana"+c}})}
 
 
 // Similar to clusters, physical volumes are storage resources.
 // Like Kubernetes, physical volumes are associated with a storage class ( SSD/Disk/Tape ) etc.
 
 
-// User homes first
+// User home first
 db.getSiblingDB("iris").physical_volumes.insertOne({
-  "name": "wekassd2022",
+  "name": "sdfhome",
   "storageclass": "ssd",
   "gigabytes": 1000000,
   "inodes": 100000
@@ -150,45 +142,31 @@ db.getSiblingDB("iris").physical_volumes.insertOne({
 
 db.getSiblingDB("iris").facility_compute_purchases.insertOne({
   "facility": "LCLS",
-  "clustername": "rome-b050",
+  "clustername": "roma",
   "start": ISODate("2021-05-01T00:00:00-07:00"),
   "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
   "slachours": 100000
 })
 db.getSiblingDB("iris").facility_compute_purchases.insertOne({
   "facility": "LCLS",
-  "clustername": "milan-srcf",
+  "clustername": "milano",
   "start": ISODate("2021-05-01T00:00:00-07:00"),
   "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
   "slachours": 200000
-})
-db.getSiblingDB("iris").facility_compute_purchases.insertOne({
-  "facility": "LCLS",
-  "clustername": "psana",
-  "start": ISODate("2021-05-01T00:00:00-07:00"),
-  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
-  "slachours": 300000
 })
 
 db.getSiblingDB("iris").facility_compute_purchases.insertOne({
   "facility": "CryoEM",
-  "clustername": "rome-b050",
+  "clustername": "roma",
   "start": ISODate("2021-05-01T00:00:00-07:00"),
   "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
   "slachours": 200000
-})
-db.getSiblingDB("iris").facility_compute_purchases.insertOne({
-  "facility": "CryoEM",
-  "clustername": "milan-srcf",
-  "start": ISODate("2021-05-01T00:00:00-07:00"),
-  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
-  "slachours": 100000
 })
 
 db.getSiblingDB("iris").facility_storage_purchases.insertOne({
   "facility": "LCLS",
-  "storagename": "wekassd2022",
-  "purpose": "science-data",
+  "storagename": "sdfdata",
+  "purpose": "data",
   "start": ISODate("2021-05-01T00:00:00-07:00"),
   "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
   "gigabytes": 20000000,
@@ -196,7 +174,7 @@ db.getSiblingDB("iris").facility_storage_purchases.insertOne({
 })
 db.getSiblingDB("iris").facility_storage_purchases.insertOne({
   "facility": "LCLS",
-  "storagename": "wekassd2022",
+  "storagename": "sdfhome",
   "purpose": "group",
   "start": ISODate("2021-05-01T00:00:00-07:00"),
   "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
@@ -205,7 +183,7 @@ db.getSiblingDB("iris").facility_storage_purchases.insertOne({
 })
 db.getSiblingDB("iris").facility_storage_purchases.insertOne({
   "facility": "LCLS",
-  "storagename": "wekassd2022",
+  "storagename": "sdfhome",
   "purpose": "scratch",
   "start": ISODate("2021-05-01T00:00:00-07:00"),
   "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
@@ -215,8 +193,8 @@ db.getSiblingDB("iris").facility_storage_purchases.insertOne({
 
 db.getSiblingDB("iris").facility_storage_purchases.insertOne({
   "facility": "CryoEM",
-  "storagename": "wekassd2022",
-  "purpose": "science-data",
+  "storagename": "sdfdata",
+  "purpose": "data",
   "start": ISODate("2021-05-01T00:00:00-07:00"),
   "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
   "gigabytes": 40000000,
@@ -224,7 +202,7 @@ db.getSiblingDB("iris").facility_storage_purchases.insertOne({
 })
 db.getSiblingDB("iris").facility_storage_purchases.insertOne({
   "facility": "CryoEM",
-  "storagename": "wekassd2022",
+  "storagename": "sdfhome",
   "purpose": "group",
   "start": ISODate("2021-05-01T00:00:00-07:00"),
   "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
@@ -233,7 +211,7 @@ db.getSiblingDB("iris").facility_storage_purchases.insertOne({
 })
 db.getSiblingDB("iris").facility_storage_purchases.insertOne({
   "facility": "CryoEM",
-  "storagename": "wekassd2022",
+  "storagename": "sdfhome",
   "purpose": "scratch",
   "start": ISODate("2021-05-01T00:00:00-07:00"),
   "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
@@ -241,24 +219,24 @@ db.getSiblingDB("iris").facility_storage_purchases.insertOne({
   "inodes": 7600000,
 })
 
-// Admin users
-db.getSiblingDB("iris").users.insertOne({ "username": "mshankar", "uidnumber": 128, "eppns": [ "mshankar@slac.stanford.edu", "muralis@stanford.edu" ], "shell": "/bin/bash", "preferredemail": "mshankar@slac.stanford.edu" })
-db.getSiblingDB("iris").users.insertOne({ "username": "ytl", "uidnumber": 129, "eppns": [ "ytl@slac.stanford.edu", "yee379@stanford.edu" ], "shell": "/bin/bash", "preferredemail": "ytl@slac.stanford.edu" })
-db.getSiblingDB("iris").users.insertOne({ "username": "wilko", "uidnumber": 130, "eppns": [ "wilko@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "wilko@slac.stanford.edu" })
-db.getSiblingDB("iris").users.insertOne({ "username": "perazzo", "uidnumber": 131, "eppns": [ "perazzo@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "perazzo@slac.stanford.edu" })
-db.getSiblingDB("iris").users.insertOne({ "username": "yemi", "uidnumber": 132, "eppns": [ "yemi@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "yemi@slac.stanford.edu" })
-db.getSiblingDB("iris").users.insertOne({ "username": "richard", "uidnumber": 133, "eppns": [ "richard@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "richard@slac.stanford.edu" })
+// users
+db.getSiblingDB("iris").users.insertOne({ "username": "mshankar", "uidnumber": 11042, "eppns": [ "mshankar@slac.stanford.edu", "muralis@stanford.edu" ], "shell": "/bin/bash", "preferredemail": "mshankar@slac.stanford.edu" })
+db.getSiblingDB("iris").users.insertOne({ "username": "ytl", "uidnumber": 7017, "eppns": [ "ytl@slac.stanford.edu", "yee379@stanford.edu" ], "shell": "/bin/bash", "preferredemail": "ytl@slac.stanford.edu" })
+db.getSiblingDB("iris").users.insertOne({ "username": "wilko", "uidnumber": 2871, "eppns": [ "wilko@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "wilko@slac.stanford.edu" })
+db.getSiblingDB("iris").users.insertOne({ "username": "perazzo", "uidnumber": 3934, "eppns": [ "perazzo@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "perazzo@slac.stanford.edu" })
+db.getSiblingDB("iris").users.insertOne({ "username": "yemi", "uidnumber": 5275, "eppns": [ "yemi@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "yemi@slac.stanford.edu" })
+//db.getSiblingDB("iris").users.insertOne({ "username": "richard", "uidnumber": 1088, "eppns": [ "richard@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "richard@slac.stanford.edu" })
 
 // User_Volume_Storage_Allocation
 
 ["mshankar", "ytl", "wilko", "perazzo", "yemi", "richard"].forEach(function(u){
   db.getSiblingDB("iris").user_storage_allocation.insertOne({
     "username": u,
-    "storagename": "wekassd2022",
+    "storagename": "sdfhome",
     "purpose": "home",
     "gigabytes": 20,
     "inodes": 1000,
-    "rootfolder": "<prefix>/homes/" + u[0] + "/" + u
+    "rootfolder": "<prefix>/home/" + u[0] + "/" + u
   })
 })
 

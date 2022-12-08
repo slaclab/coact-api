@@ -89,7 +89,7 @@ db.getSiblingDB("iris").repos.insertOne({
 
 db.getSiblingDB("iris").repo_compute_allocations.insertOne({
   "repo": "cxi12345",
-  "clustername": "psana",
+  "clustername": "roma",
   "start": ISODate("2021-05-01T00:00:00-07:00"),
   "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
   "qoses": {
@@ -106,7 +106,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
 
 db.getSiblingDB("iris").repo_compute_allocations.insertOne({
   "repo": "cxi12345",
-  "clustername": "milan-srcf",
+  "clustername": "milano",
   "start": ISODate("2021-05-01T00:00:00-07:00"),
   "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
   "qoses": {
@@ -124,7 +124,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
 // This is last years allocation for the same repo
 db.getSiblingDB("iris").repo_compute_allocations.insertOne({
   "repo": "cxi12345",
-  "clustername": "psana",
+  "clustername": "roma",
   "start": ISODate("2020-05-01T00:00:00-07:00"), // Last years allocations
   "end": ISODate("2020-12-31T00:00:00Z"),
   "qoses": {
@@ -141,7 +141,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
 
 db.getSiblingDB("iris").repo_compute_allocations.insertOne({
   "repo": "CA104",
-  "clustername": "milan-srcf",
+  "clustername": "milano",
   "start": ISODate("2021-05-01T00:00:00-07:00"),
   "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
   "qoses": {
@@ -161,8 +161,8 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
 // For example, we'd allocate 10TB for data, 10GB for scratch etc.
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
   "repo": "cxi12345",
-  "storagename": "wekassd2022",
-  "purpose": "science-data",
+  "storagename": "sdfdata",
+  "purpose": "data",
   "start": ISODate("2021-05-01T00:00:00-07:00"),
   "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
   "gigabytes": 200000,
@@ -171,7 +171,7 @@ db.getSiblingDB("iris").repo_storage_allocations.insertOne({
 })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
   "repo": "cxi12345",
-  "storagename": "wekassd2022",
+  "storagename": "sdfhome",
   "purpose": "scratch",
   "start": ISODate("2021-05-01T00:00:00-07:00"),
   "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
@@ -181,7 +181,7 @@ db.getSiblingDB("iris").repo_storage_allocations.insertOne({
 })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
   "repo": "cxi12345",
-  "storagename": "wekassd2022",
+  "storagename": "sdfhome",
   "purpose": "group",
   "start": ISODate("2021-05-01T00:00:00-07:00"),
   "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
