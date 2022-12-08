@@ -83,60 +83,6 @@ db.getSiblingDB("iris").facilities.insertOne({
 })
 
 
-// Clusters are compute resources; a cluster consists of CPU/GPU nodes.
-
-db.getSiblingDB("iris").clusters.insertOne({
-  "name": "roma",
-  "nodecpucount": 128,
-  "nodecpucountdivisor": 64, //?? sockets?
-  "nodememgb": 512,
-  "chargefactor": 0.8,
-  "nodecpusmt": 1, // threads per core
-  "members": [ ] // perhaps use regex?
-})
-for(c=0;c<32;c++) {   db.getSiblingDB("iris").clusters.updateOne({"name": "roma"}, {"$addToSet": {"members": "sdfrome"+String(c).padStart(4,'0')}})}
-
-
-db.getSiblingDB("iris").clusters.insertOne({
-  "name": "milano",
-  "nodecpucount": 128,
-  "nodecpucountdivisor": 16, //??
-  "nodememgb": 512,
-  "chargefactor": 0.8,
-  "nodecpusmt": 1, // threads per core
-  "members": [ ]
-})
-for(c=0;c<28;c++) {   db.getSiblingDB("iris").clusters.updateOne({"name": "roma"}, {"$addToSet": {"members": "sdfmilan"+String(c).padStart(4,'0')}})}
-
-db.getSiblingDB("iris").clusters.insertOne({
-  "name": "ampt",
-  "nodecpucount": 128,
-  "nodecpucountdivisor": 16, //??
-  "nodememgb": 1024,
-  "chargefactor": 0.8,
-  "nodecpusmt": 2, // threads per core
-  "nodegpucount": 4,
-  "nodegpumemgb": 40,
-  "members": [ "sdfampt001", "sdfampt002","sdfampt003","sdfampt004","sdfampt005" ]
-})
-
-
-// Too lazy to create all the cluster members for psana
-
-
-// Similar to clusters, physical volumes are storage resources.
-// Like Kubernetes, physical volumes are associated with a storage class ( SSD/Disk/Tape ) etc.
-
-
-// User home first
-db.getSiblingDB("iris").physical_volumes.insertOne({
-  "name": "sdfhome",
-  "storageclass": "ssd",
-  "gigabytes": 1000000,
-  "inodes": 100000
-})
-
-// End the description of resources....
 
 // Facilities purchase compute and storage on various clusters and volumes.
 
@@ -219,34 +165,3 @@ db.getSiblingDB("iris").facility_storage_purchases.insertOne({
   "inodes": 7600000,
 })
 
-// users
-db.getSiblingDB("iris").users.insertOne({ "username": "mshankar", "uidnumber": 11042, "eppns": [ "mshankar@slac.stanford.edu", "muralis@stanford.edu" ], "shell": "/bin/bash", "preferredemail": "mshankar@slac.stanford.edu" })
-db.getSiblingDB("iris").users.insertOne({ "username": "ytl", "uidnumber": 7017, "eppns": [ "ytl@slac.stanford.edu", "yee379@stanford.edu" ], "shell": "/bin/bash", "preferredemail": "ytl@slac.stanford.edu" })
-db.getSiblingDB("iris").users.insertOne({ "username": "wilko", "uidnumber": 2871, "eppns": [ "wilko@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "wilko@slac.stanford.edu" })
-db.getSiblingDB("iris").users.insertOne({ "username": "perazzo", "uidnumber": 3934, "eppns": [ "perazzo@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "perazzo@slac.stanford.edu" })
-db.getSiblingDB("iris").users.insertOne({ "username": "yemi", "uidnumber": 5275, "eppns": [ "yemi@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "yemi@slac.stanford.edu" })
-//db.getSiblingDB("iris").users.insertOne({ "username": "richard", "uidnumber": 1088, "eppns": [ "richard@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "richard@slac.stanford.edu" })
-
-// User_Volume_Storage_Allocation
-
-["mshankar", "ytl", "wilko", "perazzo", "yemi", "richard"].forEach(function(u){
-  db.getSiblingDB("iris").user_storage_allocation.insertOne({
-    "username": u,
-    "storagename": "sdfhome",
-    "purpose": "home",
-    "gigabytes": 20,
-    "inodes": 1000,
-    "rootfolder": "<prefix>/home/" + u[0] + "/" + u
-  })
-})
-
-
-["mshankar", "ytl", "wilko", "perazzo", "yemi", "richard"].forEach(function(u){
-  let allocid = db.getSiblingDB("iris").user_storage_allocation.findOne({"username": u, "purpose": "home" })["_id"]
-  db.getSiblingDB("iris").user_storage_usage.insertOne({
-    "allocid": allocid,
-    "date": new Date(),
-    "gigabytes": 19.99,
-    "inodes": 976,
-  })
-})

@@ -22,8 +22,13 @@ db.createUser({ user: "coact", roles: [ { db: "iris", role: "readWrite" } ], pwd
 kubectl apply -f restore.yaml
 kubectl exec -it <pod> -c mongo -- sh
 
+### bootstrap the database with base data
+mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < ./scripts/bootstrap.mongo
+
 ### load the sample data/schema
-mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < ./scripts/sample_data.mongo
+mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < ./scripts/sample_data_0.mongo
+mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < ./scripts/sample_data_1.mongo
+mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < ./scripts/run21coactdata.mongo
 
 (exit)
 
