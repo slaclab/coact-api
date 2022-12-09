@@ -1,0 +1,65 @@
+db.getSiblingDB("iris").facilities.insertOne({
+  "name" : "LCLS",
+  "resources": ["compute", "storage"],
+  "serviceaccount": "lcls-pcdsdata", // set primary uid on all volumes
+  "servicegroup": "lcls-pcdsmgr", // set primary gid on all volumes
+  "czars": [ "mshankar", "wilko" ],
+  "policies": {
+    "UserAccount": {
+      "user_storage_allocation": [
+        {
+          "username": "$username",
+          "storagename": "sdfhome",
+          "purpose": "home",
+          "gigabytes": 20,
+          "inodes": 1000,
+          "rootfolder": "<prefix>/home/$usernamefirstchar/$username"
+        }
+      ]
+    }
+  }
+})
+
+db.getSiblingDB("iris").facility_compute_purchases.insertOne({
+  "facility": "LCLS",
+  "clustername": "roma",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "slachours": 100000
+})
+db.getSiblingDB("iris").facility_compute_purchases.insertOne({
+  "facility": "LCLS",
+  "clustername": "milano",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "slachours": 200000
+})
+
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility": "LCLS",
+  "storagename": "sdfdata",
+  "purpose": "data",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 20000000,
+  "inodes": 100000000,
+})
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility": "LCLS",
+  "storagename": "sdfhome",
+  "purpose": "group",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 200000,
+  "inodes": 100000,
+})
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility": "LCLS",
+  "storagename": "sdfhome",
+  "purpose": "scratch",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 200000,
+  "inodes": 100000,
+})
+
