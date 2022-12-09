@@ -159,7 +159,7 @@ class User(UserInput):
         return self.username in admins
     @strawberry.field
     def isCzar(self, info) -> bool:
-        myfacs = list(info.context.db.find_facilities({"czars": self.username}, exclude_fields=["policies"]))
+        myfacs = list(info.context.db.collection("facilities").find({"czars": self.username}, {"_id": 0, "name": 1}))
         if myfacs:
             return True
         return False
