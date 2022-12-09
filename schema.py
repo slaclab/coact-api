@@ -151,11 +151,15 @@ class Query:
     def myRepos(self, info: Info) -> List[Repo]:
         username = info.context.username
         assert username != None
-        return info.context.db.find_repos( { '$or': [
+        orlist = [
             { "users": username },
             { "leaders": username },
             { "principal": username }
-            ] } )
+        ]
+        myfacs = [ x.name for x in info.context.db.find_facilities({"czars": username}, exclude_fields=["policies"]) ]
+        if myfacs:
+            orlist.append({ "facility": { "$in": myfacs }})
+        return info.context.db.find_repos( { '$or':  orlist} )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def reposWithUser( self, info: Info, username: str ) -> List[Repo]:
