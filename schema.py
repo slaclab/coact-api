@@ -384,7 +384,7 @@ class Mutation:
                 raise Exception(f"When creating a new repo, please specify the facility.")
             if not thereq.principal:
                 raise Exception(f"When creating a new repo, please specify the principal.")
-            if not info.context.db.find_facility({"name": thereq.facilityname}):
+            if not info.context.db.find_facility({"name": thereq.facilityname}, exclude_fields=["policies"]):
                 raise Exception(f"Facility {thereq.facilityname} does not seem to be a valid facility")
             if not info.context.db.find_user({"username": thereq.principal}):
                 raise Exception(f"The principal {thereq.principal} does not seem to exist")
