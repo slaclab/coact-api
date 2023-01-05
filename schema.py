@@ -10,6 +10,7 @@ from threading import Thread
 from typing import List, Optional, AsyncGenerator
 import copy
 import datetime
+import pytz
 import json
 from string import Template
 
@@ -30,7 +31,8 @@ from models import \
         SDFRequestInput, SDFRequest, SDFRequestType, SDFRequestEvent, \
         RepoFacilityName, \
         Usage, UsageInput, StorageDailyUsageInput, \
-        ReportRangeInput, PerDateUsage, PerUserUsage
+        ReportRangeInput, PerDateUsage, PerUserUsage, \
+        RepoComputeAllocationInput, QosInput, RepoStorageAllocationInput
 
 import logging
 LOG = logging.getLogger(__name__)
@@ -288,11 +290,11 @@ class Mutation:
         request.username = info.context.username
         request.requestedby = info.context.username
         request.timeofrequest = datetime.datetime.utcnow()
-        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype', "allocationid", "gigabytes", "inodes" ], find_existing=None)
+        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype', "allocationid", "gigabytes" ], find_existing=None)
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def userQuotaRequest(self, request: SDFRequestInput, info: Info) -> SDFRequest:
-        if request.reqtype != SDFRequestType.UserStorageAllocation or not request.storagename or not request.gigabytes or not request.inodes:
+        if request.reqtype != SDFRequestType.UserStorageAllocation or not request.storagename or not request.gigabytes:
             raise Exception()
         request.username = info.context.username
         request.requestedby = info.context.username
@@ -360,8 +362,8 @@ class Mutation:
             thepurpose = thereq.purpose
             if not thepurpose:
                 raise Exception(f"Please specify the purpose; this is used to identify which allocation to update")
-            if not thereq.gigabytes or not thereq.inodes:
-                raise Exception(f"Please specify the storage request as gigabytes and inodes")
+            if not thereq.gigabytes:
+                raise Exception(f"Please specify the storage request as gigabytes")
 
             alloc = info.context.db.collection("user_storage_allocation").find_one( { "username": theuser, "storagename": thestoragename, "purpose": thepurpose } )
             if not alloc:
@@ -563,6 +565,52 @@ class Mutation:
                 ]}}}])
         return info.context.db.find_access_group( grpfilter )
 
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    def initializeRepoComputeAllocation(self, repo: RepoInput, repocompute: RepoComputeAllocationInput, qosinputs: List[QosInput], info: Info) -> Repo:
+        rc = {"repo": repo.name}
+        repo = info.context.db.find_repo( { "name": repo.name } )
+        clustername = repocompute.clustername
+        if not info.context.db.find_clusters({"name": clustername}):
+            raise Exception("Cannot find cluster with name " + clustername)
+
+        if repo.currentComputeAllocations(info):
+            for rca in repo.currentComputeAllocations(info):
+                if rca.clustername == clustername:
+                    raise Exception("Repo " + repo.name + "already has a compute allocation for cluster " + clustername)
+        rc["clustername"] = clustername
+        rc["start"] = repocompute.start.astimezone(pytz.utc)
+        rc["end"] = repocompute.end.astimezone(pytz.utc)
+        rc["qoses"] = {}
+        for qosinput in qosinputs:
+            rc["qoses"][qosinput.name] = { "slachours": qosinput.slachours, "chargefactor": qosinput.chargefactor }
+        LOG.info(rc)
+        info.context.db.collection("repo_compute_allocations").insert_one(rc)
+        return info.context.db.find_repo( { "name": repo.name } )
+
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    def initializeRepoStorageAllocation(self, repo: RepoInput, repostorage: RepoStorageAllocationInput, info: Info) -> Repo:
+        rs = {"repo": repo.name}
+        repo = info.context.db.find_repo( { "name": repo.name } )
+        storagename = repostorage.storagename
+        if not info.context.db.collection("physical_volumes").find_one({"name": storagename}):
+            raise Exception("Cannot find physical volume with name " + storagename)
+
+        if repo.currentStorageAllocations(info):
+            for rsa in repo.currentStorageAllocations(info):
+                if rsa.purpose == repostorage.purpose:
+                    raise Exception("Repo " + repo.name + "already has a storage allocation for purpose  " + purpose)
+        rs["storagename"] = storagename
+        rs["purpose"] = repostorage.purpose
+        rs["start"] = repostorage.start.astimezone(pytz.utc)
+        rs["end"] = repostorage.end.astimezone(pytz.utc)
+        rs["gigabytes"] = repostorage.gigabytes
+        rs["inodes"] =  repostorage.inodes
+        rs["rootfolder"] = repostorage.rootfolder
+
+        LOG.info(rs)
+        info.context.db.collection("repo_storage_allocations").insert_one(rs)
+        return info.context.db.find_repo( { "name": repo.name } )
+
     @strawberry.mutation
     def importJobs(self, jobs: List[Job], info: Info) -> str:
         jbs = [dict(j.__dict__.items()) for j in jobs]
@@ -668,6 +716,7 @@ def start_change_stream_queues(db):
                 change = change_stream.try_next()
                 while change is not None:
                     try:
+                        LOG.info("Publishing a request")
                         LOG.info(dumps(change))
                         theId = change["documentKey"]["_id"]
                         theRq = db["requests"].find_one({"_id": theId})

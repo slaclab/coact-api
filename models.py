@@ -144,7 +144,7 @@ class User(UserInput):
     # For now we assume everyone is a SLAC person.
     @strawberry.field
     def eppnObjs(self, info) -> List[Eppn]:
-        ret = [ Eppn(**{ "eppn": self.username, "fullname": self.username, "email": self.username+"@slac.stanford.edu", "organization": "slac.stanford.edu"})]
+        ret = [ ]
         if self.eppns is UNSET:
             return []
         for x in self.eppns:

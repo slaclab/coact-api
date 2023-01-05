@@ -59,7 +59,7 @@ db.getSiblingDB("iris").clusters.insertOne({
   "nodecpusmt": 1, // threads per core
   "members": [ ]
 })
-for(c=0;c<28;c++) {   db.getSiblingDB("iris").clusters.updateOne({"name": "roma"}, {"$addToSet": {"members": "sdfmilan"+String(c).padStart(4,'0')}})}
+for(c=0;c<28;c++) {   db.getSiblingDB("iris").clusters.updateOne({"name": "milano"}, {"$addToSet": {"members": "sdfmilan"+String(c).padStart(4,'0')}})}
 
 db.getSiblingDB("iris").clusters.insertOne({
   "name": "ampere",
@@ -73,7 +73,7 @@ db.getSiblingDB("iris").clusters.insertOne({
   "nodecpusmt": 2, // threads per core
   "members": [ ]
 })
-for(c=0;c<6;c++) {   db.getSiblingDB("iris").clusters.updateOne({"name": "roma"}, {"$addToSet": {"members": "sdfampere"+String(c).padStart(4,'0')}})}
+for(c=0;c<6;c++) {   db.getSiblingDB("iris").clusters.updateOne({"name": "ampere"}, {"$addToSet": {"members": "sdfampere"+String(c).padStart(4,'0')}})}
 
 //
 // Storage
