@@ -394,7 +394,7 @@ class Mutation:
                   "facility": thereq.facilityname,
                   "principal": thereq.principal,
                   "leaders": [  ],
-                  "users": [  ],
+                  "users": [ thereq.principal  ],
                   "access_groups": []
               })
             thereq.approve(info)
