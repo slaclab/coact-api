@@ -1,12 +1,13 @@
 
 //
 // initial users
-// 
+//
 db.getSiblingDB("iris").users.insertOne({ "username": "mshankar", "uidnumber": 11042, "eppns": [ "mshankar@slac.stanford.edu", "muralis@stanford.edu" ], "shell": "/bin/bash", "preferredemail": "mshankar@slac.stanford.edu" })
 db.getSiblingDB("iris").users.insertOne({ "username": "ytl", "uidnumber": 7017, "eppns": [ "ytl@slac.stanford.edu", "yee379@stanford.edu" ], "shell": "/bin/bash", "preferredemail": "ytl@slac.stanford.edu" })
 db.getSiblingDB("iris").users.insertOne({ "username": "wilko", "uidnumber": 2871, "eppns": [ "wilko@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "wilko@slac.stanford.edu" })
 db.getSiblingDB("iris").users.insertOne({ "username": "perazzo", "uidnumber": 3934, "eppns": [ "perazzo@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "perazzo@slac.stanford.edu" })
 db.getSiblingDB("iris").users.insertOne({ "username": "yemi", "uidnumber": 5275, "eppns": [ "yemi@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "yemi@slac.stanford.edu" })
+db.getSiblingDB("iris").users.insertOne({ "username": "vossj", "uidnumber": 11954, "eppns": [ "vossj@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "vossj@slac.stanford.edu" })
 //db.getSiblingDB("iris").users.insertOne({ "username": "richard", "uidnumber": 1088, "eppns": [ "richard@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "richard@slac.stanford.edu" })
 
 // User_Volume_Storage_Allocation

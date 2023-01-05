@@ -3,7 +3,7 @@ db.getSiblingDB("iris").facilities.insertOne({
   "resources": ["compute", "storage"],
   "serviceaccount": "suncat", // set primary uid on all volumes
   "servicegroup": "suncat", // set primary gid on all volumes
-  "czars": [ "johannes"], // set primary uid on all volumes
+  "czars": [ "vossj"],
   "policies": {
     "UserAccount": {
       "user_storage_allocation": [
@@ -19,5 +19,3 @@ db.getSiblingDB("iris").facilities.insertOne({
     }
   }
 })
-
-
