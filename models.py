@@ -80,8 +80,10 @@ class SDFRequest(SDFRequestInput):
     def approve(self, info) -> bool:
         info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": SDFRequestStatus.Approved.value, "actedby": info.context.username, "actedat": datetime.utcnow() }})
         return True
-    def reject(self, info) -> bool:
-        info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": SDFRequestStatus.Rejected.value, "actedby": info.context.username, "actedat": datetime.utcnow() }})
+    def reject(self, notes, info) -> bool:
+        curreq = info.context.db.collection("requests").find_one({"_id": self._id})
+        notes = notes + curreq.get("notes", "")
+        info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": SDFRequestStatus.Rejected.value, "actedby": info.context.username, "actedat": datetime.utcnow(), "notes": notes }})
         return True
 
 

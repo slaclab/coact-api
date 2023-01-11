@@ -459,9 +459,9 @@ class Mutation:
             raise Exception("Approval of requests of type " + thereq.reqtype + " is not yet implemented")
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def rejectRequest(id: str, info: Info) -> bool:
+    def rejectRequest(id: str, notes: str, info: Info) -> bool:
         thereq = info.context.db.find_request({ "_id": ObjectId(id) })
-        thereq.reject(info)
+        thereq.reject(notes, info)
         return True
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
