@@ -317,24 +317,39 @@ class Mutation:
         LOG.debug(id)
         thereq = info.context.db.find_request({ "_id": ObjectId(id) })
         user = info.context.authn()
+
+        isAdmin = info.context.is_admin
+        isCzar = False
+        isLeader = False
+        if thereq.reponame:
+            therepos = info.context.db.find_repos({"name": thereq.reponame})
+            if therepos:
+                therepo = info.context.db.find_repo({"name": thereq.reponame})
+                if user in therepo.leaders or therepo.principal == user:
+                    isLeader = True
+                facilities = info.context.db.find_facilities({ 'czars': user }, exclude_fields=["policies"])
+                if facilities:
+                    if repo.facility in [ x.name for x in facilities]:
+                        isCzar = True
+            else:
+                if not thereq.reqtype == "NewRepo":
+                    raise Exception("Can't find repo with reponame " + thereq.reponame)
+        if thereq.facilityname:
+            facilities = info.context.db.find_facilities({ 'czars': user }, exclude_fields=["policies"])
+            if facilities:
+                if thereq.facilityname in [ x.name for x in facilities]:
+                    isCzar = True
+
         if thereq.reqtype == "RepoMembership":
-            therepo = info.context.db.find_repo({"name": thereq.reponame})
-            isleader = False
-            if user in therepo.leaders or therepo.principal == user:
-                isleader = True
-            if not info.context.is_admin and not isleader:
-                raise Exception("User is not an admin or a leader in the repo.")
+            if not isAdmin and not isCzar and not isLeader:
+                raise Exception("User is not an admin, czar or a leader in the repo.")
             # These two should be in a transaction.
             info.context.db.collection("repos").update_one({"_id": therepo._id}, {"$addToSet": {"users": thereq.username}})
             thereq.approve(info)
             return True
         elif thereq.reqtype == "UserAccount":
-            facilities = info.context.db.find_facilities({ 'czars': user }, exclude_fields=["policies"])
-            if not info.context.is_admin and not facilities:
-                raise Exception("User is not an admin or a czar - cannot approve.")
-            if not info.context.is_admin and facilities:
-                if not thereq.facilityname in [ x.name for x in facilities ]:
-                    raise Exception("Czars can only approve UserAccount for their facilities.")
+            if not isAdmin and not isCzar:
+                raise Exception("User is not an admin or a czar")
             theeppn = thereq.eppn
             if not theeppn:
                 raise Exception("Account request without a eppn - cannot approve.")
@@ -365,8 +380,8 @@ class Mutation:
             thereq.approve(info)
             return True
         elif thereq.reqtype == "UserStorageAllocation":
-            if not info.context.is_admin:
-                raise Exception("User is not an admin - cannot approve.")
+            if not isAdmin and not isCzar:
+                raise Exception("User is not an admin or a czar")
             theuser = thereq.username
             if not theuser or not info.context.db.collection("users").find_one( { "username": theuser } ):
                 raise Exception(f"Cannot find user object for {theusername}")
@@ -389,8 +404,8 @@ class Mutation:
             thereq.approve(info)
             return True
         elif thereq.reqtype == "NewRepo":
-            if not info.context.is_admin:
-                raise Exception("User is not an admin - cannot approve.")
+            if not isAdmin and not isCzar:
+                raise Exception("User is not an admin or a czar")
             thereponame = thereq.reponame
             if not thereponame:
                 raise Exception("New repo request without a repo name - cannot approve.")
@@ -416,8 +431,8 @@ class Mutation:
             thereq.approve(info)
             return True
         elif thereq.reqtype == "RepoComputeAllocation":
-            if not info.context.is_admin:
-                raise Exception("User is not an admin - cannot approve.")
+            if not isAdmin and not isCzar:
+                raise Exception("User is not an admin or a czar")
             thereponame = thereq.reponame
             if not thereponame:
                 raise Exception("RepoComputeAllocation request without a repo name - cannot approve.")
@@ -448,8 +463,8 @@ class Mutation:
             thereq.approve(info)
             return True
         elif thereq.reqtype == "RepoStorageAllocation":
-            if not info.context.is_admin:
-                raise Exception("User is not an admin - cannot approve.")
+            if not isAdmin and not isCzar:
+                raise Exception("User is not an admin or a czar")
             thereponame = thereq.reponame
             if not thereponame:
                 raise Exception("RepoComputeAllocation request without a repo name - cannot approve.")
@@ -468,8 +483,8 @@ class Mutation:
             thereq.approve(info)
             return True
         else:
-            if not info.context.is_admin:
-                raise Exception("User is not an admin")
+            if not isAdmin and not isCzar:
+                raise Exception("User is not an admin or a czar")
             raise Exception("Approval of requests of type " + thereq.reqtype + " is not yet implemented")
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
