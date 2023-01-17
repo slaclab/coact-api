@@ -336,10 +336,10 @@ class Mutation:
 
             policies = info.context.db.collection("facilities").find_one({"name": thefacility}).get("policies", {}).get("UserAccount", {})
 
-            maxuidusr, maxuidnum = info.context.db.collection("users").find({}).sort([("uidnumber", -1)]).limit(1), 0
-            if maxuidusr:
-                maxuidnum = list(maxuidusr)[0].get("uidnumber", 0)
-            info.context.db.collection("users").insert_one({ "username": preferredUserName, "uidnumber": maxuidnum+1, "eppns": [ theeppn ], "shell": "/bin/bash", "preferredemail": theeppn })
+            # We set the UID to 0 so that the automatic scripts can detect this fact and set the appropriate UID based on introspection of external LDAP servers.
+            # This lets us at least make an attempt to match B50 UID's and then maybe use a range for external EPPN's
+            defaultUIDnum = 0
+            info.context.db.collection("users").insert_one({ "username": preferredUserName, "uidnumber": defaultUIDnum, "eppns": [ theeppn ], "shell": "/bin/bash", "preferredemail": theeppn })
             if policies:
                 for collname, plstmtlist in policies.items():
                     for plstmt in plstmtlist:
@@ -470,10 +470,10 @@ class Mutation:
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def accessGroupCreate(self, accessgroup: AccessGroupInput, info: Info) -> AccessGroup:
-        maxgidgrp, maxgidnum = info.context.db.collection("access_groups").find({}).sort([("gidnumber", -1)]).limit(1), 0
-        if maxgidgrp:
-            maxgidnum = list(maxgidgrp)[0].get("gidnumber", 0)
-        accessgroup.gidnumber = maxgidnum + 1
+        # We set the GID to 0 so that the automatic scripts can detect this fact and set the appropriate GID based on introspection of external LDAP servers.
+        # This lets us at least make an attempt to match B50 GID's.
+        defaultGIDnum = 0
+        accessgroup.gidnumber = defaultGIDnum
         if not accessgroup.members:
             accessgroup.members = []
         newgrpid = info.context.db.collection("access_groups").insert_one(info.context.db.to_dict(accessgroup)).inserted_id
