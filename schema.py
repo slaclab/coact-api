@@ -329,8 +329,12 @@ class Mutation:
             thereq.approve(info)
             return True
         elif thereq.reqtype == "UserAccount":
-            if not info.context.is_admin:
-                raise Exception("User is not an admin - cannot approve.")
+            facilities = info.context.db.find_facilities({ 'czars': user }, exclude_fields=["policies"])
+            if not info.context.is_admin and not facilities:
+                raise Exception("User is not an admin or a czar - cannot approve.")
+            if not info.context.is_admin and facilities:
+                if not thereq.facilityname in [ x.name for x in facilities ]:
+                    raise Exception("Czars can only approve UserAccount for their facilities.")
             theeppn = thereq.eppn
             if not theeppn:
                 raise Exception("Account request without a eppn - cannot approve.")
