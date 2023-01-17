@@ -1,5 +1,6 @@
 from os import environ
 import re
+import json
 
 from functools import wraps
 from typing import List, Optional
@@ -45,6 +46,7 @@ class CustomContext(BaseContext):
     origin_username: str = None
     is_admin: bool = False
     is_impersonating: bool = False
+    showallforczars: bool = False
 
     def __init__(self, *args, **kwargs):
         self.db = DB(mongo,DB_NAME)
@@ -99,6 +101,11 @@ class CustomContext(BaseContext):
             else:
                 if 'coactimp' in self.request.headers and self.request.headers['coactimp'] and self.request.headers['coactimp'] != 'null':
                     raise Exception(f"unauthorised attempt by user {self.username} to impersonate {kwargs['impersonate']}")
+            self.showallforczars = json.loads(self.request.headers.get("coactshowall", "false"))
+            if self.showallforczars:
+                facilities = self.db.find_facilities({ 'czars': self.username }, exclude_fields=["policies"])
+                if not facilities and not self.is_admin:
+                    raise Exception(f"Showall is set for user {self.username} who is not an admin  czar")
 
         return self.username
 
