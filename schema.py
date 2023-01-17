@@ -336,10 +336,9 @@ class Mutation:
 
             policies = info.context.db.collection("facilities").find_one({"name": thefacility}).get("policies", {}).get("UserAccount", {})
 
-            # We set the UID to 0 so that the automatic scripts can detect this fact and set the appropriate UID based on introspection of external LDAP servers.
+            # We do not explicitly set the UID so that the automatic scripts can detect this fact and set the appropriate UID based on introspection of external LDAP servers.
             # This lets us at least make an attempt to match B50 UID's and then maybe use a range for external EPPN's
-            defaultUIDnum = 0
-            info.context.db.collection("users").insert_one({ "username": preferredUserName, "uidnumber": defaultUIDnum, "eppns": [ theeppn ], "shell": "/bin/bash", "preferredemail": theeppn })
+            info.context.db.collection("users").insert_one({ "username": preferredUserName, "eppns": [ theeppn ], "shell": "/bin/bash", "preferredemail": theeppn })
             if policies:
                 for collname, plstmtlist in policies.items():
                     for plstmt in plstmtlist:
@@ -470,10 +469,9 @@ class Mutation:
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def accessGroupCreate(self, repo: RepoInput, accessgroup: AccessGroupInput, info: Info) -> AccessGroup:
-        # We set the GID to 0 so that the automatic scripts can detect this fact and set the appropriate GID based on introspection of external LDAP servers.
+        # We do not set the GID so that the automatic scripts can detect this fact and set the appropriate GID based on introspection of external LDAP servers.
         # This lets us at least make an attempt to match B50 GID's.
-        defaultGIDnum = 0
-        accessgroup.gidnumber = defaultGIDnum
+        accessgroup.gidnumber = UNSET
         if not accessgroup.members:
             accessgroup.members = []
         newgrpid = info.context.db.collection("access_groups").insert_one(info.context.db.to_dict(accessgroup)).inserted_id

@@ -9,7 +9,7 @@ db.getSiblingDB("iris").facility_storage_purchases.createIndex({"facility": 1, "
 
 
 db.getSiblingDB("iris").users.createIndex({"username": 1}, unique=true)
-db.getSiblingDB("iris").users.createIndex({"uidnumber": 1}, { unique: true, partialFilterExpression: { uidnumber: { $ne: 0 } } })
+db.getSiblingDB("iris").users.createIndex({"uidnumber": 1}, { unique: true, partialFilterExpression: { uidnumber: { $type: "number" } } })
 db.getSiblingDB("iris").users.createIndex({"eppns": 1}, {unique: true, partialFilterExpression: { eppns: { $type: "array" }}})
 
 db.getSiblingDB("iris").user_allocations.createIndex({"username": 1, "allocationid": 1}, unique=true)
@@ -22,7 +22,7 @@ db.getSiblingDB("iris").user_storage_allocation.createIndex({"username": 1, "vol
 db.getSiblingDB("iris").user_storage_usage.createIndex({"alloc_id": 1, "date": 1}, unique=true)
 
 db.getSiblingDB("iris").access_groups.createIndex({"name": 1}, unique=true)
-db.getSiblingDB("iris").access_groups.createIndex({"gidnumber": 1}, {unique: true, partialFilterExpression: { gidnumber: { $ne: 0 } } })
+db.getSiblingDB("iris").access_groups.createIndex({"gidnumber": 1}, {unique: true, partialFilterExpression: { gidnumber: { $type: "number" } } })
 
 db.getSiblingDB("iris").repos.createIndex({"name": 1}, unique=true)
 db.getSiblingDB("iris").repos.createIndex({"leader": 1}) // For performance
