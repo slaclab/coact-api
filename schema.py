@@ -88,11 +88,11 @@ class Query:
         if info.context.is_admin:
             queryterms.append({"reqtype": {"$not": {"$in": [ "RepoMembership" ]}}})
         else:
-            queryterms.append({"reqtype": "RepoMembership"})
             username = info.context.username
             assert username != None
             myfacs = list(info.context.db.find_facilities({"czars": username}, exclude_fields=["policies"]))
             if myfacs:
+                czarqueryterms = [{"facilityname": {"$in": [ x.name for x in myfacs ]}}]
                 myfacnms = [ x.name for x in myfacs ]
                 myrepos = info.context.db.find_repos( { '$or': [
                     { "leaders": username },
@@ -100,8 +100,10 @@ class Query:
                     { "facility": {"$in": myfacnms }}
                     ] } )
                 reponames = [ x.name for x in myrepos ]
-                queryterms.append({ "reponame": {"$in": reponames } })
+                czarqueryterms.append({ "reponame": {"$in": reponames } })
+                queryterms.append({ "$or": czarqueryterms })
             else:
+                queryterms.append({"reqtype": "RepoMembership"})
                 myrepos = info.context.db.find_repos( { '$or': [
                     { "leaders": username },
                     { "principal": username }
@@ -110,7 +112,9 @@ class Query:
                     reponames = [ x.name for x in myrepos ]
                     queryterms.append({ "reponame": {"$in": reponames } })
 
-        crsr = info.context.db.collection("requests").find({"$and": queryterms }).sort([("timeofrequest", -1)])
+        finalqueryterms = {"$and": queryterms }
+        LOG.info("Looking for requests using %s",  finalqueryterms)
+        crsr = info.context.db.collection("requests").find(finalqueryterms).sort([("timeofrequest", -1)])
         return info.context.db.cursor_to_objlist(crsr, SDFRequest, exclude_fields={})
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
