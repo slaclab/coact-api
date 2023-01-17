@@ -507,7 +507,7 @@ class RepoStorageAllocation(RepoStorageAllocationInput):
 class AccessGroupInput:
     _id: Optional[MongoId] = UNSET
     state: Optional[str] = UNSET
-    gidnumber: Optional[int] = UNSET # perhaps we should use a linux non-specific name?
+    gidnumber: Optional[int] = 0 # perhaps we should use a linux non-specific name?
     name: Optional[str] = UNSET
     repo: Optional[str] = UNSET
     members: Optional[List[str]] = UNSET

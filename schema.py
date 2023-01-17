@@ -468,8 +468,8 @@ class Mutation:
     def facilityCreate(self, facility: FacilityInput, info: Info) -> Facility:
         return info.context.db.create( 'facilities', facility, required_fields=[ 'name' ], find_existing={ 'name': facility.name } )
 
-    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def accessGroupCreate(self, accessgroup: AccessGroupInput, info: Info) -> AccessGroup:
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
+    def accessGroupCreate(self, repo: RepoInput, accessgroup: AccessGroupInput, info: Info) -> AccessGroup:
         # We set the GID to 0 so that the automatic scripts can detect this fact and set the appropriate GID based on introspection of external LDAP servers.
         # This lets us at least make an attempt to match B50 GID's.
         defaultGIDnum = 0
@@ -480,8 +480,8 @@ class Mutation:
         ret = info.context.db.find_access_group({"_id": newgrpid})
         return ret
 
-    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def accessGroupUpdate(self, access_group: AccessGroupInput, info: Info) -> AccessGroup:
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
+    def accessGroupUpdate(self, repo: RepoInput, access_group: AccessGroupInput, info: Info) -> AccessGroup:
         return info.context.db.update( 'access_groups', info, access_group, required_fields=[ 'Id', ], find_existing={ '_id': accesss_group._id } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
