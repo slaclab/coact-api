@@ -134,7 +134,7 @@ class UserInput:
     _id: Optional[MongoId] = UNSET
     username: Optional[str] = UNSET
     fullname: Optional[str] = UNSET
-    uidnumber: Optional[int] = UNSET
+    uidnumber: Optional[int] = None
     eppns: Optional[List[str]] = UNSET
     preferredemail: Optional[str] = UNSET
     shell: Optional[str] = UNSET
