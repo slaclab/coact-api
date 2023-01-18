@@ -365,19 +365,9 @@ class Mutation:
             if not thefacility:
                 raise Exception("Account request without a facility - cannot approve.")
 
-            policies = info.context.db.collection("facilities").find_one({"name": thefacility}).get("policies", {}).get("UserAccount", {})
-
             # We do not explicitly set the UID so that the automatic scripts can detect this fact and set the appropriate UID based on introspection of external LDAP servers.
             # This lets us at least make an attempt to match B50 UID's and then maybe use a range for external EPPN's
             info.context.db.collection("users").insert_one({ "username": preferredUserName, "eppns": [ theeppn ], "shell": "/bin/bash", "preferredemail": theeppn })
-            if policies:
-                for collname, plstmtlist in policies.items():
-                    for plstmt in plstmtlist:
-                        LOG.info(json.dumps(plstmt))
-                        fmtedstmt = json.loads(Template(json.dumps(plstmt)).substitute(username=preferredUserName, usernamefirstchar=preferredUserName[0]))
-                        LOG.info(json.dumps(fmtedstmt, indent=4))
-                        info.context.db.collection(collname).insert_one(fmtedstmt)
-
             thereq.approve(info)
             return True
         elif thereq.reqtype == "UserStorageAllocation":
