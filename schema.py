@@ -3,7 +3,8 @@ from auth import IsAuthenticated, \
         IsRepoLeader, \
         IsRepoPrincipalOrLeader, \
         IsAdmin, \
-        IsValidEPPN
+        IsValidEPPN, \
+        IsFacilityCzarOrAdmin
 
 import asyncio
 from threading import Thread
@@ -487,7 +488,7 @@ class Mutation:
                 raise Exception("User is not an admin or a czar")
             raise Exception("Approval of requests of type " + thereq.reqtype + " is not yet implemented")
 
-    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
     def rejectRequest(id: str, notes: str, info: Info) -> bool:
         thereq = info.context.db.find_request({ "_id": ObjectId(id) })
         thereq.reject(notes, info)
@@ -512,11 +513,11 @@ class Mutation:
     def accessGroupUpdate(self, repo: RepoInput, access_group: AccessGroupInput, info: Info) -> AccessGroup:
         return info.context.db.update( 'access_groups', info, access_group, required_fields=[ 'Id', ], find_existing={ '_id': accesss_group._id } )
 
-    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
     def repoCreate(self, repo: RepoInput, info: Info) -> Repo:
         return info.context.db.create( 'repos', repo, required_fields=[ 'name', 'facility' ], find_existing={ 'name': repo.name, 'facility': repo.facility } )
 
-    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
     def repoUpdate(self, repo: RepoInput, info: Info) -> Repo:
         return info.context.db.update( 'repos', info, repo, required_fields=[ 'Id' ], find_existing={ '_id': repo._id } )
 
@@ -593,7 +594,7 @@ class Mutation:
                 ]}}}])
         return info.context.db.find_access_group( grpfilter )
 
-    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
     def initializeRepoComputeAllocation(self, repo: RepoInput, repocompute: RepoComputeAllocationInput, qosinputs: List[QosInput], info: Info) -> Repo:
         rc = {"repo": repo.name}
         repo = info.context.db.find_repo( { "name": repo.name } )
@@ -615,7 +616,7 @@ class Mutation:
         info.context.db.collection("repo_compute_allocations").insert_one(rc)
         return info.context.db.find_repo( { "name": repo.name } )
 
-    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
     def initializeRepoStorageAllocation(self, repo: RepoInput, repostorage: RepoStorageAllocationInput, info: Info) -> Repo:
         rs = {"repo": repo.name}
         repo = info.context.db.find_repo( { "name": repo.name } )
