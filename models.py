@@ -538,7 +538,7 @@ class RepoInput:
 class Repo( RepoInput ):
     @strawberry.field
     def facilityObj(self, info) -> Facility:
-        return info.context.db.find_facility({"name": self.facility}, exclude_fields=["policies"])
+        return info.context.db.find_facility({"name": self.facility})
 
     @strawberry.field
     def allUsers(self, info) -> List[User]:

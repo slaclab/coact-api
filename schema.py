@@ -69,7 +69,7 @@ class Query:
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def facilities(self, info: Info, filter: Optional[FacilityInput]={} ) -> List[Facility]:
-        return info.context.db.find_facilities( filter, exclude_fields=["policies"])
+        return info.context.db.find_facilities( filter)
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def requests(self, info: Info, fetchprocessed: Optional[bool]=False, showmine: Optional[bool]=True) -> Optional[List[SDFRequest]]:
@@ -91,7 +91,7 @@ class Query:
         else:
             username = info.context.username
             assert username != None
-            myfacs = list(info.context.db.find_facilities({"czars": username}, exclude_fields=["policies"]))
+            myfacs = list(info.context.db.find_facilities({"czars": username}))
             if myfacs:
                 czarqueryterms = [{"facilityname": {"$in": [ x.name for x in myfacs ]}}]
                 myfacnms = [ x.name for x in myfacs ]
@@ -120,7 +120,7 @@ class Query:
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def facility(self, info: Info, filter: Optional[FacilityInput]) -> Facility:
-        return info.context.db.find_facilities( filter, exclude_fields=["policies"] )[0]
+        return info.context.db.find_facilities( filter )[0]
 
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
@@ -160,7 +160,7 @@ class Query:
         assert username != None
         if info.context.showallforczars:
             LOG.error("Need to show all repos for a czar")
-            facilities = info.context.db.find_facilities({ 'czars': username }, exclude_fields=["policies"])
+            facilities = info.context.db.find_facilities({ 'czars': username })
             if not facilities:
                 raise Exception("No facilities found for czar " + username)
             return info.context.db.find_repos( { "facility": { "$in": [ x.name for x in facilities ] } } )
@@ -328,7 +328,7 @@ class Mutation:
                 therepo = info.context.db.find_repo({"name": thereq.reponame})
                 if user in therepo.leaders or therepo.principal == user:
                     isLeader = True
-                facilities = info.context.db.find_facilities({ 'czars': user }, exclude_fields=["policies"])
+                facilities = info.context.db.find_facilities({ 'czars': user })
                 if facilities:
                     if therepo.facility in [ x.name for x in facilities]:
                         isCzar = True
@@ -336,7 +336,7 @@ class Mutation:
                 if not thereq.reqtype == "NewRepo":
                     raise Exception("Can't find repo with reponame " + thereq.reponame)
         if thereq.facilityname:
-            facilities = info.context.db.find_facilities({ 'czars': user }, exclude_fields=["policies"])
+            facilities = info.context.db.find_facilities({ 'czars': user })
             if facilities:
                 if thereq.facilityname in [ x.name for x in facilities]:
                     isCzar = True
@@ -416,7 +416,7 @@ class Mutation:
                 raise Exception(f"When creating a new repo, please specify the facility.")
             if not thereq.principal:
                 raise Exception(f"When creating a new repo, please specify the principal.")
-            if not info.context.db.find_facility({"name": thereq.facilityname}, exclude_fields=["policies"]):
+            if not info.context.db.find_facility({"name": thereq.facilityname}):
                 raise Exception(f"Facility {thereq.facilityname} does not seem to be a valid facility")
             if not info.context.db.find_user({"username": thereq.principal}):
                 raise Exception(f"The principal {thereq.principal} does not seem to exist")

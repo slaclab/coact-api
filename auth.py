@@ -64,7 +64,7 @@ class IsFacilityCzarOrAdmin(BasePermission):
         assert repo.name == reponame
         self.LOG.debug(f"attempting {type(self).__name__} permissions for user {user} at path {info.path.key} for repo {reponame} with {kwargs}")
         if user and repo:
-            facility = info.context.db.find_facility( { 'name': repo.facility }, exclude_fields=["policies"])
+            facility = info.context.db.find_facility( { 'name': repo.facility })
             if user in facility.czars:
                 self.LOG.debug(f"  user {user} permitted to modify facility {facility}")
                 return True

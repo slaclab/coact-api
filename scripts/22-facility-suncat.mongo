@@ -3,19 +3,5 @@ db.getSiblingDB("iris").facilities.insertOne({
   "resources": ["compute", "storage"],
   "serviceaccount": "suncat", // set primary uid on all volumes
   "servicegroup": "suncat", // set primary gid on all volumes
-  "czars": [ "vossj"],
-  "policies": {
-    "UserAccount": {
-      "user_storage_allocation": [
-        {
-          "username": "$username",
-          "storagename": "sdfhome",
-          "purpose": "home",
-          "gigabytes": 20,
-          "inodes": 1000,
-          "rootfolder": "<prefix>/home/$usernamefirstchar/$username"
-        }
-      ]
-    }
-  }
+  "czars": [ "vossj"]
 })

@@ -103,7 +103,7 @@ class CustomContext(BaseContext):
                     raise Exception(f"unauthorised attempt by user {self.username} to impersonate {kwargs['impersonate']}")
             self.showallforczars = json.loads(self.request.headers.get("coactshowall", "false"))
             if self.showallforczars:
-                facilities = self.db.find_facilities({ 'czars': self.username }, exclude_fields=["policies"])
+                facilities = self.db.find_facilities({ 'czars': self.username })
                 if not facilities and not self.is_admin:
                     raise Exception(f"Showall is set for user {self.username} who is not an admin  czar")
 
