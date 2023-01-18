@@ -75,7 +75,7 @@ class SDFRequest(SDFRequestInput):
     _id: Optional[MongoId] = UNSET
     approvalstatus: Optional[SDFRequestStatus] = SDFRequestStatus.NotActedOn
     actedby: Optional[str] = UNSET
-    actedat: Optional[datetime] = UNSET
+    actedat: Optional[datetime] = None
 
     def approve(self, info) -> bool:
         info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": SDFRequestStatus.Approved.value, "actedby": info.context.username, "actedat": datetime.utcnow() }})

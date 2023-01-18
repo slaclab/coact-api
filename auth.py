@@ -53,11 +53,18 @@ class IsFacilityCzarOrAdmin(BasePermission):
         if info.context.is_admin:
             self.LOG.debug(f"  user {user} permitted to modify facility {facility}")
             return True
-        facilityname = kwargs['data']['name']
-        self.LOG.debug(f"attempting {type(self).__name__} permissions for user {user} at path {info.path.key} for facility {facilityname} with {kwargs}")
+        reponame = None
+        if 'repo' in kwargs:
+            reponame = kwargs['repo']['name']
+        elif 'request' in kwargs:
+            reponame = kwargs['request']['reponame']
+        else:
+            reponame = kwargs['data']['name']
+        repo = info.context.db.find_repo( { 'name': reponame })
+        assert repo.name == reponame
+        self.LOG.debug(f"attempting {type(self).__name__} permissions for user {user} at path {info.path.key} for repo {reponame} with {kwargs}")
         if user and repo:
-            facility = info.context.db.find_facility( { 'name': facilityname })
-            assert facility.name == facilityname
+            facility = info.context.db.find_facility( { 'name': repo.facility }, exclude_fields=["policies"])
             if user in facility.czars:
                 self.LOG.debug(f"  user {user} permitted to modify facility {facility}")
                 return True

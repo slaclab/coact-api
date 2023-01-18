@@ -330,7 +330,7 @@ class Mutation:
                     isLeader = True
                 facilities = info.context.db.find_facilities({ 'czars': user }, exclude_fields=["policies"])
                 if facilities:
-                    if repo.facility in [ x.name for x in facilities]:
+                    if therepo.facility in [ x.name for x in facilities]:
                         isCzar = True
             else:
                 if not thereq.reqtype == "NewRepo":
