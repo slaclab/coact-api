@@ -2,6 +2,7 @@
 //
 // initial users
 //
+db.getSiblingDB("iris").users.insertOne({ "username": "sdf-cli", "uidnumber": 0, "eppns": [ "coact@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "coact@slac.stanford.edu" })
 db.getSiblingDB("iris").users.insertOne({ "username": "mshankar", "uidnumber": 11042, "eppns": [ "mshankar@slac.stanford.edu", "muralis@stanford.edu" ], "shell": "/bin/bash", "preferredemail": "mshankar@slac.stanford.edu" })
 db.getSiblingDB("iris").users.insertOne({ "username": "ytl", "uidnumber": 7017, "eppns": [ "ytl@slac.stanford.edu", "yee379@stanford.edu" ], "shell": "/bin/bash", "preferredemail": "ytl@slac.stanford.edu" })
 db.getSiblingDB("iris").users.insertOne({ "username": "wilko", "uidnumber": 2871, "eppns": [ "wilko@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "wilko@slac.stanford.edu" })
