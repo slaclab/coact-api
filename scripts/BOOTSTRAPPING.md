@@ -26,10 +26,10 @@ kubectl exec -it <pod> -c mongo -- sh
 mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < ./scripts/00-indexes.mongo
 mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < ./scripts/10-bootstrap.mongo
 
-### load the sample data/schema
-mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < ./scripts/sample_data_0.mongo
-mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < ./scripts/sample_data_1.mongo
-mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < ./scripts/run21coactdata.mongo
+### add facility information
+mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < ./scripts/20-facility-lcls.mongo
+mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < ./scripts/21-facility-cryoem.mongo
+mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < ./scripts/22-facility-suncat.mongo
 
 (exit)
 
