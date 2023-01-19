@@ -63,6 +63,11 @@ class Query:
     def user(self, info: Info, user: UserInput ) -> User:
         return info.context.db.find_user( user )
 
+    @strawberry.field
+    def getuserforeppn(self, info: Info, eppn: str) -> User:
+        user = info.context.db.collection("users").find_one( {"eppns": eppn} )
+        return User(**user)
+
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def clusters(self, info: Info, filter: Optional[ClusterInput]={} ) -> List[Cluster]:
         return info.context.db.find_clusters( filter )
@@ -313,6 +318,10 @@ class Mutation:
         request.timeofrequest = datetime.datetime.utcnow()
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
 
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    def createRequest(self, request: CoactRequestInput, info: Info) -> CoactRequest:
+        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
+
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def approveRequest(id: str, info: Info) -> bool:
         LOG.debug(id)
@@ -375,7 +384,7 @@ class Mutation:
                 raise Exception("User is not an admin or a czar")
             theuser = thereq.username
             if not theuser or not info.context.db.collection("users").find_one( { "username": theuser } ):
-                raise Exception(f"Cannot find user object for {theusername}")
+                raise Exception(f"Cannot find user object for {theuser}")
             thestoragename = thereq.storagename
             if not thestoragename:
                 raise Exception(f"Please specify the volume")
@@ -387,11 +396,19 @@ class Mutation:
 
             alloc = info.context.db.collection("user_storage_allocation").find_one( { "username": theuser, "storagename": thestoragename, "purpose": thepurpose } )
             if not alloc:
-                raise Exception(f"Cannot find an allocation for {theusername} on volume {thestoragename}")
-            info.context.db.collection("user_storage_allocation").update_one(
-                { "username": theuser, "storagename": thestoragename, "purpose": thepurpose },
-                {"$set": {"gigabytes": thereq.gigabytes, "inodes": thereq.inodes }}
-            )
+                info.context.db.collection("user_storage_allocation").insert_one({
+                    "username": theuser,
+                    "storagename": thestoragename,
+                    "purpose": thepurpose,
+                    "gigabytes": thereq.gigabytes,
+                    "inodes": thereq.inodes,
+                    "rootfolder": "<prefix>/home/" + theuser[0] + "/" + theuser
+                })
+            else:
+                info.context.db.collection("user_storage_allocation").update_one(
+                    { "username": theuser, "storagename": thestoragename, "purpose": thepurpose },
+                    {"$set": {"gigabytes": thereq.gigabytes, "inodes": thereq.inodes }}
+                )
             thereq.approve(info)
             return True
         elif thereq.reqtype == "NewRepo":
