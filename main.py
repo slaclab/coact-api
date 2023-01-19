@@ -110,7 +110,7 @@ class CustomContext(BaseContext):
         return self.username
 
 
-from models import User, AccessGroup, Repo, Facility, Cluster, SDFRequest
+from models import User, AccessGroup, Repo, Facility, Cluster, CoactRequest
 
 class DB:
     LOG = logging.getLogger(__name__)
@@ -120,7 +120,7 @@ class DB:
         'access_groups': AccessGroup,
         'repos': Repo,
         'facilities': Facility,
-        'requests': SDFRequest,
+        'requests': CoactRequest,
     }
     def __init__(self, mongo, db_name):
         self._db = mongo
