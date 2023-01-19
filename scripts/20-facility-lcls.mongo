@@ -3,21 +3,7 @@ db.getSiblingDB("iris").facilities.insertOne({
   "resources": ["compute", "storage"],
   "serviceaccount": "lcls-pcdsdata", // set primary uid on all volumes
   "servicegroup": "lcls-pcdsmgr", // set primary gid on all volumes
-  "czars": [ "mshankar", "wilko" ],
-  "policies": {
-    "UserAccount": {
-      "user_storage_allocation": [
-        {
-          "username": "$username",
-          "storagename": "sdfhome",
-          "purpose": "home",
-          "gigabytes": 20,
-          "inodes": 1000,
-          "rootfolder": "<prefix>/home/$usernamefirstchar/$username"
-        }
-      ]
-    }
-  }
+  "czars": [ "mshankar", "wilko" ]
 })
 
 db.getSiblingDB("iris").facility_compute_purchases.insertOne({
@@ -62,4 +48,3 @@ db.getSiblingDB("iris").facility_storage_purchases.insertOne({
   "gigabytes": 200000,
   "inodes": 100000,
 })
-

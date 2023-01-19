@@ -29,7 +29,7 @@ from models import \
         Facility, FacilityInput, Job, \
         UserAllocationInput, UserAllocation, \
         ClusterInput, Cluster, \
-        SDFRequestInput, SDFRequest, SDFRequestType, SDFRequestEvent, \
+        CoactRequestInput, CoactRequest, CoactRequestType, CoactRequestEvent, \
         RepoFacilityName, \
         Usage, UsageInput, StorageDailyUsageInput, \
         ReportRangeInput, PerDateUsage, PerUserUsage, \
@@ -69,10 +69,10 @@ class Query:
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def facilities(self, info: Info, filter: Optional[FacilityInput]={} ) -> List[Facility]:
-        return info.context.db.find_facilities( filter, exclude_fields=["policies"])
+        return info.context.db.find_facilities( filter)
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def requests(self, info: Info, fetchprocessed: Optional[bool]=False, showmine: Optional[bool]=True) -> Optional[List[SDFRequest]]:
+    def requests(self, info: Info, fetchprocessed: Optional[bool]=False, showmine: Optional[bool]=True) -> Optional[List[CoactRequest]]:
         """
         Separate queries for admin/czar/leader/user
         """
@@ -83,7 +83,7 @@ class Query:
                 return []
             queryterms.append({ "requestedby": username })
             crsr = info.context.db.collection("requests").find( {"$or": queryterms } ).sort([("timeofrequest", -1)])
-            return info.context.db.cursor_to_objlist(crsr, SDFRequest, exclude_fields={})
+            return info.context.db.cursor_to_objlist(crsr, CoactRequest, exclude_fields={})
         if not fetchprocessed:
             queryterms.append({"approvalstatus": {"$exists": False}})
         if info.context.is_admin:
@@ -91,7 +91,7 @@ class Query:
         else:
             username = info.context.username
             assert username != None
-            myfacs = list(info.context.db.find_facilities({"czars": username}, exclude_fields=["policies"]))
+            myfacs = list(info.context.db.find_facilities({"czars": username}))
             if myfacs:
                 czarqueryterms = [{"facilityname": {"$in": [ x.name for x in myfacs ]}}]
                 myfacnms = [ x.name for x in myfacs ]
@@ -116,11 +116,11 @@ class Query:
         finalqueryterms = {"$and": queryterms }
         LOG.info("Looking for requests using %s",  finalqueryterms)
         crsr = info.context.db.collection("requests").find(finalqueryterms).sort([("timeofrequest", -1)])
-        return info.context.db.cursor_to_objlist(crsr, SDFRequest, exclude_fields={})
+        return info.context.db.cursor_to_objlist(crsr, CoactRequest, exclude_fields={})
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def facility(self, info: Info, filter: Optional[FacilityInput]) -> Facility:
-        return info.context.db.find_facilities( filter, exclude_fields=["policies"] )[0]
+        return info.context.db.find_facilities( filter )[0]
 
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
@@ -160,7 +160,7 @@ class Query:
         assert username != None
         if info.context.showallforczars:
             LOG.error("Need to show all repos for a czar")
-            facilities = info.context.db.find_facilities({ 'czars': username }, exclude_fields=["policies"])
+            facilities = info.context.db.find_facilities({ 'czars': username })
             if not facilities:
                 raise Exception("No facilities found for czar " + username)
             return info.context.db.find_repos( { "facility": { "$in": [ x.name for x in facilities ] } } )
@@ -264,13 +264,13 @@ class Mutation:
         return info.context.db.find_user( {"username": info.context.username} )
 
     @strawberry.field( permission_classes=[ IsValidEPPN ] )
-    def newSDFAccountRequest(self, request: SDFRequestInput, info: Info) -> SDFRequest:
+    def newSDFAccountRequest(self, request: CoactRequestInput, info: Info) -> CoactRequest:
         request.timeofrequest = datetime.datetime.utcnow()
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def repoMembershipRequest(self, request: SDFRequestInput, info: Info) -> SDFRequest:
-        if request.reqtype != SDFRequestType.RepoMembership or not request.reponame:
+    def repoMembershipRequest(self, request: CoactRequestInput, info: Info) -> CoactRequest:
+        if request.reqtype != CoactRequestType.RepoMembership or not request.reponame:
             raise Exception()
         request.username = info.context.username
         request.requestedby = info.context.username
@@ -278,8 +278,8 @@ class Mutation:
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def newRepoRequest(self, request: SDFRequestInput, info: Info) -> SDFRequest:
-        if request.reqtype != SDFRequestType.NewRepo or not request.reponame or not request.facilityname or not request.principal:
+    def newRepoRequest(self, request: CoactRequestInput, info: Info) -> CoactRequest:
+        if request.reqtype != CoactRequestType.NewRepo or not request.reponame or not request.facilityname or not request.principal:
             raise Exception()
         request.username = info.context.username
         request.requestedby = info.context.username
@@ -287,8 +287,8 @@ class Mutation:
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def repoComputeAllocationRequest(self, request: SDFRequestInput, info: Info) -> SDFRequest:
-        if request.reqtype != SDFRequestType.RepoComputeAllocation or not request.reponame or not request.clustername or not request.slachours:
+    def repoComputeAllocationRequest(self, request: CoactRequestInput, info: Info) -> CoactRequest:
+        if request.reqtype != CoactRequestType.RepoComputeAllocation or not request.reponame or not request.clustername or not request.slachours:
             raise Exception()
         request.username = info.context.username
         request.requestedby = info.context.username
@@ -296,8 +296,8 @@ class Mutation:
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def repoStorageAllocationRequest(self, request: SDFRequestInput, info: Info) -> SDFRequest:
-        if request.reqtype != SDFRequestType.RepoStorageAllocation or not request.reponame or not request.allocationid or not request.gigabytes:
+    def repoStorageAllocationRequest(self, request: CoactRequestInput, info: Info) -> CoactRequest:
+        if request.reqtype != CoactRequestType.RepoStorageAllocation or not request.reponame or not request.allocationid or not request.gigabytes:
             raise Exception()
         request.username = info.context.username
         request.requestedby = info.context.username
@@ -305,8 +305,8 @@ class Mutation:
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype', "allocationid", "gigabytes" ], find_existing=None)
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def userQuotaRequest(self, request: SDFRequestInput, info: Info) -> SDFRequest:
-        if request.reqtype != SDFRequestType.UserStorageAllocation or not request.storagename or not request.gigabytes:
+    def userQuotaRequest(self, request: CoactRequestInput, info: Info) -> CoactRequest:
+        if request.reqtype != CoactRequestType.UserStorageAllocation or not request.storagename or not request.gigabytes:
             raise Exception()
         request.username = info.context.username
         request.requestedby = info.context.username
@@ -328,7 +328,7 @@ class Mutation:
                 therepo = info.context.db.find_repo({"name": thereq.reponame})
                 if user in therepo.leaders or therepo.principal == user:
                     isLeader = True
-                facilities = info.context.db.find_facilities({ 'czars': user }, exclude_fields=["policies"])
+                facilities = info.context.db.find_facilities({ 'czars': user })
                 if facilities:
                     if therepo.facility in [ x.name for x in facilities]:
                         isCzar = True
@@ -336,7 +336,7 @@ class Mutation:
                 if not thereq.reqtype == "NewRepo":
                     raise Exception("Can't find repo with reponame " + thereq.reponame)
         if thereq.facilityname:
-            facilities = info.context.db.find_facilities({ 'czars': user }, exclude_fields=["policies"])
+            facilities = info.context.db.find_facilities({ 'czars': user })
             if facilities:
                 if thereq.facilityname in [ x.name for x in facilities]:
                     isCzar = True
@@ -365,19 +365,9 @@ class Mutation:
             if not thefacility:
                 raise Exception("Account request without a facility - cannot approve.")
 
-            policies = info.context.db.collection("facilities").find_one({"name": thefacility}).get("policies", {}).get("UserAccount", {})
-
             # We do not explicitly set the UID so that the automatic scripts can detect this fact and set the appropriate UID based on introspection of external LDAP servers.
             # This lets us at least make an attempt to match B50 UID's and then maybe use a range for external EPPN's
             info.context.db.collection("users").insert_one({ "username": preferredUserName, "eppns": [ theeppn ], "shell": "/bin/bash", "preferredemail": theeppn })
-            if policies:
-                for collname, plstmtlist in policies.items():
-                    for plstmt in plstmtlist:
-                        LOG.info(json.dumps(plstmt))
-                        fmtedstmt = json.loads(Template(json.dumps(plstmt)).substitute(username=preferredUserName, usernamefirstchar=preferredUserName[0]))
-                        LOG.info(json.dumps(fmtedstmt, indent=4))
-                        info.context.db.collection(collname).insert_one(fmtedstmt)
-
             thereq.approve(info)
             return True
         elif thereq.reqtype == "UserStorageAllocation":
@@ -416,7 +406,7 @@ class Mutation:
                 raise Exception(f"When creating a new repo, please specify the facility.")
             if not thereq.principal:
                 raise Exception(f"When creating a new repo, please specify the principal.")
-            if not info.context.db.find_facility({"name": thereq.facilityname}, exclude_fields=["policies"]):
+            if not info.context.db.find_facility({"name": thereq.facilityname}):
                 raise Exception(f"Facility {thereq.facilityname} does not seem to be a valid facility")
             if not info.context.db.find_user({"username": thereq.principal}):
                 raise Exception(f"The principal {thereq.principal} does not seem to exist")
@@ -729,7 +719,7 @@ requests_queue = asyncio.Queue()
 @strawberry.type
 class Subscription:
     @strawberry.subscription
-    async def requests(self, info: Info) -> AsyncGenerator[SDFRequestEvent, None]:
+    async def requests(self, info: Info) -> AsyncGenerator[CoactRequestEvent, None]:
         while True:
             req = await requests_queue.get()
             yield req
@@ -749,8 +739,8 @@ def start_change_stream_queues(db):
                         LOG.info(dumps(change))
                         theId = change["documentKey"]["_id"]
                         theRq = db["requests"].find_one({"_id": theId})
-                        req = SDFRequest(**theRq) if theRq else None
-                        await requests_queue.put(SDFRequestEvent(operationType=change["operationType"], theRequest=req))
+                        req = CoactRequest(**theRq) if theRq else None
+                        await requests_queue.put(CoactRequestEvent(operationType=change["operationType"], theRequest=req))
                         change = change_stream.try_next()
                     except Exception as e:
                         LOG.exception("Exception processing change")

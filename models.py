@@ -31,7 +31,7 @@ MongoId = strawberry.scalar(
 # we generally just set everything to be option so that we can create a form like experience with graphql. we impose some of the required fields in some utility functions like create_thing(). not a great use of the graphql spec, but allows to to limit the amount of code we have to write
 
 @strawberry.enum
-class SDFRequestType(Enum):
+class CoactRequestType(Enum):
     UserAccount = "UserAccount"
     NewRepo = "NewRepo"
     NewFacility = "NewFacility"
@@ -43,8 +43,8 @@ class SDFRequestType(Enum):
     FacilityStorageAllocation = "FacilityStorageAllocation"
 
 @strawberry.input
-class SDFRequestInput:
-    reqtype: Optional[SDFRequestType] = UNSET
+class CoactRequestInput:
+    reqtype: Optional[CoactRequestType] = UNSET
     requestedby: Optional[str] = UNSET
     timeofrequest: Optional[datetime] = UNSET
     eppn: Optional[str] = UNSET
@@ -64,33 +64,33 @@ class SDFRequestInput:
     notes: Optional[str] = UNSET
 
 @strawberry.enum
-class SDFRequestStatus(IntEnum):
+class CoactRequestStatus(IntEnum):
     NotActedOn = 0
     Approved = 1
     Rejected = -1
 
 
 @strawberry.type
-class SDFRequest(SDFRequestInput):
+class CoactRequest(CoactRequestInput):
     _id: Optional[MongoId] = UNSET
-    approvalstatus: Optional[SDFRequestStatus] = SDFRequestStatus.NotActedOn
+    approvalstatus: Optional[CoactRequestStatus] = CoactRequestStatus.NotActedOn
     actedby: Optional[str] = UNSET
     actedat: Optional[datetime] = None
 
     def approve(self, info) -> bool:
-        info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": SDFRequestStatus.Approved.value, "actedby": info.context.username, "actedat": datetime.utcnow() }})
+        info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Approved.value, "actedby": info.context.username, "actedat": datetime.utcnow() }})
         return True
     def reject(self, notes, info) -> bool:
         curreq = info.context.db.collection("requests").find_one({"_id": self._id})
         notes = notes + curreq.get("notes", "")
-        info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": SDFRequestStatus.Rejected.value, "actedby": info.context.username, "actedat": datetime.utcnow(), "notes": notes }})
+        info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Rejected.value, "actedby": info.context.username, "actedat": datetime.utcnow(), "notes": notes }})
         return True
 
 
 @strawberry.type
-class SDFRequestEvent:
+class CoactRequestEvent:
     operationType: str
-    theRequest: Optional[SDFRequest] = UNSET
+    theRequest: Optional[CoactRequest] = UNSET
 
 @strawberry.input
 class EppnInput:
@@ -538,7 +538,7 @@ class RepoInput:
 class Repo( RepoInput ):
     @strawberry.field
     def facilityObj(self, info) -> Facility:
-        return info.context.db.find_facility({"name": self.facility}, exclude_fields=["policies"])
+        return info.context.db.find_facility({"name": self.facility})
 
     @strawberry.field
     def allUsers(self, info) -> List[User]:

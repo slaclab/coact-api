@@ -103,14 +103,14 @@ class CustomContext(BaseContext):
                     raise Exception(f"unauthorised attempt by user {self.username} to impersonate {kwargs['impersonate']}")
             self.showallforczars = json.loads(self.request.headers.get("coactshowall", "false"))
             if self.showallforczars:
-                facilities = self.db.find_facilities({ 'czars': self.username }, exclude_fields=["policies"])
+                facilities = self.db.find_facilities({ 'czars': self.username })
                 if not facilities and not self.is_admin:
                     raise Exception(f"Showall is set for user {self.username} who is not an admin  czar")
 
         return self.username
 
 
-from models import User, AccessGroup, Repo, Facility, Cluster, SDFRequest
+from models import User, AccessGroup, Repo, Facility, Cluster, CoactRequest
 
 class DB:
     LOG = logging.getLogger(__name__)
@@ -120,7 +120,7 @@ class DB:
         'access_groups': AccessGroup,
         'repos': Repo,
         'facilities': Facility,
-        'requests': SDFRequest,
+        'requests': CoactRequest,
     }
     def __init__(self, mongo, db_name):
         self._db = mongo
