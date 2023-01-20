@@ -53,10 +53,14 @@ class CoactRequestInput:
     reponame: Optional[str] = UNSET
     facilityname: Optional[str] = UNSET
     principal: Optional[str] = UNSET
+    start: Optional[datetime] = UNSET
+    end: Optional[datetime] = UNSET
     clustername: Optional[str] = UNSET
+    chargefactor: Optional[float] = 1.0
     storagename: Optional[str] = UNSET
     qosname: Optional[str] = UNSET
     purpose: Optional[str] = UNSET
+    rootfolder: Optional[str] = UNSET
     allocationid: Optional[MongoId] = UNSET
     slachours: Optional[float] = 0
     gigabytes: Optional[float] = 0

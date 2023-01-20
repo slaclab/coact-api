@@ -456,18 +456,39 @@ class Mutation:
                 raise Exception("RepoComputeAllocation request without a QOS name - cannot approve.")
             if not thereq.slachours:
                 raise Exception("RepoComputeAllocation without a slachours - cannot approve.")
+            if not thereq.start:
+                thereq.start = datetime.datetime.utcnow()
+            if not thereq.end:
+                thereq.end = datetime.datetime.utcnow().replace(year=2100)
+            if not thereq.chargefactor:
+                thereq.chargefactor = 1.0
 
-            clusteralloc = [ x for x in info.context.db.find_repo( {"name": thereponame} ).currentComputeAllocations(info) if x.clustername == theclustername ][0]
-            if not clusteralloc:
-                raise Exception(f"Cannot find an allocation for the cluster with name {theclustername} for repo {thereponame}")
-            theqos = [ q for q in clusteralloc.qoses(info) if q.name == theqosname ][0]
-            if not theqos:
-                raise Exception(f"Cannot find a QOS with the name {theqosname} for the cluster with name {theclustername} for repo {thereponame}")
+            clusterallocs = [ x for x in info.context.db.find_repo( {"name": thereponame} ).currentComputeAllocations(info) if x.clustername == theclustername ]
+            if not clusterallocs or len(clusterallocs) < 1:
+                info.context.db.collection("repo_compute_allocations").insert_one({
+                    "repo": thereponame,
+                    "clustername": theclustername,
+                    "start": thereq.start,
+                    "end": thereq.end,
+                    "qoses": {
+                        theqosname: {
+                            "slachours": thereq.slachours,
+                            "chargefactor": thereq.chargefactor
+                        }
+                    }
+                })
+            else:
+                if len(clusterallocs) != 1:
+                    raise AssertionError( f"Found more than one current allocation for repo {thereponame} on cluster {theclustername}" )
+                clusteralloc = clusterallocs[0]
+                theqos = [ q for q in clusteralloc.qoses(info) if q.name == theqosname ][0]
+                if not theqos:
+                    raise Exception(f"Cannot find a QOS with the name {theqosname} for the cluster with name {theclustername} for repo {thereponame}")
 
-            info.context.db.collection("repo_compute_allocations").update_one(
-                {"_id": ObjectId(clusteralloc._id)},
-                {"$set": {"qoses."+theqosname+".slachours": thereq.slachours}}
-            )
+                info.context.db.collection("repo_compute_allocations").update_one(
+                    {"_id": ObjectId(clusteralloc._id)},
+                    {"$set": {"qoses."+theqosname+".slachours": thereq.slachours}}
+                )
             thereq.approve(info)
             return True
         elif thereq.reqtype == "RepoStorageAllocation":
@@ -479,15 +500,38 @@ class Mutation:
             therepo = info.context.db.find_repo( {"name": thereponame} )
             if not therepo:
                 raise Exception(f"Repo with name {thereponame} does not exist")
+            if not thereq.purpose:
+                raise Exception(f"Request for storage without purpose")
+            if not thereq.storagename:
+                raise Exception(f"Request for storage without storagename")
+            if not thereq.gigabytes:
+                raise Exception(f"Request for storage without gigabytes")
+            if not thereq.start:
+                thereq.start = datetime.datetime.utcnow()
+            if not thereq.end:
+                thereq.end = datetime.datetime.utcnow().replace(year=2100)
 
-            storagealloc = therepo.storageAllocation(info, thereq.allocationid)
-            if not storagealloc:
-                raise Exception(f"Could not find the allocation with id " + thereq.allocationid)
+            storageallocs = [ x for x in info.context.db.find_repo( {"name": thereponame} ).currentStorageAllocations(info) if x.purpose == thereq.purpose ]
+            if not storageallocs:
+                info.context.db.collection("repo_storage_allocations").insert_one({
+                    "repo": thereponame,
+                    "purpose": thereq.purpose,
+                    "start": thereq.start,
+                    "end": thereq.end,
+                    "storagename": thereq.storagename,
+                    "purpose": thereq.purpose,
+                    "gigabytes": thereq.gigabytes,
+                    "rootfolder": thereq.rootfolder,
+                })
+            else:
+                if len(storageallocs) != 1:
+                    raise AssertionError( f"Found more than one current storage allocation for repo {thereponame} for purpose {thereq.purpose}" )
+                storagealloc = storageallocs[0]
+                info.context.db.collection("repo_storage_allocations").update_one(
+                    {"_id": ObjectId(storagealloc._id)},
+                    {"$set": {"gigabytes": thereq.gigabytes, "inodes": thereq.inodes}}
+                )
 
-            info.context.db.collection("repo_storage_allocations").update_one(
-                {"_id": ObjectId(storagealloc._id)},
-                {"$set": {"gigabytes": thereq.gigabytes, "inodes": thereq.inodes}}
-            )
             thereq.approve(info)
             return True
         else:
