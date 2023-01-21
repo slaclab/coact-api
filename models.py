@@ -72,6 +72,8 @@ class CoactRequestStatus(IntEnum):
     NotActedOn = 0
     Approved = 1
     Rejected = -1
+    Incomplete = 2
+    Completed = 3
 
 
 @strawberry.type
@@ -88,6 +90,16 @@ class CoactRequest(CoactRequestInput):
         curreq = info.context.db.collection("requests").find_one({"_id": self._id})
         notes = notes + curreq.get("notes", "")
         info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Rejected.value, "actedby": info.context.username, "actedat": datetime.utcnow(), "notes": notes }})
+        return True
+    def complete(self, notes, info) -> bool:
+        curreq = info.context.db.collection("requests").find_one({"_id": self._id})
+        notes = notes + curreq.get("notes", "")
+        info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Completed.value, "actedby": info.context.username, "actedat": datetime.utcnow(), "notes": notes }})
+        return True
+    def incomplete(self, notes, info) -> bool:
+        curreq = info.context.db.collection("requests").find_one({"_id": self._id})
+        notes = notes + curreq.get("notes", "")
+        info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Incomplete.value, "actedby": info.context.username, "actedat": datetime.utcnow(), "notes": notes }})
         return True
 
 

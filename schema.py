@@ -545,6 +545,18 @@ class Mutation:
         thereq.reject(notes, info)
         return True
 
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
+    def completeRequest(id: str, notes: str, info: Info) -> bool:
+        thereq = info.context.db.find_request({ "_id": ObjectId(id) })
+        thereq.complete(notes, info)
+        return True
+
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
+    def markRequestIncomplete(id: str, notes: str, info: Info) -> bool:
+        thereq = info.context.db.find_request({ "_id": ObjectId(id) })
+        thereq.incomplete(notes, info)
+        return True
+
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def facilityCreate(self, facility: FacilityInput, info: Info) -> Facility:
         return info.context.db.create( 'facilities', facility, required_fields=[ 'name' ], find_existing={ 'name': facility.name } )
