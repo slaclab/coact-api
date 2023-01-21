@@ -101,6 +101,10 @@ class CoactRequest(CoactRequestInput):
         notes = notes + curreq.get("notes", "")
         info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Incomplete.value, "actedby": info.context.username, "actedat": datetime.utcnow(), "notes": notes }})
         return True
+    def refire(self, info) -> bool:
+        curreq = info.context.db.collection("requests").find_one({"_id": self._id})
+        info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "actedby": info.context.username, "actedat": datetime.utcnow() }})
+        return True
 
 
 @strawberry.type

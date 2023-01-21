@@ -51,7 +51,7 @@ class IsFacilityCzarOrAdmin(BasePermission):
     def has_permission(self, source: Any, info: Info, **kwargs) -> bool:
         user = info.context.authn()
         if info.context.is_admin:
-            self.LOG.debug(f"  user {user} permitted to modify facility {facility}")
+            self.LOG.debug(f"  user {user} is admin user and is permitted to modify")
             return True
         reponame = None
         if 'repo' in kwargs:
