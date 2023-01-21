@@ -68,6 +68,16 @@ createrequest = gql(
     """
 )
 
+accessgroupcreate = gql(
+    """
+    mutation accessGroupCreate($repo: RepoInput!, $accessgroup: AccessGroupInput!) {
+        accessGroupCreate(repo: $repo, accessgroup: $accessgroup) {
+            name
+        }
+    }
+    """
+)
+
 approverequest = gql(
     """
     mutation approveRequest($Id: String!) {
@@ -281,6 +291,18 @@ class ProcessRequests:
                 print(result)
             except Exception as e:
                 LOG.exception(e)
+        # Create the main access group
+        alreadyCreatedAccessGroups = map(lambda x: x["name"], repo["accessGroupObjs"])
+        if repo["name"] in alreadyCreatedAccessGroups:
+            LOG.info("Repo %s already has the primary access group", repo["name"])
+        else:
+            try:
+                allusers = list(set([repo["principal"]] + repo["users"]))
+                result = self.mutateclient.execute(accessgroupcreate, variable_values={ "repo": {"name": repo["name"]}, "accessgroup": { "name": repo["name"], "repo": repo["name"], "members": allusers } })
+                print(result)
+            except Exception as e:
+                LOG.exception(e)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Process request approvales. For now, this is mainly for testing")
