@@ -131,6 +131,16 @@ findrepo = gql(
     """
 )
 
+createAuditTrail = gql(
+    """
+    mutation auditTrailAdd($theaud: AuditTrailInput!) {
+        auditTrailAdd(theaud: $theaud) {
+            Id
+        }
+    }
+    """
+)
+
 class ProcessRequests:
     def __init__(self, args):
         self.reqtransport = RequestsHTTPTransport(url=args.mutationurl, verify=True, retries=3)
@@ -178,6 +188,13 @@ class ProcessRequests:
             # Now approve the request
             LOG.info("Approving therequest for home storage for %s - %s", theReq["eppn"], result["createRequest"]["Id"])
             result = self.mutateclient.execute(approverequest, variable_values={"Id": result["createRequest"]["Id"]})
+            print(result)
+            result = self.mutateclient.execute(createAuditTrail, variable_values={ "theaud": {
+                "type": "User",
+                "name": username,
+                "action": "UserAccountDone",
+                "details": "Test audit trail from scripts"
+            }})
             print(result)
 
         except Exception as e:

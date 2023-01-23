@@ -33,7 +33,8 @@ from models import \
         RepoFacilityName, \
         Usage, UsageInput, StorageDailyUsageInput, \
         ReportRangeInput, PerDateUsage, PerUserUsage, \
-        RepoComputeAllocationInput, QosInput, RepoStorageAllocationInput
+        RepoComputeAllocationInput, QosInput, RepoStorageAllocationInput, \
+        AuditTrailObjectType, AuditTrail, AuditTrailInput
 
 import logging
 LOG = logging.getLogger(__name__)
@@ -240,6 +241,14 @@ class Query:
         ])
         return info.context.db.cursor_to_objlist(usgs, Usage, {})
 
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def userAuditTrails( self, info: Info ) -> List[AuditTrail]:
+        return info.context.db.cursor_to_objlist(info.context.db.collection("audit_trail").find({ "type": AuditTrailObjectType.User.name, "name": info.context.username }).sort([("actedat", -1)]), AuditTrail)
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def repoAuditTrails( self, repo: RepoInput, info: Info ) -> List[AuditTrail]:
+        return info.context.db.cursor_to_objlist(info.context.db.collection("audit_trail").find({ "type": AuditTrailObjectType.Repo.name, "name": repo.name }).sort([("actedat", -1)]), AuditTrail)
+
 @strawberry.type
 class Mutation:
 
@@ -249,7 +258,10 @@ class Mutation:
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def userUpdate(self, user: UserInput, info: Info) -> User:
-        return info.context.db.update( 'users', user, required_fields=[ '_id' ], find_existing={ '_id': user._id } )
+        user_before_update = info.context.db.find_user({'_id': user._id})
+        user_after_update = info.context.db.update( 'users', user, required_fields=[ '_id' ], find_existing={ '_id': user._id } )
+        info.context.audit(AuditTrailObjectType.User, user_after_update.username, "userUpdate", details=info.context.dict_diffs(user_before_update, user_after_update))
+        return user_after_update
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def userUpdateEppn(self, eppns: List[str], info: Info) -> User:
@@ -260,12 +272,14 @@ class Mutation:
         if len(existing_users) != 1 or existing_users[0].username != logged_in_user:
             raise Exception("Some of the eppns are being used by another user")
         info.context.db.collection("users").update_one({"username": logged_in_user}, {"$set": { "eppns": eppns }})
+        info.context.audit(AuditTrailObjectType.User, info.context.username, "userUpdateEppn", details=",".join(eppns))
         return info.context.db.find_user( {"username": logged_in_user} )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def changeUserShell(self, newshell: str, info: Info) -> User:
         LOG.info("Changing shell for user %s to %s", info.context.username, newshell)
         info.context.db.collection("users").update_one({"username": info.context.username}, {"$set": {"shell": newshell}})
+        info.context.audit(AuditTrailObjectType.User, info.context.username, "changeUserShell", details=newshell)
         return info.context.db.find_user( {"username": info.context.username} )
 
     @strawberry.field( permission_classes=[ IsValidEPPN ] )
@@ -356,6 +370,8 @@ class Mutation:
             # These two should be in a transaction.
             info.context.db.collection("repos").update_one({"_id": therepo._id}, {"$addToSet": {"users": thereq.username}})
             thereq.approve(info)
+            info.context.audit(AuditTrailObjectType.User, thereq.username, "+RepoMembership", details=therepo.name)
+            info.context.audit(AuditTrailObjectType.Repo, therepo.name, "+RepoMembership", details=thereq.username)
             return True
         elif thereq.reqtype == "UserAccount":
             if not isAdmin and not isCzar:
@@ -378,6 +394,7 @@ class Mutation:
             # This lets us at least make an attempt to match B50 UID's and then maybe use a range for external EPPN's
             info.context.db.collection("users").insert_one({ "username": preferredUserName, "eppns": [ theeppn ], "shell": "/bin/bash", "preferredemail": theeppn })
             thereq.approve(info)
+            info.context.audit(AuditTrailObjectType.User, preferredUserName, "UserAccount")
             return True
         elif thereq.reqtype == "UserStorageAllocation":
             if not isAdmin and not isCzar:
@@ -410,6 +427,7 @@ class Mutation:
                     {"$set": {"gigabytes": thereq.gigabytes, "inodes": thereq.inodes }}
                 )
             thereq.approve(info)
+            info.context.audit(AuditTrailObjectType.User, theuser, "UserStorageAllocation", details=thepurpose+"="+str(thereq.gigabytes)+"GB on "+thestoragename)
             return True
         elif thereq.reqtype == "NewRepo":
             if not isAdmin and not isCzar:
@@ -437,6 +455,7 @@ class Mutation:
                   "access_groups": []
               })
             thereq.approve(info)
+            info.context.audit(AuditTrailObjectType.Repo, thereq.reponame, "NewRepo")
             return True
         elif thereq.reqtype == "RepoComputeAllocation":
             if not isAdmin and not isCzar:
@@ -490,6 +509,7 @@ class Mutation:
                     {"$set": {"qoses."+theqosname+".slachours": thereq.slachours}}
                 )
             thereq.approve(info)
+            info.context.audit(AuditTrailObjectType.Repo, thereponame, "RepoComputeAllocation", details=theclustername+"/"+theqosname+"="+str(thereq.slachours))
             return True
         elif thereq.reqtype == "RepoStorageAllocation":
             if not isAdmin and not isCzar:
@@ -533,6 +553,7 @@ class Mutation:
                 )
 
             thereq.approve(info)
+            info.context.audit(AuditTrailObjectType.Repo, thereponame, "RepoStorageAllocation", details="purpose="+thereq.purpose+" gigabytes="+str(thereq.gigabytes))
             return True
         else:
             if not isAdmin and not isCzar:
@@ -577,11 +598,15 @@ class Mutation:
             accessgroup.members = []
         newgrpid = info.context.db.collection("access_groups").insert_one(info.context.db.to_dict(accessgroup)).inserted_id
         ret = info.context.db.find_access_group({"_id": newgrpid})
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "accessGroupCreate", details=accessgroup.name)
         return ret
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def accessGroupUpdate(self, repo: RepoInput, access_group: AccessGroupInput, info: Info) -> AccessGroup:
-        return info.context.db.update( 'access_groups', info, access_group, required_fields=[ 'Id', ], find_existing={ '_id': accesss_group._id } )
+        group_before_update = info.context.db.find_access_group(access_group)
+        group_after_update = info.context.db.update( 'access_groups', info, access_group, required_fields=[ 'Id', ], find_existing={ '_id': accesss_group._id } )
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "accessGroupUpdate", details=info.context.dict_diffs(group_before_update, group_after_update))
+        return group_after_update
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
     def repoCreate(self, repo: RepoInput, info: Info) -> Repo:
@@ -600,24 +625,28 @@ class Mutation:
         for ua in uas:
             nua = {k: v for k,v in ua.items() if not v is UNSET}
             info.context.db.collection("user_allocations").replace_one({k: v for k,v in nua.items() if k in keys}, nua, upsert=True)
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "updateUserAllocation")
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def addUserToRepo(self, repo: RepoInput, user: UserInput, info: Info ) -> Repo:
         filter = {"name": repo.name}
         info.context.db.collection("repos").update_one(filter, { "$addToSet": {"users": user.username}})
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "addUserToRepo", details=user.username)
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def addLeaderToRepo(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
         filter = {"name": repo.name}
         info.context.db.collection("repos").update_one(filter, { "$addToSet": {"leaders": user.username}})
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "addLeaderToRepo", details=user.username)
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipal ] )
     def changePrincipalForRepo(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
         filter = {"name": repo.name}
         info.context.db.collection("repos").update_one(filter, { "$set": {"principal": user.username}})
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "changePrincipalForRepo", details=user.username)
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
@@ -630,6 +659,7 @@ class Mutation:
         if theuser == therepo.principal:
             raise Exception(theuser + " is a PI in repo " + repo.name + ". Cannot be removed from the repo")
         info.context.db.collection("repos").update_one(filter, { "$pull": {"leaders": theuser, "users": theuser}})
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "removeUserFromRepo", details=user.username)
         return info.context.db.find_repo( filter )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
@@ -645,6 +675,7 @@ class Mutation:
                 { "$setDifference": [ "$leaders", [ user.username ] ] },
                 { "$concatArrays": [ "$leaders", [ user.username ] ] }
                 ]}}}])
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "toggleUserRole", details=user.username)
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
@@ -662,6 +693,7 @@ class Mutation:
                 { "$setDifference": [ "$members", [ user.username ] ] },
                 { "$concatArrays": [ "$members", [ user.username ] ] }
                 ]}}}])
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "toggleGroupMembership", details=user.username)
         return info.context.db.find_access_group( grpfilter )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
@@ -684,6 +716,7 @@ class Mutation:
             rc["qoses"][qosinput.name] = { "slachours": qosinput.slachours, "chargefactor": qosinput.chargefactor }
         LOG.info(rc)
         info.context.db.collection("repo_compute_allocations").insert_one(rc)
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "initializeRepoComputeAllocation", details=clustername+"="+json.dumps(rc["qoses"]))
         return info.context.db.find_repo( { "name": repo.name } )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
@@ -708,6 +741,7 @@ class Mutation:
 
         LOG.info(rs)
         info.context.db.collection("repo_storage_allocations").insert_one(rs)
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "initializeRepoStorageAllocation", details=repostorage.purpose+"="+str(repostorage.gigabytes))
         return info.context.db.find_repo( { "name": repo.name } )
 
     @strawberry.mutation
@@ -793,6 +827,17 @@ class Mutation:
             { "$merge": { "into": "repo_overall_storage_usage", "whenMatched": "replace" } }
         ])
         return "Done"
+
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
+    def auditTrailAdd(theaud: AuditTrailInput, info: Info) -> AuditTrail:
+        if not theaud.type or not theaud.name or not theaud.action:
+            raise Exception("Audit trails need type, name and action information")
+        if not theaud.actedby:
+            theaud.actedby = info.context.username
+        if not theaud.actedat:
+            theaud.actedat = datetime.datetime.utcnow()
+        return info.context.db.create("audit_trail", theaud)
+
 
 requests_queue = asyncio.Queue()
 

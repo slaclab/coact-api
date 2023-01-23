@@ -670,3 +670,22 @@ class StorageDailyUsageInput:
 @strawberry.type
 class StorageDailyUsage(StorageDailyUsageInput):
     pass
+
+@strawberry.enum
+class AuditTrailObjectType(Enum):
+    User = "User"
+    Repo = "Repo"
+
+@strawberry.input
+class AuditTrailInput:
+    _id: Optional[MongoId] = UNSET
+    type: Optional[AuditTrailObjectType] = UNSET
+    name: Optional[str] = UNSET # username in case of user; reponame in case of repo
+    action: Optional[str] = UNSET
+    actedby: Optional[str] = UNSET
+    actedat: Optional[datetime] = UNSET
+    details: Optional[str] = UNSET
+
+@strawberry.type
+class AuditTrail(AuditTrailInput):
+    pass

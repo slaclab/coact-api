@@ -1,6 +1,7 @@
 from os import environ
 import re
 import json
+from datetime import datetime
 
 from functools import wraps
 from typing import List, Optional
@@ -16,7 +17,7 @@ from strawberry.arguments import UNSET
 from pymongo import MongoClient
 from bson import ObjectId
 
-
+from models import User, AccessGroup, Repo, Facility, Cluster, CoactRequest, AuditTrail, AuditTrailObjectType
 from schema import Query, Mutation, Subscription, start_change_stream_queues
 
 import logging
@@ -109,8 +110,39 @@ class CustomContext(BaseContext):
 
         return self.username
 
+    def audit(self, type: AuditTrailObjectType, name: str, action: str, actedby=None, actedat=None, details=""):
+        if not actedby:
+            actedby = self.username
+        if not actedat:
+            actedat = datetime.utcnow()
+        atrail = AuditTrail(type=type, name=name, action=action, actedby=actedby, actedat=actedat, details=details)
+        return self.db.create("audit_trail", atrail)
 
-from models import User, AccessGroup, Repo, Facility, Cluster, CoactRequest
+    def dict_diffs(self, prev, curr):
+        """ Difference between two dicts suitable for history. Does not process embedded arrays/dicts """
+        def __expand_dict__(d, prefix=""):
+            arr = []
+            for k, v in d.items():
+                if isinstance(v, dict):
+                    arr.extend(__expand_dict__(v, prefix + "." + k if prefix else k))
+                elif isinstance(v, list):
+                    for counter, arrayval in enumerate(v):
+                        arr.append((prefix + "." + k + "[" + str(counter) + "]" if prefix else k + "[" + str(counter) + "]", arrayval))
+                else:
+                    arr.append((prefix + "." + k if prefix else k, v))
+            return arr
+
+        prev_dict = self.db.to_dict(prev)
+        curr_dict = self.db.to_dict(curr)
+        fwd_changes = dict(set(__expand_dict__(curr_dict)) - set(__expand_dict__(prev_dict)))
+        bwd_changes = dict(set(__expand_dict__(prev_dict)) - set(__expand_dict__(curr_dict)))
+        changed = fwd_changes.keys() & bwd_changes.keys()
+        added = fwd_changes.keys() - bwd_changes.keys()
+        removed = bwd_changes.keys() - fwd_changes.keys()
+        all_changes = [ str(k) + ": " + str(bwd_changes[k]) + " -> " + str(fwd_changes[k]) for k in changed ]
+        all_changes.extend([ str(k) + ": N/A -> " + str(fwd_changes[k]) for k in added ])
+        all_changes.extend([ str(k) + ": " + str(bwd_changes[k]) + " -> N/A" for k in removed ])
+        return "\n".join(all_changes)
 
 class DB:
     LOG = logging.getLogger(__name__)
@@ -121,6 +153,7 @@ class DB:
         'repos': Repo,
         'facilities': Facility,
         'requests': CoactRequest,
+        'audit_trail': AuditTrail,
     }
     def __init__(self, mongo, db_name):
         self._db = mongo
@@ -150,7 +183,7 @@ class DB:
         return d
 
     @classmethod
-    def cursor_to_objlist(cls, cursor, klass, exclude_fields):
+    def cursor_to_objlist(cls, cursor, klass, exclude_fields=[]):
         items = []
         for item in cursor:
             LOG.debug(f" found {klass} {item}")
@@ -193,6 +226,8 @@ class DB:
         return self.find("access_groups", filter, exclude_fields=["repo"])
     def find_access_group(self, filter):
         return self.assert_one( self.find_access_groups( filter ), filter )
+    def find_audit_trails(self, filter):
+        return self.find("audit_trail", filter)
 
     def create( self, thing, data, required_fields=[], find_existing={} ):
         klass = self.KLASSES[thing]

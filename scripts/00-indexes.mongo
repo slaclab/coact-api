@@ -41,3 +41,5 @@ db.getSiblingDB("iris").repo_daily_compute_usage.createIndex({"allocationid": 1,
 db.getSiblingDB("iris").repo_peruser_compute_usage.createIndex({"allocationid": 1, "username": 1}, unique=true)
 
 db.getSiblingDB("iris").repo_daily_storage_usage.createIndex({"allocationid": 1, "date": 1}, unique=true)
+
+db.getSiblingDB("iris").audit_trail.createIndex({"type": 1, "name": 1, "actedat": -1})
