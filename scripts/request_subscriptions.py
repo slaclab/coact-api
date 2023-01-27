@@ -37,8 +37,8 @@ query = gql(
 
 repocomputeallocationmutation = gql(
     """
-    mutation initializeRepoComputeAllocation($repo: RepoInput!, $repocompute: RepoComputeAllocationInput!, $qosinputs: [QosInput!]! ) {
-      initializeRepoComputeAllocation(repo: $repo, repocompute: $repocompute, qosinputs: $qosinputs) {
+    mutation repoInitializeComputeAllocation($repo: RepoInput!, $repocompute: RepoComputeAllocationInput!, $qosinputs: [QosInput!]! ) {
+      repoInitializeComputeAllocation(repo: $repo, repocompute: $repocompute, qosinputs: $qosinputs) {
         name
       }
     }
@@ -47,8 +47,8 @@ repocomputeallocationmutation = gql(
 
 repostorageallocationmutation = gql(
     """
-    mutation initializeRepoStorageAllocation($repo: RepoInput!, $repostorage: RepoStorageAllocationInput! ) {
-      initializeRepoStorageAllocation(repo: $repo, repostorage: $repostorage) {
+    mutation repoInitializeStorageAllocation($repo: RepoInput!, $repostorage: RepoStorageAllocationInput! ) {
+      repoInitializeStorageAllocation(repo: $repo, repostorage: $repostorage) {
         name
       }
     }
@@ -57,8 +57,8 @@ repostorageallocationmutation = gql(
 
 createrequest = gql(
     """
-    mutation createRequest($request: CoactRequestInput!) {
-        createRequest(request: $request) {
+    mutation requestCreate($request: CoactRequestInput!) {
+        requestCreate(request: $request) {
             Id
             reqtype
             requestedby
@@ -80,8 +80,8 @@ accessgroupcreate = gql(
 
 approverequest = gql(
     """
-    mutation approveRequest($Id: String!) {
-        approveRequest(id: $Id)
+    mutation requestApprove($Id: String!) {
+        requestApprove(id: $Id)
     }
     """
 )
@@ -186,8 +186,8 @@ class ProcessRequests:
             result = self.mutateclient.execute(createrequest, variable_values=homestoragerequest)
             print(result)
             # Now approve the request
-            LOG.info("Approving therequest for home storage for %s - %s", theReq["eppn"], result["createRequest"]["Id"])
-            result = self.mutateclient.execute(approverequest, variable_values={"Id": result["createRequest"]["Id"]})
+            LOG.info("Approving therequest for home storage for %s - %s", theReq["eppn"], result["requestCreate"]["Id"])
+            result = self.mutateclient.execute(approverequest, variable_values={"Id": result["requestCreate"]["Id"]})
             print(result)
             result = self.mutateclient.execute(createAuditTrail, variable_values={ "theaud": {
                 "type": "User",
@@ -274,8 +274,8 @@ class ProcessRequests:
                 result = self.mutateclient.execute(createrequest, variable_values=defaultComputeAllocation)
                 print(result)
                 # Now approve the request
-                LOG.info("Approving therequest for compute for %s on %s - %s", repo["name"], clustername, result["createRequest"]["Id"])
-                result = self.mutateclient.execute(approverequest, variable_values={"Id": result["createRequest"]["Id"]})
+                LOG.info("Approving therequest for compute for %s on %s - %s", repo["name"], clustername, result["requestCreate"]["Id"])
+                result = self.mutateclient.execute(approverequest, variable_values={"Id": result["requestCreate"]["Id"]})
                 print(result)
             except Exception as e:
                 LOG.exception(e)
@@ -303,8 +303,8 @@ class ProcessRequests:
                 result = self.mutateclient.execute(createrequest, variable_values=defaultStorageAllocation)
                 print(result)
                 # Now approve the request
-                LOG.info("Approving therequest for storage for %s on %s - %s", repo["name"], purpose, result["createRequest"]["Id"])
-                result = self.mutateclient.execute(approverequest, variable_values={"Id": result["createRequest"]["Id"]})
+                LOG.info("Approving therequest for storage for %s on %s - %s", repo["name"], purpose, result["requestCreate"]["Id"])
+                result = self.mutateclient.execute(approverequest, variable_values={"Id": result["requestCreate"]["Id"]})
                 print(result)
             except Exception as e:
                 LOG.exception(e)

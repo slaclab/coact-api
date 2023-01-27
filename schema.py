@@ -279,12 +279,12 @@ class Mutation:
         return info.context.db.find_user( {"username": info.context.username} )
 
     @strawberry.field( permission_classes=[ IsValidEPPN ] )
-    def newSDFAccountRequest(self, request: CoactRequestInput, info: Info) -> CoactRequest:
+    def requestNewSDFAccount(self, request: CoactRequestInput, info: Info) -> CoactRequest:
         request.timeofrequest = datetime.datetime.utcnow()
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def repoMembershipRequest(self, request: CoactRequestInput, info: Info) -> CoactRequest:
+    def requestRepoMembership(self, request: CoactRequestInput, info: Info) -> CoactRequest:
         if request.reqtype != CoactRequestType.RepoMembership or not request.reponame:
             raise Exception()
         request.username = info.context.username
@@ -293,7 +293,7 @@ class Mutation:
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def newRepoRequest(self, request: CoactRequestInput, info: Info) -> CoactRequest:
+    def requestNewRepo(self, request: CoactRequestInput, info: Info) -> CoactRequest:
         if request.reqtype != CoactRequestType.NewRepo or not request.reponame or not request.facilityname or not request.principal:
             raise Exception()
         request.username = info.context.username
@@ -302,7 +302,7 @@ class Mutation:
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def repoComputeAllocationRequest(self, request: CoactRequestInput, info: Info) -> CoactRequest:
+    def requestRepoComputeAllocation(self, request: CoactRequestInput, info: Info) -> CoactRequest:
         if request.reqtype != CoactRequestType.RepoComputeAllocation or not request.reponame or not request.clustername or not request.slachours:
             raise Exception()
         request.username = info.context.username
@@ -311,7 +311,7 @@ class Mutation:
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def repoStorageAllocationRequest(self, request: CoactRequestInput, info: Info) -> CoactRequest:
+    def requestRepoStorageAllocation(self, request: CoactRequestInput, info: Info) -> CoactRequest:
         if request.reqtype != CoactRequestType.RepoStorageAllocation or not request.reponame or not request.allocationid or not request.gigabytes:
             raise Exception()
         request.username = info.context.username
@@ -320,7 +320,7 @@ class Mutation:
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype', "allocationid", "gigabytes" ], find_existing=None)
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def userQuotaRequest(self, request: CoactRequestInput, info: Info) -> CoactRequest:
+    def requestUserQuota(self, request: CoactRequestInput, info: Info) -> CoactRequest:
         if request.reqtype != CoactRequestType.UserStorageAllocation or not request.storagename or not request.gigabytes:
             raise Exception()
         request.username = info.context.username
@@ -329,11 +329,11 @@ class Mutation:
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def createRequest(self, request: CoactRequestInput, info: Info) -> CoactRequest:
+    def requestCreate(self, request: CoactRequestInput, info: Info) -> CoactRequest:
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def approveRequest(id: str, info: Info) -> bool:
+    def requestApprove(id: str, info: Info) -> bool:
         LOG.debug(id)
         thereq = info.context.db.find_request({ "_id": ObjectId(id) })
         user = info.context.authn()
@@ -557,25 +557,25 @@ class Mutation:
             raise Exception("Approval of requests of type " + thereq.reqtype + " is not yet implemented")
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
-    def rejectRequest(id: str, notes: str, info: Info) -> bool:
+    def requestReject(id: str, notes: str, info: Info) -> bool:
         thereq = info.context.db.find_request({ "_id": ObjectId(id) })
         thereq.reject(notes, info)
         return True
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
-    def completeRequest(id: str, notes: str, info: Info) -> bool:
+    def requestComplete(id: str, notes: str, info: Info) -> bool:
         thereq = info.context.db.find_request({ "_id": ObjectId(id) })
         thereq.complete(notes, info)
         return True
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
-    def markRequestIncomplete(id: str, notes: str, info: Info) -> bool:
+    def requestMarkIncomplete(id: str, notes: str, info: Info) -> bool:
         thereq = info.context.db.find_request({ "_id": ObjectId(id) })
         thereq.incomplete(notes, info)
         return True
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
-    def refireRequest(id: str, info: Info) -> bool:
+    def requestRefire(id: str, info: Info) -> bool:
         thereq = info.context.db.find_request({ "_id": ObjectId(id) })
         thereq.refire(info)
         return True
@@ -604,7 +604,7 @@ class Mutation:
         return info.context.db.update( 'repos', info, repo, required_fields=[ 'Id' ], find_existing={ '_id': repo._id } )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def updateUserAllocation(self, repo: RepoInput, data: List[UserAllocationInput], info: Info) -> Repo:
+    def repoUpdateUserAllocation(self, repo: RepoInput, data: List[UserAllocationInput], info: Info) -> Repo:
         filter = {"name": repo.name}
         therepos =  info.context.db.find_repo( filter )
         uas = [dict(j.__dict__.items()) for j in data]
@@ -612,32 +612,32 @@ class Mutation:
         for ua in uas:
             nua = {k: v for k,v in ua.items() if not v is UNSET}
             info.context.db.collection("user_allocations").replace_one({k: v for k,v in nua.items() if k in keys}, nua, upsert=True)
-        info.context.audit(AuditTrailObjectType.Repo, repo.name, "updateUserAllocation")
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "repoUpdateUserAllocation")
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def addUserToRepo(self, repo: RepoInput, user: UserInput, info: Info ) -> Repo:
+    def repoAddUser(self, repo: RepoInput, user: UserInput, info: Info ) -> Repo:
         filter = {"name": repo.name}
         info.context.db.collection("repos").update_one(filter, { "$addToSet": {"users": user.username}})
-        info.context.audit(AuditTrailObjectType.Repo, repo.name, "addUserToRepo", details=user.username)
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "repoAddUser", details=user.username)
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def addLeaderToRepo(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
+    def repoAddLeader(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
         filter = {"name": repo.name}
         info.context.db.collection("repos").update_one(filter, { "$addToSet": {"leaders": user.username}})
-        info.context.audit(AuditTrailObjectType.Repo, repo.name, "addLeaderToRepo", details=user.username)
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "repoAddLeader", details=user.username)
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipal ] )
-    def changePrincipalForRepo(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
+    def repoChangePrincipal(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
         filter = {"name": repo.name}
         info.context.db.collection("repos").update_one(filter, { "$set": {"principal": user.username}})
-        info.context.audit(AuditTrailObjectType.Repo, repo.name, "changePrincipalForRepo", details=user.username)
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "repoChangePrincipal", details=user.username)
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def removeUserFromRepo(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
+    def repoRemoveUser(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
         filter = {"name": repo.name}
         therepo =  info.context.db.find_repo( filter )
         theuser = user.username
@@ -646,11 +646,11 @@ class Mutation:
         if theuser == therepo.principal:
             raise Exception(theuser + " is a PI in repo " + repo.name + ". Cannot be removed from the repo")
         info.context.db.collection("repos").update_one(filter, { "$pull": {"leaders": theuser, "users": theuser}})
-        info.context.audit(AuditTrailObjectType.Repo, repo.name, "removeUserFromRepo", details=user.username)
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "repoRemoveUser", details=user.username)
         return info.context.db.find_repo( filter )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def toggleUserRole(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
+    def repoToggleUserRole(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
         filter = {"name": repo.name}
         therepo = info.context.db.find_repo( filter )
         theuser = user.username
@@ -662,11 +662,11 @@ class Mutation:
                 { "$setDifference": [ "$leaders", [ user.username ] ] },
                 { "$concatArrays": [ "$leaders", [ user.username ] ] }
                 ]}}}])
-        info.context.audit(AuditTrailObjectType.Repo, repo.name, "toggleUserRole", details=user.username)
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "repoToggleUserRole", details=user.username)
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
-    def toggleGroupMembership(self, repo: RepoInput, user: UserInput, group: AccessGroupInput, info: Info) -> AccessGroup:
+    def repoToggleGroupMembership(self, repo: RepoInput, user: UserInput, group: AccessGroupInput, info: Info) -> AccessGroup:
         filter = {"name": repo.name}
         therepo = info.context.db.find_repo( filter )
         theuser = user.username
@@ -680,11 +680,11 @@ class Mutation:
                 { "$setDifference": [ "$members", [ user.username ] ] },
                 { "$concatArrays": [ "$members", [ user.username ] ] }
                 ]}}}])
-        info.context.audit(AuditTrailObjectType.Repo, repo.name, "toggleGroupMembership", details=user.username)
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "repoToggleGroupMembership", details=user.username)
         return info.context.db.find_access_group( grpfilter )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
-    def initializeRepoComputeAllocation(self, repo: RepoInput, repocompute: RepoComputeAllocationInput, qosinputs: List[QosInput], info: Info) -> Repo:
+    def repoInitializeComputeAllocation(self, repo: RepoInput, repocompute: RepoComputeAllocationInput, qosinputs: List[QosInput], info: Info) -> Repo:
         rc = {"repo": repo.name}
         repo = info.context.db.find_repo( { "name": repo.name } )
         clustername = repocompute.clustername
@@ -703,11 +703,11 @@ class Mutation:
             rc["qoses"][qosinput.name] = { "slachours": qosinput.slachours, "chargefactor": qosinput.chargefactor }
         LOG.info(rc)
         info.context.db.collection("repo_compute_allocations").insert_one(rc)
-        info.context.audit(AuditTrailObjectType.Repo, repo.name, "initializeRepoComputeAllocation", details=clustername+"="+json.dumps(rc["qoses"]))
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "repoInitializeComputeAllocation", details=clustername+"="+json.dumps(rc["qoses"]))
         return info.context.db.find_repo( { "name": repo.name } )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
-    def initializeRepoStorageAllocation(self, repo: RepoInput, repostorage: RepoStorageAllocationInput, info: Info) -> Repo:
+    def repoInitializeStorageAllocation(self, repo: RepoInput, repostorage: RepoStorageAllocationInput, info: Info) -> Repo:
         rs = {"repo": repo.name}
         repo = info.context.db.find_repo( { "name": repo.name } )
         storagename = repostorage.storagename
@@ -728,7 +728,7 @@ class Mutation:
 
         LOG.info(rs)
         info.context.db.collection("repo_storage_allocations").insert_one(rs)
-        info.context.audit(AuditTrailObjectType.Repo, repo.name, "initializeRepoStorageAllocation", details=repostorage.purpose+"="+str(repostorage.gigabytes))
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "repoInitializeStorageAllocation", details=repostorage.purpose+"="+str(repostorage.gigabytes))
         return info.context.db.find_repo( { "name": repo.name } )
 
     @strawberry.mutation
