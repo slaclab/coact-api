@@ -252,10 +252,6 @@ class Query:
 @strawberry.type
 class Mutation:
 
-    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def userCreate(self, user: UserInput, info: Info) -> User:
-        return info.context.db.create( 'users', user, required_fields=[ 'username', 'uidnumber', 'eppns' ], find_existing={ 'username': user.username } )
-
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def userUpdate(self, user: UserInput, info: Info) -> User:
         user_before_update = info.context.db.find_user({'_id': user._id})
@@ -584,11 +580,6 @@ class Mutation:
         thereq.refire(info)
         return True
 
-
-    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def facilityCreate(self, facility: FacilityInput, info: Info) -> Facility:
-        return info.context.db.create( 'facilities', facility, required_fields=[ 'name' ], find_existing={ 'name': facility.name } )
-
     @strawberry.field( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def accessGroupCreate(self, repo: RepoInput, accessgroup: AccessGroupInput, info: Info) -> AccessGroup:
         # We do not set the GID so that the automatic scripts can detect this fact and set the appropriate GID based on introspection of external LDAP servers.
@@ -607,10 +598,6 @@ class Mutation:
         group_after_update = info.context.db.update( 'access_groups', info, access_group, required_fields=[ 'Id', ], find_existing={ '_id': accesss_group._id } )
         info.context.audit(AuditTrailObjectType.Repo, repo.name, "accessGroupUpdate", details=info.context.dict_diffs(group_before_update, group_after_update))
         return group_after_update
-
-    @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
-    def repoCreate(self, repo: RepoInput, info: Info) -> Repo:
-        return info.context.db.create( 'repos', repo, required_fields=[ 'name', 'facility' ], find_existing={ 'name': repo.name, 'facility': repo.facility } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
     def repoUpdate(self, repo: RepoInput, info: Info) -> Repo:
