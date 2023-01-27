@@ -283,6 +283,12 @@ class FacilityInput:
 @strawberry.type
 class Facility( FacilityInput ):
     @strawberry.field
+    def czarObjs(self, info) -> List[User]:
+        ret = []
+        for cz in self.czars:
+            ret.append(info.context.db.find_user({"username": cz}))
+        return ret
+    @strawberry.field
     def computepurchases(self, info) -> Optional[List[FacilityComputePurchases]]:
         # More complex; we want to return the "current" per resource type.
         todaysdate = datetime.utcnow()
