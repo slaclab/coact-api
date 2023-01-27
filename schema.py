@@ -272,10 +272,10 @@ class Mutation:
         return info.context.db.find_user( {"username": logged_in_user} )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def changeUserShell(self, newshell: str, info: Info) -> User:
+    def userChangeShell(self, newshell: str, info: Info) -> User:
         LOG.info("Changing shell for user %s to %s", info.context.username, newshell)
         info.context.db.collection("users").update_one({"username": info.context.username}, {"$set": {"shell": newshell}})
-        info.context.audit(AuditTrailObjectType.User, info.context.username, "changeUserShell", details=newshell)
+        info.context.audit(AuditTrailObjectType.User, info.context.username, "userChangeShell", details=newshell)
         return info.context.db.find_user( {"username": info.context.username} )
 
     @strawberry.field( permission_classes=[ IsValidEPPN ] )
