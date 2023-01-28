@@ -279,7 +279,7 @@ class Mutation:
         info.context.audit(AuditTrailObjectType.User, info.context.username, "userChangeShell", details=newshell)
         return info.context.db.find_user( {"username": info.context.username} )
 
-    @strawberry.field( permission_classes=[ IsRepoPrincipalOrLeader ] )
+    @strawberry.field( permission_classes=[ IsFacilityCzarOrAdmin ] )
     def userStorageAllocationUpsert(self, user: UserInput, userstorage: UserStorageInput, info: Info) -> User:
         LOG.info("Creating or updating home storage allocation for user %s", user.username)
         theuser = info.context.db.find_user({'username': user.username})
