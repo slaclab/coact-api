@@ -24,6 +24,9 @@ query = gql(
             facilityname
             principal
             username
+            purpose
+            gigabytes
+            storagename
             actedat
             actedby
             requestedby
@@ -141,6 +144,16 @@ createAuditTrail = gql(
     """
 )
 
+updateuserstorageallocation = gql(
+    """
+    mutation userInitializeOrUpdateStorageAllocation($user: UserInput!, $userstorage: UserStorageInput!) {
+        userInitializeOrUpdateStorageAllocation(user: $user, userstorage: $userstorage) {
+            Id
+        }
+    }
+    """
+)
+
 class ProcessRequests:
     def __init__(self, args):
         self.reqtransport = RequestsHTTPTransport(url=args.mutationurl, verify=True, retries=3)
@@ -158,6 +171,8 @@ class ProcessRequests:
                     if request["requests"]["operationType"] == "update" and theReq.get("approvalstatus", None) == "Approved":
                         if theReq.get("reqtype", None) == "UserAccount":
                             self.processUserAccount(theReq)
+                        elif theReq.get("reqtype", None) == "UserStorageAllocation":
+                            self.processUserStorageAllocation(theReq)
                         elif theReq.get("reqtype", None) == "NewRepo":
                             self.processNewRepo(theReq)
             except Exception as e:
@@ -199,6 +214,34 @@ class ProcessRequests:
 
         except Exception as e:
             LOG.exception(e)
+
+    def processUserStorageAllocation(self, theReq):
+        """
+        Kick on the script to create home folders; once this succeeds update coact with the allocation and rootfolder.
+        """
+        LOG.info("Actually creating home storage for %s", theReq["username"])
+        username = theReq["username"]
+        homestorageallocationrequest = {
+            "user" : {
+                "username" : username,
+            },
+            "userstorage" : {
+                "username": username,
+                "purpose": theReq["purpose"],
+                "gigabytes": theReq["gigabytes"],
+                "storagename": theReq["storagename"],
+                "rootfolder": "<prefix>/home/" + username[0] + "/" + username
+            }
+        }
+        try:
+            result = self.mutateclient.execute(updateuserstorageallocation, variable_values=homestorageallocationrequest)
+            print(result)
+
+        except Exception as e:
+            LOG.exception(e)
+
+
+
 
     def processNewRepo(self, theReq):
         """

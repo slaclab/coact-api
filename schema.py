@@ -24,6 +24,7 @@ from bson.json_util import dumps
 from models import \
         MongoId, \
         User, UserInput, UserRegistration, \
+        UserStorageInput, UserStorage, \
         AccessGroup, AccessGroupInput, \
         Repo, RepoInput, \
         Facility, FacilityInput, Job, \
@@ -278,6 +279,31 @@ class Mutation:
         info.context.audit(AuditTrailObjectType.User, info.context.username, "userChangeShell", details=newshell)
         return info.context.db.find_user( {"username": info.context.username} )
 
+    @strawberry.field( permission_classes=[ IsRepoPrincipalOrLeader ] )
+    def userInitializeOrUpdateStorageAllocation(self, user: UserInput, userstorage: UserStorageInput, info: Info) -> User:
+        LOG.info("Creating or updating home storage allocation for user %s", user.username)
+        theuser = info.context.db.find_user({'username': user.username})
+        for field in ["storagename", "purpose", "gigabytes", "rootfolder"]:
+            if not getattr(userstorage, field):
+                raise Exception(f"Please specify {field} in the userstorage")
+        alloc = info.context.db.collection("user_storage_allocation").find_one( { "username": theuser.username, "storagename": userstorage.storagename, "purpose": userstorage.purpose } )
+        if not alloc:
+            info.context.db.collection("user_storage_allocation").insert_one({
+                "username": theuser.username,
+                "storagename": userstorage.storagename,
+                "purpose": userstorage.purpose,
+                "gigabytes": userstorage.gigabytes,
+                "rootfolder": userstorage.rootfolder
+            })
+        else:
+            info.context.db.collection("user_storage_allocation").update_one(
+                {"username": theuser.username, "storagename": userstorage.storagename, "purpose": userstorage.purpose },
+                {"$set": {
+                    "gigabytes": userstorage.gigabytes,
+                    "rootfolder": userstorage.rootfolder}})
+        info.context.audit(AuditTrailObjectType.User, theuser.username, "UserStorageAllocation", details=userstorage.purpose+"="+str(userstorage.gigabytes)+"GB on "+userstorage.storagename)
+        return info.context.db.find_user({'username': user.username})
+
     @strawberry.field( permission_classes=[ IsValidEPPN ] )
     def requestNewSDFAccount(self, request: CoactRequestInput, info: Info) -> CoactRequest:
         request.timeofrequest = datetime.datetime.utcnow()
@@ -407,23 +433,7 @@ class Mutation:
             if not thereq.gigabytes:
                 raise Exception(f"Please specify the storage request as gigabytes")
 
-            alloc = info.context.db.collection("user_storage_allocation").find_one( { "username": theuser, "storagename": thestoragename, "purpose": thepurpose } )
-            if not alloc:
-                info.context.db.collection("user_storage_allocation").insert_one({
-                    "username": theuser,
-                    "storagename": thestoragename,
-                    "purpose": thepurpose,
-                    "gigabytes": thereq.gigabytes,
-                    "inodes": thereq.inodes,
-                    "rootfolder": "<prefix>/home/" + theuser[0] + "/" + theuser
-                })
-            else:
-                info.context.db.collection("user_storage_allocation").update_one(
-                    { "username": theuser, "storagename": thestoragename, "purpose": thepurpose },
-                    {"$set": {"gigabytes": thereq.gigabytes, "inodes": thereq.inodes }}
-                )
             thereq.approve(info)
-            info.context.audit(AuditTrailObjectType.User, theuser, "UserStorageAllocation", details=thepurpose+"="+str(thereq.gigabytes)+"GB on "+thestoragename)
             return True
         elif thereq.reqtype == "NewRepo":
             if not isAdmin and not isCzar:

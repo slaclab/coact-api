@@ -126,23 +126,25 @@ class Eppn(EppnInput):
 
 @strawberry.type
 class UserStorageUsage:
-    _id: MongoId
-    gigabytes: float
-    inodes: float
-    date: datetime
-    allocid: MongoId
+    _id: Optional[MongoId] = UNSET
+    gigabytes: Optional[float] = 0
+    inodes: Optional[float] = 0
+    date: Optional[datetime] = UNSET
+    allocid: Optional[float] = 0
+
+@strawberry.input
+class UserStorageInput:
+    _id: Optional[MongoId] = UNSET
+    username: Optional[str] = UNSET
+    purpose: Optional[str] = UNSET
+    gigabytes: Optional[float] = 0
+    inodes: Optional[float] = 0
+    storagename: Optional[str] = UNSET
+    rootfolder: Optional[str] = UNSET
 
 @strawberry.type
-class UserStorage:
-    _id: MongoId
-    username: str
-    purpose: str
-    gigabytes: float
-    inodes: float
-    storagename: str
-    rootfolder: str
+class UserStorage(UserStorageInput):
     usage: Optional[UserStorageUsage]
-
 
 @strawberry.type
 class UserRegistration(EppnInput):
