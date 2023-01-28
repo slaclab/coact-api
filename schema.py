@@ -348,7 +348,7 @@ class Mutation:
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def requestApprove(id: str, info: Info) -> bool:
+    def requestApprove(self, id: str, info: Info) -> bool:
         LOG.debug(id)
         thereq = info.context.db.find_request({ "_id": ObjectId(id) })
         user = info.context.authn()
@@ -556,25 +556,25 @@ class Mutation:
             raise Exception("Approval of requests of type " + thereq.reqtype + " is not yet implemented")
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
-    def requestReject(id: str, notes: str, info: Info) -> bool:
+    def requestReject(self, id: str, notes: str, info: Info) -> bool:
         thereq = info.context.db.find_request({ "_id": ObjectId(id) })
         thereq.reject(notes, info)
         return True
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
-    def requestComplete(id: str, notes: str, info: Info) -> bool:
+    def requestComplete(self, id: str, notes: str, info: Info) -> bool:
         thereq = info.context.db.find_request({ "_id": ObjectId(id) })
         thereq.complete(notes, info)
         return True
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
-    def requestMarkIncomplete(id: str, notes: str, info: Info) -> bool:
+    def requestMarkIncomplete(self, id: str, notes: str, info: Info) -> bool:
         thereq = info.context.db.find_request({ "_id": ObjectId(id) })
         thereq.incomplete(notes, info)
         return True
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
-    def requestRefire(id: str, info: Info) -> bool:
+    def requestRefire(self, id: str, info: Info) -> bool:
         thereq = info.context.db.find_request({ "_id": ObjectId(id) })
         thereq.refire(info)
         return True
@@ -814,8 +814,8 @@ class Mutation:
         ])
         return "Done"
 
-    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
-    def auditTrailAdd(theaud: AuditTrailInput, info: Info) -> AuditTrail:
+    @strawberry.mutation(permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
+    def auditTrailAdd(self, theaud: AuditTrailInput, info: Info) -> AuditTrail:
         if not theaud.type or not theaud.name or not theaud.action:
             raise Exception("Audit trails need type, name and action information")
         if not theaud.actedby:
