@@ -283,9 +283,7 @@ class Mutation:
     def userStorageAllocationUpsert(self, user: UserInput, userstorage: UserStorageInput, info: Info) -> User:
         LOG.info("Creating or updating home storage allocation for user %s", user.username)
         theuser = info.context.db.find_user({'username': user.username})
-        for field in ["storagename", "purpose", "gigabytes", "rootfolder"]:
-            if not getattr(userstorage, field):
-                raise Exception(f"Please specify {field} in the userstorage")
+        info.context.ensure_attrs(["storagename", "purpose", "gigabytes", "rootfolder"], userstorage, "Please specify {} in the userstorage")
         info.context.db.collection("user_storage_allocation").update_one(
             {"username": theuser.username, "storagename": userstorage.storagename, "purpose": userstorage.purpose },
             {"$set": { "gigabytes": userstorage.gigabytes, "rootfolder": userstorage.rootfolder}},
