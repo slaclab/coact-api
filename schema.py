@@ -280,27 +280,16 @@ class Mutation:
         return info.context.db.find_user( {"username": info.context.username} )
 
     @strawberry.field( permission_classes=[ IsRepoPrincipalOrLeader ] )
-    def userInitializeOrUpdateStorageAllocation(self, user: UserInput, userstorage: UserStorageInput, info: Info) -> User:
+    def userStorageAllocationUpsert(self, user: UserInput, userstorage: UserStorageInput, info: Info) -> User:
         LOG.info("Creating or updating home storage allocation for user %s", user.username)
         theuser = info.context.db.find_user({'username': user.username})
         for field in ["storagename", "purpose", "gigabytes", "rootfolder"]:
             if not getattr(userstorage, field):
                 raise Exception(f"Please specify {field} in the userstorage")
-        alloc = info.context.db.collection("user_storage_allocation").find_one( { "username": theuser.username, "storagename": userstorage.storagename, "purpose": userstorage.purpose } )
-        if not alloc:
-            info.context.db.collection("user_storage_allocation").insert_one({
-                "username": theuser.username,
-                "storagename": userstorage.storagename,
-                "purpose": userstorage.purpose,
-                "gigabytes": userstorage.gigabytes,
-                "rootfolder": userstorage.rootfolder
-            })
-        else:
-            info.context.db.collection("user_storage_allocation").update_one(
-                {"username": theuser.username, "storagename": userstorage.storagename, "purpose": userstorage.purpose },
-                {"$set": {
-                    "gigabytes": userstorage.gigabytes,
-                    "rootfolder": userstorage.rootfolder}})
+        info.context.db.collection("user_storage_allocation").update_one(
+            {"username": theuser.username, "storagename": userstorage.storagename, "purpose": userstorage.purpose },
+            {"$set": { "gigabytes": userstorage.gigabytes, "rootfolder": userstorage.rootfolder}},
+            upsert=True)
         info.context.audit(AuditTrailObjectType.User, theuser.username, "UserStorageAllocation", details=userstorage.purpose+"="+str(userstorage.gigabytes)+"GB on "+userstorage.storagename)
         return info.context.db.find_user({'username': user.username})
 

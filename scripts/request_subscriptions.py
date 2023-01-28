@@ -144,10 +144,10 @@ createAuditTrail = gql(
     """
 )
 
-updateuserstorageallocation = gql(
+userStorageAllocationUpsert = gql(
     """
-    mutation userInitializeOrUpdateStorageAllocation($user: UserInput!, $userstorage: UserStorageInput!) {
-        userInitializeOrUpdateStorageAllocation(user: $user, userstorage: $userstorage) {
+    mutation userStorageAllocationUpsert($user: UserInput!, $userstorage: UserStorageInput!) {
+        userStorageAllocationUpsert(user: $user, userstorage: $userstorage) {
             Id
         }
     }
@@ -234,7 +234,7 @@ class ProcessRequests:
             }
         }
         try:
-            result = self.mutateclient.execute(updateuserstorageallocation, variable_values=homestorageallocationrequest)
+            result = self.mutateclient.execute(userStorageAllocationUpsert, variable_values=homestorageallocationrequest)
             print(result)
 
         except Exception as e:
