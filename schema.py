@@ -568,7 +568,7 @@ class Mutation:
         return True
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
-    def requestMarkIncomplete(self, id: str, notes: str, info: Info) -> bool:
+    def requestIncomplete(self, id: str, notes: str, info: Info) -> bool:
         thereq = info.context.db.find_request({ "_id": ObjectId(id) })
         thereq.incomplete(notes, info)
         return True
