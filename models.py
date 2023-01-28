@@ -84,6 +84,8 @@ class CoactRequest(CoactRequestInput):
     actedby: Optional[str] = UNSET
     actedat: Optional[datetime] = None
 
+    LOG = logging.getLogger(__name__)
+
     def approve(self, info) -> bool:
         info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Approved.value, "actedby": info.context.username, "actedat": datetime.utcnow() }})
         return True
@@ -104,8 +106,14 @@ class CoactRequest(CoactRequestInput):
         return True
     def refire(self, info) -> bool:
         curreq = info.context.db.collection("requests").find_one({"_id": self._id})
-        info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "actedby": info.context.username, "actedat": datetime.utcnow() }})
-        return True
+        v = {
+          'actedby': info.context.username,
+          'actedat': datetime.utcnow()
+        }
+        # if curreq's status is Incomplete, assume we are reiring to fix incomplete, so set it to Approved again
+        if self.approvalstatus == CoactRequestStatus.Incomplete:
+            v['approvalstatus'] = CoactRequestStatus.Approved 
+        return info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": v})
 
 
 @strawberry.type
