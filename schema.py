@@ -35,11 +35,21 @@ from models import \
         Usage, UsageInput, StorageDailyUsageInput, \
         ReportRangeInput, PerDateUsage, PerUserUsage, \
         RepoComputeAllocationInput, QosInput, RepoStorageAllocationInput, \
-        AuditTrailObjectType, AuditTrail, AuditTrailInput
+        AuditTrailObjectType, AuditTrail, AuditTrailInput, \
+        NotificationInput, Notification
+
+import smtplib
+#import aiosmtplib #
+from email.message import EmailMessage
+import os
 
 import logging
 LOG = logging.getLogger(__name__)
 
+EMAIL_SERVER_HOST = os.getenv( 'COACT_EMAIL_SERVER_HOST', 'smtp.slac.stanford.edu' )
+EMAIL_SERVER_TLS = bool( os.getenv( 'COACT_EMAIL_SERVER_TLS', False ) )
+EMAIL_SERVER_SSL = bool( os.getenv( 'COACT_EMAIL_SERVER_SSL', False ) )
+EMAIL_SERVER_PORT = os.getenv( 'COACT_EMAIL_SERVER_PORT', 465 if EMAIL_SERVER_SSL else 25 )
 
 @strawberry.type
 class Query:
@@ -823,6 +833,22 @@ class Mutation:
         if not theaud.actedat:
             theaud.actedat = datetime.datetime.utcnow()
         return info.context.db.create("audit_trail", theaud)
+
+    @strawberry.mutation(permission_classes=[ IsAuthenticated, IsAdmin ] )
+    def notificationSend(self, msg: NotificationInput, info: Info) -> bool:
+        email = EmailMessage()
+        email["From"] = "s3df-help@slac.stanford.edu"
+        email["To"] = ', '.join(msg.to)
+        if not isinstance(msg.cc,strawberry.unset.UnsetType):
+            email["Cc"] = ', '.join(msg.cc)
+        if not isinstance(msg.bcc,strawberry.unset.UnsetType):
+            email["Bcc"] = ', '.join(msg.cc)
+        email["Subject"] = msg.subject
+        email.set_content(msg.body)
+        s = smtplib.SMTP(EMAIL_SERVER_HOST)
+        s.send_message(email)
+        #await aiosmtplib.send(email, hostname=EMAIL_SERVER_HOST, port=EMAIL_SERVER_PORT, use_tls=EMAIL_SERVER_TLS) 
+        return True  
 
 
 requests_queue = asyncio.Queue()

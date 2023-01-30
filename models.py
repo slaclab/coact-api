@@ -706,3 +706,17 @@ class AuditTrailInput:
 @strawberry.type
 class AuditTrail(AuditTrailInput):
     pass
+
+@strawberry.input
+class NotificationInput:
+    to: Optional[List[str]] = UNSET
+    cc: Optional[List[str]] = UNSET
+    to: Optional[List[str]] = UNSET
+    bcc: Optional[List[str]] = UNSET
+    subject: Optional[str] = UNSET
+    body: Optional[str] = UNSET
+    
+@strawberry.type
+class Notification(NotificationInput):
+    pass
+
