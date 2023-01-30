@@ -112,7 +112,8 @@ class CoactRequest(CoactRequestInput):
           'actedat': datetime.utcnow()
         }
         # if curreq's status is Incomplete, assume we are reiring to fix incomplete, so set it to Approved again
-        if self.approvalstatus == CoactRequestStatus.Incomplete:
+        # if the current status is Complete, then assume that we have an idempotent workflow to rerun
+        if self.approvalstatus in [ CoactRequestStatus.Incomplete, CoactRequestStatus.Completed ]:
             v['approvalstatus'] = CoactRequestStatus.Approved
         return info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": v})
 
