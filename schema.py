@@ -253,9 +253,17 @@ class Query:
 @strawberry.type
 class Mutation:
 
+    @strawberry.field( permission_classes=[ IsAdmin ] )
+    def userCreate(self, user: UserInput, info: Info) -> User:
+        user = info.context.db.create( 'users', user, required_fields=[ 'username', 'eppns', 'shell', 'preferredemail' ], find_existing={ 'username': user.username} )
+        info.context.audit(AuditTrailObjectType.User, user.username, "userCreate")
+        return user
+
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def userUpdate(self, user: UserInput, info: Info) -> User:
         user_before_update = info.context.db.find_user({'_id': user._id})
+        if not info.context.username == user_before_update.username and not info.context.is_admin:
+            raise Exception(f"Only admins can update other users - {info.context.username} wants to update {user.username}")
         user_after_update = info.context.db.update( 'users', user, required_fields=[ '_id' ], find_existing={ '_id': user._id } )
         info.context.audit(AuditTrailObjectType.User, user_after_update.username, "userUpdate", details=info.context.dict_diffs(user_before_update, user_after_update))
         return user_after_update
@@ -347,6 +355,10 @@ class Mutation:
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def requestApprove(self, id: str, info: Info) -> bool:
+        """
+        This mostly checks authorization and marks the request as being approved.
+        Most of the actual action, both in the database and in the external world ( SLURM, LDAP etc) happen in external subscription processing.
+        """
         LOG.debug(id)
         thereq = info.context.db.find_request({ "_id": ObjectId(id) })
         user = info.context.authn()
@@ -376,11 +388,7 @@ class Mutation:
         if thereq.reqtype == "RepoMembership":
             if not isAdmin and not isCzar and not isLeader:
                 raise Exception("User is not an admin, czar or a leader in the repo.")
-            # These two should be in a transaction.
-            info.context.db.collection("repos").update_one({"_id": therepo._id}, {"$addToSet": {"users": thereq.username}})
             thereq.approve(info)
-            info.context.audit(AuditTrailObjectType.User, thereq.username, "+RepoMembership", details=therepo.name)
-            info.context.audit(AuditTrailObjectType.Repo, therepo.name, "+RepoMembership", details=thereq.username)
             return True
         elif thereq.reqtype == "UserAccount":
             if not isAdmin and not isCzar:
@@ -398,12 +406,7 @@ class Mutation:
             thefacility = thereq.facilityname
             if not thefacility:
                 raise Exception("Account request without a facility - cannot approve.")
-
-            # We do not explicitly set the UID so that the automatic scripts can detect this fact and set the appropriate UID based on introspection of external LDAP servers.
-            # This lets us at least make an attempt to match B50 UID's and then maybe use a range for external EPPN's
-            info.context.db.collection("users").insert_one({ "username": preferredUserName, "eppns": [ theeppn ], "shell": "/bin/bash", "preferredemail": theeppn })
             thereq.approve(info)
-            info.context.audit(AuditTrailObjectType.User, preferredUserName, "UserAccount")
             return True
         elif thereq.reqtype == "UserStorageAllocation":
             if not isAdmin and not isCzar:
@@ -438,17 +441,7 @@ class Mutation:
                 raise Exception(f"Facility {thereq.facilityname} does not seem to be a valid facility")
             if not info.context.db.find_user({"username": thereq.principal}):
                 raise Exception(f"The principal {thereq.principal} does not seem to exist")
-
-            info.context.db.collection("repos").insert_one({
-                  "name": thereponame,
-                  "facility": thereq.facilityname,
-                  "principal": thereq.principal,
-                  "leaders": [  ],
-                  "users": [ thereq.principal  ],
-                  "access_groups": []
-              })
             thereq.approve(info)
-            info.context.audit(AuditTrailObjectType.Repo, thereq.reponame, "NewRepo")
             return True
         elif thereq.reqtype == "RepoComputeAllocation":
             if not isAdmin and not isCzar:
@@ -474,35 +467,7 @@ class Mutation:
                 thereq.end = datetime.datetime.utcnow().replace(year=2100)
             if not thereq.chargefactor:
                 thereq.chargefactor = 1.0
-
-            clusterallocs = [ x for x in info.context.db.find_repo( {"name": thereponame} ).currentComputeAllocations(info) if x.clustername == theclustername ]
-            if not clusterallocs or len(clusterallocs) < 1:
-                info.context.db.collection("repo_compute_allocations").insert_one({
-                    "repo": thereponame,
-                    "clustername": theclustername,
-                    "start": thereq.start,
-                    "end": thereq.end,
-                    "qoses": {
-                        theqosname: {
-                            "slachours": thereq.slachours,
-                            "chargefactor": thereq.chargefactor
-                        }
-                    }
-                })
-            else:
-                if len(clusterallocs) != 1:
-                    raise AssertionError( f"Found more than one current allocation for repo {thereponame} on cluster {theclustername}" )
-                clusteralloc = clusterallocs[0]
-                theqos = [ q for q in clusteralloc.qoses(info) if q.name == theqosname ][0]
-                if not theqos:
-                    raise Exception(f"Cannot find a QOS with the name {theqosname} for the cluster with name {theclustername} for repo {thereponame}")
-
-                info.context.db.collection("repo_compute_allocations").update_one(
-                    {"_id": ObjectId(clusteralloc._id)},
-                    {"$set": {"qoses."+theqosname+".slachours": thereq.slachours}}
-                )
             thereq.approve(info)
-            info.context.audit(AuditTrailObjectType.Repo, thereponame, "RepoComputeAllocation", details=theclustername+"/"+theqosname+"="+str(thereq.slachours))
             return True
         elif thereq.reqtype == "RepoStorageAllocation":
             if not isAdmin and not isCzar:
@@ -524,29 +489,7 @@ class Mutation:
             if not thereq.end:
                 thereq.end = datetime.datetime.utcnow().replace(year=2100)
 
-            storageallocs = [ x for x in info.context.db.find_repo( {"name": thereponame} ).currentStorageAllocations(info) if x.purpose == thereq.purpose ]
-            if not storageallocs:
-                info.context.db.collection("repo_storage_allocations").insert_one({
-                    "repo": thereponame,
-                    "purpose": thereq.purpose,
-                    "start": thereq.start,
-                    "end": thereq.end,
-                    "storagename": thereq.storagename,
-                    "purpose": thereq.purpose,
-                    "gigabytes": thereq.gigabytes,
-                    "rootfolder": thereq.rootfolder,
-                })
-            else:
-                if len(storageallocs) != 1:
-                    raise AssertionError( f"Found more than one current storage allocation for repo {thereponame} for purpose {thereq.purpose}" )
-                storagealloc = storageallocs[0]
-                info.context.db.collection("repo_storage_allocations").update_one(
-                    {"_id": ObjectId(storagealloc._id)},
-                    {"$set": {"gigabytes": thereq.gigabytes, "inodes": thereq.inodes}}
-                )
-
             thereq.approve(info)
-            info.context.audit(AuditTrailObjectType.Repo, thereponame, "RepoStorageAllocation", details="purpose="+thereq.purpose+" gigabytes="+str(thereq.gigabytes))
             return True
         else:
             if not isAdmin and not isCzar:
@@ -596,9 +539,18 @@ class Mutation:
         info.context.audit(AuditTrailObjectType.Repo, repo.name, "accessGroupUpdate", details=info.context.dict_diffs(group_before_update, group_after_update))
         return group_after_update
 
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    def repoCreate(self, repo: RepoInput, info: Info) -> Repo:
+        repo = info.context.db.create( 'repos', repo, required_fields=[ 'name', 'facility', 'principal' ], find_existing={ 'name': repo.name } )
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "repoCreate")
+        return repo
+
     @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
     def repoUpdate(self, repo: RepoInput, info: Info) -> Repo:
-        return info.context.db.update( 'repos', info, repo, required_fields=[ 'Id' ], find_existing={ '_id': repo._id } )
+        repo_before_update = info.context.db.find_repo({ 'name': repo.name })
+        repo_after_update = info.context.db.update( 'repos', info, repo, required_fields=[ 'name' ], find_existing={ 'name': repo.name } )
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "repoUpdate", details=info.context.dict_diffs(repo_before_update, repo_after_update))
+        return repo_after_update
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def repoUpdateUserAllocation(self, repo: RepoInput, data: List[UserAllocationInput], info: Info) -> Repo:
@@ -617,6 +569,7 @@ class Mutation:
         filter = {"name": repo.name}
         info.context.db.collection("repos").update_one(filter, { "$addToSet": {"users": user.username}})
         info.context.audit(AuditTrailObjectType.Repo, repo.name, "repoAddUser", details=user.username)
+        info.context.audit(AuditTrailObjectType.User, user.username, "+RepoMembership", details=repo.name)
         return info.context.db.find_repo(filter)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
@@ -644,6 +597,7 @@ class Mutation:
             raise Exception(theuser + " is a PI in repo " + repo.name + ". Cannot be removed from the repo")
         info.context.db.collection("repos").update_one(filter, { "$pull": {"leaders": theuser, "users": theuser}})
         info.context.audit(AuditTrailObjectType.Repo, repo.name, "repoRemoveUser", details=user.username)
+        info.context.audit(AuditTrailObjectType.User, user.username, "-RepoMembership", details=repo.name)
         return info.context.db.find_repo( filter )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
@@ -681,17 +635,13 @@ class Mutation:
         return info.context.db.find_access_group( grpfilter )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
-    def repoInitializeComputeAllocation(self, repo: RepoInput, repocompute: RepoComputeAllocationInput, qosinputs: List[QosInput], info: Info) -> Repo:
+    def repoComputeAllocationUpsert(self, repo: RepoInput, repocompute: RepoComputeAllocationInput, qosinputs: List[QosInput], info: Info) -> Repo:
         rc = {"repo": repo.name}
         repo = info.context.db.find_repo( { "name": repo.name } )
         clustername = repocompute.clustername
         if not info.context.db.find_clusters({"name": clustername}):
             raise Exception("Cannot find cluster with name " + clustername)
 
-        if repo.currentComputeAllocations(info):
-            for rca in repo.currentComputeAllocations(info):
-                if rca.clustername == clustername:
-                    raise Exception("Repo " + repo.name + "already has a compute allocation for cluster " + clustername)
         rc["clustername"] = clustername
         rc["start"] = repocompute.start.astimezone(pytz.utc)
         rc["end"] = repocompute.end.astimezone(pytz.utc)
@@ -699,33 +649,27 @@ class Mutation:
         for qosinput in qosinputs:
             rc["qoses"][qosinput.name] = { "slachours": qosinput.slachours, "chargefactor": qosinput.chargefactor }
         LOG.info(rc)
-        info.context.db.collection("repo_compute_allocations").insert_one(rc)
-        info.context.audit(AuditTrailObjectType.Repo, repo.name, "repoInitializeComputeAllocation", details=clustername+"="+json.dumps(rc["qoses"]))
+        info.context.db.collection("repo_compute_allocations").replace_one({"repo": rc["repo"], "clustername": rc["clustername"], "start": rc["start"]}, rc, upsert=True)
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "repoComputeAllocationUpsert", details=clustername+"="+json.dumps(rc["qoses"]))
         return info.context.db.find_repo( { "name": repo.name } )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
-    def repoInitializeStorageAllocation(self, repo: RepoInput, repostorage: RepoStorageAllocationInput, info: Info) -> Repo:
+    def repoStorageAllocationUpsert(self, repo: RepoInput, repostorage: RepoStorageAllocationInput, info: Info) -> Repo:
         rs = {"repo": repo.name}
         repo = info.context.db.find_repo( { "name": repo.name } )
         storagename = repostorage.storagename
         if not info.context.db.collection("physical_volumes").find_one({"name": storagename}):
             raise Exception("Cannot find physical volume with name " + storagename)
 
-        if repo.currentStorageAllocations(info):
-            for rsa in repo.currentStorageAllocations(info):
-                if rsa.purpose == repostorage.purpose:
-                    raise Exception("Repo " + repo.name + "already has a storage allocation for purpose  " + purpose)
         rs["storagename"] = storagename
         rs["purpose"] = repostorage.purpose
         rs["start"] = repostorage.start.astimezone(pytz.utc)
         rs["end"] = repostorage.end.astimezone(pytz.utc)
         rs["gigabytes"] = repostorage.gigabytes
-        rs["inodes"] =  repostorage.inodes
         rs["rootfolder"] = repostorage.rootfolder
-
         LOG.info(rs)
-        info.context.db.collection("repo_storage_allocations").insert_one(rs)
-        info.context.audit(AuditTrailObjectType.Repo, repo.name, "repoInitializeStorageAllocation", details=repostorage.purpose+"="+str(repostorage.gigabytes))
+        info.context.db.collection("repo_storage_allocations").replace_one({"repo": rs["repo"], "storagename": rs["storagename"], "purpose": rs["purpose"], "start": rs["start"]}, rs, upsert=True)
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "repoStorageAllocationUpsert", details=repostorage.purpose+"="+str(repostorage.gigabytes))
         return info.context.db.find_repo( { "name": repo.name } )
 
     @strawberry.mutation

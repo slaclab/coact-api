@@ -26,6 +26,7 @@ MongoId = strawberry.scalar(
 )
 
 
+
 # would this be useful? https://github.com/strawberry-graphql/strawberry/discussions/444
 
 # we generally just set everything to be option so that we can create a form like experience with graphql. we impose some of the required fields in some utility functions like create_thing(). not a great use of the graphql spec, but allows to to limit the amount of code we have to write
@@ -53,8 +54,8 @@ class CoactRequestInput:
     reponame: Optional[str] = UNSET
     facilityname: Optional[str] = UNSET
     principal: Optional[str] = UNSET
-    start: Optional[datetime] = UNSET
-    end: Optional[datetime] = UNSET
+    start: Optional[datetime] = None
+    end: Optional[datetime] = None
     clustername: Optional[str] = UNSET
     chargefactor: Optional[float] = 1.0
     storagename: Optional[str] = UNSET
@@ -112,7 +113,7 @@ class CoactRequest(CoactRequestInput):
         }
         # if curreq's status is Incomplete, assume we are reiring to fix incomplete, so set it to Approved again
         if self.approvalstatus == CoactRequestStatus.Incomplete:
-            v['approvalstatus'] = CoactRequestStatus.Approved 
+            v['approvalstatus'] = CoactRequestStatus.Approved
         return info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": v})
 
 

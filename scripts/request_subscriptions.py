@@ -16,6 +16,7 @@ query = gql(
     subscription {
       requests {
         theRequest {
+            Id
         	reqtype
             approvalstatus
         	eppn
@@ -27,6 +28,12 @@ query = gql(
             purpose
             gigabytes
             storagename
+            clustername
+            qosname
+            slachours
+            start
+            end
+            chargefactor
             actedat
             actedby
             requestedby
@@ -38,22 +45,13 @@ query = gql(
 """
 )
 
-repocomputeallocationmutation = gql(
-    """
-    mutation repoInitializeComputeAllocation($repo: RepoInput!, $repocompute: RepoComputeAllocationInput!, $qosinputs: [QosInput!]! ) {
-      repoInitializeComputeAllocation(repo: $repo, repocompute: $repocompute, qosinputs: $qosinputs) {
-        name
-      }
-    }
-    """
-)
 
-repostorageallocationmutation = gql(
+userCreate = gql(
     """
-    mutation repoInitializeStorageAllocation($repo: RepoInput!, $repostorage: RepoStorageAllocationInput! ) {
-      repoInitializeStorageAllocation(repo: $repo, repostorage: $repostorage) {
-        name
-      }
+    mutation userCreate($user: UserInput!) {
+        userCreate(user: $user) {
+            Id
+        }
     }
     """
 )
@@ -94,6 +92,17 @@ getuserforeppn = gql(
     query getuserforeppn($eppn: String!){
         getuserforeppn(eppn: $eppn) {
             username
+        }
+    }
+    """
+)
+
+repocreate = gql(
+    """
+    mutation repoCreate($repo: RepoInput!) {
+        repoCreate(repo: $repo) {
+            Id
+            name
         }
     }
     """
@@ -154,6 +163,36 @@ userStorageAllocationUpsert = gql(
     """
 )
 
+repoComputeAllocationUpsert = gql(
+    """
+    mutation repoComputeAllocationUpsert($repo: RepoInput!, $repocompute: RepoComputeAllocationInput!, $qosinputs: [QosInput!]!) {
+        repoComputeAllocationUpsert(repo: $repo, repocompute: $repocompute, qosinputs: $qosinputs) {
+            Id
+        }
+    }
+    """
+)
+
+repoStorageAllocationUpsert = gql(
+    """
+    mutation repoStorageAllocationUpsert($repo: RepoInput!, $repostorage: RepoStorageAllocationInput!) {
+        repoStorageAllocationUpsert(repo: $repo, repostorage: $repostorage) {
+            Id
+        }
+    }
+    """
+)
+
+repoAddUser = gql(
+    """
+    mutation repoAddUser($repo: RepoInput!, $user: UserInput!) {
+        repoAddUser(repo: $repo, user: $user) {
+            Id
+        }
+    }
+    """
+)
+
 class ProcessRequests:
     def __init__(self, args):
         self.reqtransport = RequestsHTTPTransport(url=args.mutationurl, verify=True, retries=3)
@@ -175,6 +214,12 @@ class ProcessRequests:
                             self.processUserStorageAllocation(theReq)
                         elif theReq.get("reqtype", None) == "NewRepo":
                             self.processNewRepo(theReq)
+                        elif theReq.get("reqtype", None) == "RepoComputeAllocation":
+                            self.processRepoComputeAllocations(theReq)
+                        elif theReq.get("reqtype", None) == "RepoStorageAllocation":
+                            self.processRepoStorageAllocations(theReq)
+                        elif theReq.get("reqtype", None) == "RepoMembership":
+                            self.processRepoMembership(theReq)
             except Exception as e:
                 LOG.exception(e)
 
@@ -182,6 +227,14 @@ class ProcessRequests:
         """
         Process UserAccount approvals
         """
+        # TODO Put in the uidnumber number here
+        resp = self.mutateclient.execute(userCreate, variable_values={"user": {
+            "username": theReq["preferredUserName"],
+            "eppns": [ theReq["eppn"] ],
+            "shell": "/bin/bash",
+            "preferredemail": theReq["eppn"]
+        }})
+
         LOG.info("Add a request for home storage for %s", theReq["eppn"])
         resp = self.mutateclient.execute(getuserforeppn, variable_values={"eppn": theReq["eppn"]})
         username = resp["getuserforeppn"]["username"]
@@ -240,14 +293,19 @@ class ProcessRequests:
         except Exception as e:
             LOG.exception(e)
 
-
-
-
     def processNewRepo(self, theReq):
         """
         Process NewRepo approvals. Create an access group, compute and storage allocations.
         """
         LOG.info("Processing a new repo request for %s in facility %s", theReq["reponame"], theReq["facilityname"])
+        repo = self.mutateclient.execute(repocreate, variable_values={"repo": {
+            "name": theReq["reponame"],
+            "facility": theReq["facilityname"],
+            "principal": theReq["principal"],
+            "leaders": [ ],
+            "users": [ theReq["principal"] ]
+        }})
+
         repo = self.mutateclient.execute(findrepo, variable_values={"filter": { "name": theReq["reponame"] }})["repo"]
         LOG.info(repo)
         fac2cluster = {
@@ -362,6 +420,86 @@ class ProcessRequests:
                 print(result)
             except Exception as e:
                 LOG.exception(e)
+
+    def processRepoComputeAllocations(self, theReq):
+        thereponame = theReq["reponame"]
+        if not thereponame:
+            LOG.error(f"RepoComputeAllocation request without a repo name - cannot approve {theReq['Id']}")
+        therepo = self.mutateclient.execute(findrepo, variable_values={"filter": { "name": theReq["reponame"] }}).get("repo", None)
+        if not therepo:
+            LOG.error(f"Repo with name {thereponame} does not exist - cannot approve {theReq['Id']}")
+        LOG.info(therepo)
+
+        for attr in [ "clustername", "qosname", "slachours" ]:
+            if not theReq.get(attr, None):
+                LOG.error(f"RepoComputeAllocation request without {attr} - cannot approve {theReq['Id']}")
+
+        if not theReq["start"]:
+            theReq["start"] = datetime.datetime.utcnow()
+        if not theReq["end"]:
+            theReq["end"] = datetime.datetime.utcnow().replace(year=2100)
+        if not theReq["chargefactor"]:
+            theReq["chargefactor"] = 1.0
+
+        try:
+            result = self.mutateclient.execute(repoComputeAllocationUpsert, variable_values={
+                "repo": {"name": thereponame},
+                "repocompute": {
+                    "repo": thereponame,
+                    "clustername": theReq["clustername"],
+                    "start": theReq["start"].isoformat(),
+                    "end": theReq["end"].isoformat(),
+                },
+                "qosinputs": [{
+                    "name": theReq["qosname"],
+                    "slachours": theReq["slachours"],
+                    "chargefactor": theReq["chargefactor"]
+                }]})
+            print(result)
+        except Exception as e:
+            LOG.exception(e)
+
+    def processRepoStorageAllocations(self, theReq):
+        thereponame = theReq["reponame"]
+        if not thereponame:
+            LOG.error(f"RepoStorageAllocation request without a repo name - cannot approve {theReq['Id']}")
+        therepo = self.mutateclient.execute(findrepo, variable_values={"filter": { "name": theReq["reponame"] }}).get("repo", None)
+        if not therepo:
+            LOG.error(f"Repo with name {thereponame} does not exist - cannot approve {theReq['Id']}")
+        LOG.info(therepo)
+
+        for attr in [ "purpose", "storagename", "gigabytes" ]:
+            if not theReq.get(attr, None):
+                LOG.error(f"RepoStorageAllocation request without {attr} - cannot approve {theReq['Id']}")
+
+        if not theReq["start"]:
+            theReq["start"] = datetime.datetime.utcnow()
+        if not theReq["end"]:
+            theReq["end"] = datetime.datetime.utcnow().replace(year=2100)
+
+        try:
+            result = self.mutateclient.execute(repoStorageAllocationUpsert, variable_values={
+                "repo": {"name": thereponame},
+                "repostorage": {
+                    "repo": thereponame,
+                    "purpose": theReq["purpose"],
+                    "storagename": theReq["storagename"],
+                    "purpose": theReq["purpose"],
+                    "gigabytes": theReq["gigabytes"],
+                    "rootfolder": f"/cds/data/{thereponame}/{theReq['purpose']}",
+                    "start": theReq["start"].isoformat(),
+                    "end": theReq["end"].isoformat(),
+                }
+            })
+            print(result)
+        except Exception as e:
+            LOG.exception(e)
+
+    def processRepoMembership(self, theReq):
+        try:
+            resp = self.mutateclient.execute(repoAddUser, variable_values={"repo": { "name": theReq["reponame"] }, "user": { "username": theReq["username"] }})
+        except Exception as e:
+            LOG.exception(e)
 
 
 if __name__ == '__main__':
