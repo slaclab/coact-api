@@ -87,24 +87,24 @@ class CoactRequest(CoactRequestInput):
 
     LOG = logging.getLogger(__name__)
 
-    def approve(self, info) -> bool:
+    def approve(self, info):
         info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Approved.value, "actedby": info.context.username, "actedat": datetime.utcnow() }})
-        return True
-    def reject(self, notes, info) -> bool:
+        return info.context.db.find_request( { "_id": ObjectId(self._id) } )
+    def reject(self, notes, info):
         curreq = info.context.db.collection("requests").find_one({"_id": self._id})
         notes = notes + curreq.get("notes", "")
         info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Rejected.value, "actedby": info.context.username, "actedat": datetime.utcnow(), "notes": notes }})
-        return True
-    def complete(self, notes, info) -> bool:
+        return info.context.db.find_request( { "_id": ObjectId(self._id) } )
+    def complete(self, notes, info):
         curreq = info.context.db.collection("requests").find_one({"_id": self._id})
         notes = notes + curreq.get("notes", "")
         info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Completed.value, "actedby": info.context.username, "actedat": datetime.utcnow(), "notes": notes }})
-        return True
-    def incomplete(self, notes, info) -> bool:
+        return info.context.db.find_request( { "_id": ObjectId(self._id) } )
+    def incomplete(self, notes, info):
         curreq = info.context.db.collection("requests").find_one({"_id": self._id})
         notes = notes + curreq.get("notes", "")
         info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Incomplete.value, "actedby": info.context.username, "actedat": datetime.utcnow(), "notes": notes }})
-        return True
+        return info.context.db.find_request( { "_id": ObjectId(self._id) } )
     def refire(self, info) -> bool:
         curreq = info.context.db.collection("requests").find_one({"_id": self._id})
         v = {
