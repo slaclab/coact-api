@@ -20,6 +20,12 @@ from bson import ObjectId
 from models import User, AccessGroup, Repo, Facility, Cluster, CoactRequest, AuditTrail, AuditTrailObjectType
 from schema import Query, Mutation, Subscription, start_change_stream_queues
 
+import smtplib
+#import aiosmtplib #
+from email.message import EmailMessage
+import jinja2
+import os
+
 import logging
 
 logging.basicConfig( level=logging.DEBUG )
@@ -38,6 +44,10 @@ LOG.info("connected to %s" % (mongo,))
 
 USER_FIELD_IN_HEADER = environ.get('USERNAME_FIELD','REMOTE_USER')
 
+EMAIL_SERVER_HOST = os.getenv( 'COACT_EMAIL_SERVER_HOST', 'smtp.slac.stanford.edu' )
+EMAIL_SERVER_PORT = os.getenv( 'COACT_EMAIL_SERVER_PORT', 25 )
+
+
 class CustomContext(BaseContext):
 
     LOG = logging.getLogger(__name__)
@@ -51,6 +61,7 @@ class CustomContext(BaseContext):
 
     def __init__(self, *args, **kwargs):
         self.db = DB(mongo,DB_NAME)
+        self.email = Email(EMAIL_SERVER_HOST, EMAIL_SERVER_PORT)
 
     def __str__(self):
         return f"CustomContext User: {self.username} is_admin {self.is_admin}"
@@ -117,6 +128,15 @@ class CustomContext(BaseContext):
             actedat = datetime.utcnow()
         atrail = AuditTrail(type=type, name=name, action=action, actedby=actedby, actedat=actedat, details=details)
         return self.db.create("audit_trail", atrail)
+
+    def notify_raw(self, to: List[str], subject: str, body: str) -> bool:
+        return self.email.send( to=to, subject=subject, body=body ) 
+
+    def notify(self,request):
+        curframe = inspect.currentframe()
+        calframe = inspect.getouterframes(curframe, 2)
+        LOG.info(f"CALLER {calframe[1][3]}")
+
 
     def dict_diffs(self, prev, curr):
         """ Difference between two dicts suitable for history. Does not process embedded arrays/dicts """
@@ -289,6 +309,41 @@ class DB:
         print(id)
         db.remove( { '_id': ObjectId(id["_id"]) } )
 
+class Email:
+    LOG = logging.getLogger(__name__)
+    KLASSES = {
+        'users': User,
+        'clusters': Cluster,
+        'access_groups': AccessGroup,
+        'repos': Repo,
+        'facilities': Facility,
+        'requests': CoactRequest,
+        'audit_trail': AuditTrail,
+    }
+    def __init__(self, server, port, fm='s3df-help@slac.stanford.edu', subject_prefix='[Coact] ', assets_path='./assets/notifications/email/'):
+        self._smtp = smtplib.SMTP(host=server,port=port)
+        self.fm = fm
+        self.subject_prefix = subject_prefix
+        template_loader = jinja2.FileSystemLoader(searchpath=assets_path)
+        self.j2 = jinja2.Environment(loader=template_loader)
+
+    def render(self, template_file, **params):
+        return self.j2.render(**params)
+        
+    def send(self, to: List[str], subject: str, body: str, cc: List[str] = [], bcc: List[str] = []) -> bool:
+        email = EmailMessage()
+        email["From"] = self.fm
+        email["To"] = ', '.join(to)
+        if len(cc):
+            email["Cc"] = ', '.join(cc)
+        if len(bcc):
+            email["Bcc"] = ', '.join(bcc)
+        email["Subject"] = subject
+        email.set_content(body)
+        self._smtp.send_message(email)
+        return True
+
+    
 
 def custom_context_dependency() -> CustomContext:
     return CustomContext()
