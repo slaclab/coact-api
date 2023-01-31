@@ -713,7 +713,6 @@ class AuditTrail(AuditTrailInput):
 class NotificationInput:
     to: Optional[List[str]] = UNSET
     cc: Optional[List[str]] = UNSET
-    to: Optional[List[str]] = UNSET
     bcc: Optional[List[str]] = UNSET
     subject: Optional[str] = UNSET
     body: Optional[str] = UNSET
