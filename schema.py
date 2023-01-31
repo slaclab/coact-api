@@ -302,7 +302,9 @@ class Mutation:
     @strawberry.field( permission_classes=[ IsValidEPPN ] )
     def requestNewSDFAccount(self, request: CoactRequestInput, info: Info) -> CoactRequest:
         request.timeofrequest = datetime.datetime.utcnow()
-        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
+        this_req = info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
+        info.context.notify( this_req )
+        return this_req
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def requestRepoMembership(self, request: CoactRequestInput, info: Info) -> CoactRequest:
@@ -499,19 +501,22 @@ class Mutation:
     @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
     def requestReject(self, id: str, notes: str, info: Info) -> bool:
         thereq = info.context.db.find_request({ "_id": ObjectId(id) })
-        thereq.reject(notes, info)
+        r = thereq.reject(notes, info)
+        info.context.notify(r)
         return True
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
     def requestComplete(self, id: str, notes: str, info: Info) -> bool:
         thereq = info.context.db.find_request({ "_id": ObjectId(id) })
-        thereq.complete(notes, info)
+        r = thereq.complete(notes, info)
+        info.context.notify(r)
         return True
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
     def requestIncomplete(self, id: str, notes: str, info: Info) -> bool:
         thereq = info.context.db.find_request({ "_id": ObjectId(id) })
-        thereq.incomplete(notes, info)
+        r = thereq.incomplete(notes, info)
+        info.context.notify(r)
         return True
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )

@@ -17,7 +17,7 @@ from strawberry.arguments import UNSET
 from pymongo import MongoClient
 from bson import ObjectId
 
-from models import User, AccessGroup, Repo, Facility, Cluster, CoactRequest, AuditTrail, AuditTrailObjectType
+from models import User, AccessGroup, Repo, Facility, Cluster, CoactRequest, CoactRequestStatus, AuditTrail, AuditTrailObjectType
 from schema import Query, Mutation, Subscription, start_change_stream_queues
 
 import smtplib
@@ -25,6 +25,7 @@ import smtplib
 from email.message import EmailMessage
 import jinja2
 import os
+import inspect
 
 import logging
 
@@ -130,12 +131,23 @@ class CustomContext(BaseContext):
         return self.db.create("audit_trail", atrail)
 
     def notify_raw(self, to: List[str], subject: str, body: str) -> bool:
-        return self.email.send( to=to, subject=subject, body=body ) 
+        email = self.email.create( to=to, subject=subject, body=body )
+        return self.email.send( email ) 
 
-    def notify(self,request):
-        curframe = inspect.currentframe()
-        calframe = inspect.getouterframes(curframe, 2)
-        LOG.info(f"CALLER {calframe[1][3]}")
+    def notify(self,request: CoactRequest) -> bool:
+        # lets try to be clever and reduce the amount of code we have to write by determing who called us
+        this_frame = inspect.currentframe()
+        caller = inspect.getouterframes(this_frame, 2)[1][3]
+        request_type = f"{request.reqtype}"
+        request_status = f"{CoactRequestStatus(request.approvalstatus).name}"
+        template_prefix = f"{request_type}_{request_status}"
+        facility = request.facilityname
+        czars = self.db.czars( facility )
+        czar_emails = self.db.email_for( czars )
+        user_email = [ request.eppn, ]
+        user = [ request.preferredUserName, ]
+        LOG.info(f">>> TEMPLATE: {template_prefix}, FACILITY: {facility}, CZARS: {czars}, CZAR EMAIL: {czar_emails}, USER: {user}, EMAIL: {user_email}")
+        return self.email.notify( request_type=request_type, request_status=request_status, data=self.db.to_dict(request), template_prefix=template_prefix, user=user_email, czars=czar_emails )
 
 
     def dict_diffs(self, prev, curr):
@@ -319,28 +331,33 @@ class DB:
         print(id)
         db.remove( { '_id': ObjectId(id["_id"]) } )
 
+    def czars(self, facilityname: str) -> List[str]:
+        f = self.collection("facilities").find_one({"name": facilityname}, {"_id": 0, "czars": 1})
+        return f['czars']
+
+    def email_for( self, username: List[str] ) -> List[str]:
+        l = [ { "username": n } for n in username ]
+        return [ e['preferredemail'] for e in self.collection('users').find({"$or": l}) ]
+        
+
 class Email:
     LOG = logging.getLogger(__name__)
-    KLASSES = {
-        'users': User,
-        'clusters': Cluster,
-        'access_groups': AccessGroup,
-        'repos': Repo,
-        'facilities': Facility,
-        'requests': CoactRequest,
-        'audit_trail': AuditTrail,
-    }
+    assets_path=None
+    template_extension = '.jinja2'
     def __init__(self, server, port, fm='s3df-help@slac.stanford.edu', subject_prefix='[Coact] ', assets_path='./assets/notifications/email/'):
         self._smtp = smtplib.SMTP(host=server,port=port)
         self.fm = fm
         self.subject_prefix = subject_prefix
-        template_loader = jinja2.FileSystemLoader(searchpath=assets_path)
+        self.assets_path = assets_path
+        template_loader = jinja2.FileSystemLoader(searchpath=self.assets_path)
         self.j2 = jinja2.Environment(loader=template_loader)
 
-    def render(self, template_file, **params):
-        return self.j2.render(**params)
+    def render(self, template_file, params):
+        t = self.j2.get_template( template_file )
+        self.LOG.debug(f"rendering {template_file} with vars {params}")
+        return t.render(**params)
         
-    def send(self, to: List[str], subject: str, body: str, cc: List[str] = [], bcc: List[str] = []) -> bool:
+    def create(self, to: List[str], subject: str, body: str, cc: List[str] = [], bcc: List[str] = []) -> EmailMessage:
         email = EmailMessage()
         email["From"] = self.fm
         email["To"] = ', '.join(to)
@@ -348,11 +365,38 @@ class Email:
             email["Cc"] = ', '.join(cc)
         if len(bcc):
             email["Bcc"] = ', '.join(bcc)
-        email["Subject"] = subject
+        email["Subject"] = self.subject_prefix + subject
         email.set_content(body)
+        return email
+
+    def send(self, email: EmailMessage) -> bool:
         self._smtp.send_message(email)
         return True
 
+    def notify(self, request_type: str, request_status: str, data: dict, template_prefix: str, user: str, czars: List[str] = [] ) -> bool:
+        # one request may need to inform multiple parties, so we
+        # assume that any files with the prefix template_prefix should be
+        # send to the parties in the template file name's suffix
+        # get list of files matching
+        templates = [ f for f in os.listdir(self.assets_path) if f.startswith(template_prefix) and f.endswith(self.template_extension) ]
+        self.LOG.info(f"Found templates {templates}")
+        for t in templates:
+            to = []
+            cc = []
+            bcc = []
+            email = None
+            if t.endswith( '_czar' + self.template_extension ):
+                to = czars
+            elif t.endswith( '_user' + self.template_extension ):
+                to = user
+                cc = czars
+            elif t.endswith( '_admin' + self.template_extension ):
+                to = admins
+            body = self.render( t, data ) 
+            email = self.create( to, f'{request_type} {request_status}', body, cc=cc, bcc=bcc )
+            LOG.debug(f"sending email from template {t}: {email}")
+            self.send( email )
+        return False
     
 
 def custom_context_dependency() -> CustomContext:
