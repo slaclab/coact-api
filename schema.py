@@ -289,15 +289,15 @@ class Mutation:
 
     @strawberry.field( permission_classes=[ IsFacilityCzarOrAdmin ] )
     def userStorageAllocationUpsert(self, user: UserInput, userstorage: UserStorageInput, info: Info) -> User:
-        LOG.info("Creating or updating home storage allocation for user %s", user.username)
-        theuser = info.context.db.find_user({'username': user.username})
+        LOG.info("Creating or updating home storage allocation for user %s", user)
+        theuser = info.context.db.find_user(user)
         userstorage.validate()
         info.context.db.collection("user_storage_allocation").update_one(
             {"username": theuser.username, "storagename": userstorage.storagename, "purpose": userstorage.purpose },
             {"$set": { "gigabytes": userstorage.gigabytes, "rootfolder": userstorage.rootfolder}},
             upsert=True)
         info.context.audit(AuditTrailObjectType.User, theuser.username, "UserStorageAllocation", details=userstorage.purpose+"="+str(userstorage.gigabytes)+"GB on "+userstorage.storagename)
-        return info.context.db.find_user({'username': user.username})
+        return theuser
 
     @strawberry.field( permission_classes=[ IsValidEPPN ] )
     def requestNewSDFAccount(self, request: CoactRequestInput, info: Info) -> CoactRequest:
