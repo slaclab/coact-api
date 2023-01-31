@@ -176,15 +176,6 @@ class CustomContext(BaseContext):
         all_changes.extend([ str(k) + ": " + str(bwd_changes[k]) + " -> N/A" for k in removed ])
         return "\n".join(all_changes)
 
-    @classmethod
-    def ensure_attrs(cls, attrnames, obj, message):
-        """
-        Make sure the obj has the specied attributes. If not raise an exception.
-        """
-        for attrname in attrnames:
-            if not getattr(obj, attrname):
-                raise Exception(message.format(attrname))
-
 
 class DB:
     LOG = logging.getLogger(__name__)

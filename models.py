@@ -151,6 +151,11 @@ class UserStorageInput:
     inodes: Optional[float] = 0
     storagename: Optional[str] = UNSET
     rootfolder: Optional[str] = UNSET
+    def validate(self, fields=["storagename", "purpose", "gigabytes", "rootfolder"]):
+        for f in fields:
+            if not getattr(self,f):
+                raise Exception(f"Attribute {f} is required")
+    
 
 @strawberry.type
 class UserStorage(UserStorageInput):
