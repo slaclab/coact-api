@@ -20,16 +20,21 @@ db.createUser({ user: "coact", roles: [ { db: "iris", role: "readWrite" } ], pwd
 
 ### create a restore pod and console into it
 kubectl apply -f restore.yaml
-kubectl exec -it <pod> -c mongo -- sh
+
+### copy the bootstrap scripts until we can find a better way to do this
+kubectl exec -it $(kubectl get pod -l app=restore -o jsonpath='{@.items[*].metadata.name}')  -c coact -- cp -vrp /app/scripts /data/
+
+### log onto the mongo restore container to get a shell
+kubectl exec -it $(kubectl get pod -l app=restore -o jsonpath='{@.items[*].metadata.name}')  -c mongo -- sh
 
 ### bootstrap the database with base data
-mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < ./scripts/00-indexes.mongo
-mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < ./scripts/10-bootstrap.mongo
+mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < /data/scripts/00-indexes.mongo
+mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < /data/scripts/10-bootstrap.mongo
 
 ### add facility information
-mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < ./scripts/20-facility-lcls.mongo
-mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < ./scripts/21-facility-cryoem.mongo
-mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < ./scripts/22-facility-suncat.mongo
+mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < /data/scripts/20-facility-lcls.mongo
+mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < /data/scripts/21-facility-cryoem.mongo
+mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < /data/scripts/22-facility-suncat.mongo
 
 (exit)
 
