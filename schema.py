@@ -255,6 +255,8 @@ class Mutation:
 
     @strawberry.field( permission_classes=[ IsAdmin ] )
     def userCreate(self, user: UserInput, info: Info) -> User:
+        if info.context.db.find_users({"username": user.username}):
+            return self.userUpdate(user, info)
         user = info.context.db.create( 'users', user, required_fields=[ 'username', 'eppns', 'shell', 'preferredemail' ], find_existing={ 'username': user.username} )
         info.context.audit(AuditTrailObjectType.User, user.username, "userCreate")
         return user
