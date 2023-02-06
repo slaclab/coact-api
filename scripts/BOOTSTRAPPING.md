@@ -35,6 +35,8 @@ mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < /data/scripts/10-
 mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < /data/scripts/20-facility-lcls.mongo
 mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < /data/scripts/21-facility-cryoem.mongo
 mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < /data/scripts/22-facility-suncat.mongo
+mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < /data/scripts/23-facility-rubin.mongo
+mongo $MONGODB_URL -u $MONGODB_USERNAME -p $MONGODB_PASSWORD < /data/scripts/24-facility-neutrino.mongo
 
 (exit)
 
