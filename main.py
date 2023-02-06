@@ -146,7 +146,7 @@ class CustomContext(BaseContext):
         czar_emails = self.db.email_for( czars )
         user_email = [ request.eppn, ]
         user = [ request.preferredUserName, ]
-        LOG.info(f">>> TEMPLATE: {template_prefix}, FACILITY: {facility}, CZARS: {czars}, CZAR EMAIL: {czar_emails}, USER: {user}, EMAIL: {user_email}")
+        LOG.info(f">>> TEMPLATE: {template_prefix}, FACILITY: {facility}, CZARS: {czars}, CZAR EMAIL: {czar_emails}, USER: {user}, EMAIL: {user_email}, DATA: {self.db.to_dict(request)}")
         return self.email.notify( request_type=request_type, request_status=request_status, data=self.db.to_dict(request), template_prefix=template_prefix, user=user_email, czars=czar_emails )
 
 
@@ -384,7 +384,13 @@ class Email:
             elif t.endswith( '_admin' + self.template_extension ):
                 to = admins
             body = self.render( t, data ) 
-            email = self.create( to, f'{request_type} {request_status}', body, cc=cc, bcc=bcc )
+
+            # format subject line nice
+            req_type = re.sub(r"(\w)([A-Z])", r"\1 \2", request_type)
+            status = request_status
+            if status == 'NotActedOn':
+                status = 'Pending'
+            email = self.create( to, f'{req_type} {status}', body, cc=cc, bcc=bcc )
             LOG.debug(f"sending email from template {t}: {email}")
             if not dry_run:
                 self.send( email )
