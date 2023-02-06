@@ -92,17 +92,17 @@ class CoactRequest(CoactRequestInput):
         return info.context.db.find_request( { "_id": ObjectId(self._id) } )
     def reject(self, notes, info):
         curreq = info.context.db.collection("requests").find_one({"_id": self._id})
-        notes = notes + curreq.get("notes", "")
+        notes = curreq.get("notes", "")
         info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Rejected.value, "actedby": info.context.username, "actedat": datetime.utcnow(), "notes": notes }})
         return info.context.db.find_request( { "_id": ObjectId(self._id) } )
     def complete(self, notes, info):
         curreq = info.context.db.collection("requests").find_one({"_id": self._id})
-        notes = notes + curreq.get("notes", "")
+        notes = curreq.get("notes", "")
         info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Completed.value, "actedby": info.context.username, "actedat": datetime.utcnow(), "notes": notes }})
         return info.context.db.find_request( { "_id": ObjectId(self._id) } )
     def incomplete(self, notes, info):
         curreq = info.context.db.collection("requests").find_one({"_id": self._id})
-        notes = notes + curreq.get("notes", "")
+        notes = curreq.get("notes", "")
         info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Incomplete.value, "actedby": info.context.username, "actedat": datetime.utcnow(), "notes": notes }})
         return info.context.db.find_request( { "_id": ObjectId(self._id) } )
     def refire(self, info) -> bool:
