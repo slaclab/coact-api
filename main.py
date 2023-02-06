@@ -364,7 +364,7 @@ class Email:
         self._smtp.send_message(email)
         return True
 
-    def notify(self, request_type: str, request_status: str, data: dict, template_prefix: str, user: str, czars: List[str] = [] ) -> bool:
+    def notify(self, request_type: str, request_status: str, data: dict, template_prefix: str, user: str, czars: List[str] = [], dry_run: bool = False ) -> bool:
         # one request may need to inform multiple parties, so we
         # assume that any files with the prefix template_prefix should be
         # send to the parties in the template file name's suffix
@@ -386,7 +386,8 @@ class Email:
             body = self.render( t, data ) 
             email = self.create( to, f'{request_type} {request_status}', body, cc=cc, bcc=bcc )
             LOG.debug(f"sending email from template {t}: {email}")
-            self.send( email )
+            if not dry_run:
+                self.send( email )
         return False
     
 
