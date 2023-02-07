@@ -30,7 +30,7 @@ from models import \
         Facility, FacilityInput, Job, \
         UserAllocationInput, UserAllocation, \
         ClusterInput, Cluster, \
-        CoactRequestInput, CoactRequest, CoactRequestType, CoactRequestEvent, \
+        CoactRequestInput, CoactRequest, CoactRequestType, CoactRequestEvent, CoactRequestStatus, \
         RepoFacilityName, \
         Usage, UsageInput, StorageDailyUsageInput, \
         ReportRangeInput, PerDateUsage, PerUserUsage, \
@@ -45,11 +45,14 @@ LOG = logging.getLogger(__name__)
 class Query:
     @strawberry.field
     def amIRegistered(self, info: Info) -> UserRegistration:
+        request_id = None
         isRegis, eppn = info.context.isUserRegistered()
         regis_pending = False
         if not isRegis:
             regis_pending = len(info.context.db.find("requests", {"reqtype" : "UserAccount", "eppn" : eppn})) == 1
-        return UserRegistration(**{ "isRegistered": isRegis, "eppn": eppn, "isRegistrationPending": regis_pending, "fullname": info.context.fullname })
+            if regis_pending:
+                request_id = info.context.db.find("requests", {"reqtype" : "UserAccount", "eppn" : eppn})[0]._id
+        return UserRegistration(**{ "isRegistered": isRegis, "eppn": eppn, "isRegistrationPending": regis_pending, "fullname": info.context.fullname, "requestId": request_id })
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def whoami(self, info: Info) -> User:
@@ -311,6 +314,9 @@ class Mutation:
     @strawberry.field( permission_classes=[ IsValidEPPN ] )
     def requestNewSDFAccount(self, request: CoactRequestInput, info: Info) -> CoactRequest:
         request.timeofrequest = datetime.datetime.utcnow()
+        if request.approvalstatus == CoactRequestStatus.PreApproved:
+            if not IsFacilityCzarOrAdmin.isFacilityCzarOrAdmin(request.facilityname, info):
+                raise Exception("Only facility czars and admin can create preapproved requests")
         this_req = info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
         info.context.notify( this_req )
         return this_req
@@ -402,11 +408,12 @@ class Mutation:
             thereq.approve(info)
             return True
         elif thereq.reqtype == "UserAccount":
-            if not isAdmin and not isCzar:
-                raise Exception("User is not an admin or a czar")
             theeppn = thereq.eppn
             if not theeppn:
                 raise Exception("Account request without a eppn - cannot approve.")
+            okToApprove = isAdmin or isCzar
+            if not okToApprove:
+                raise Exception("User is not an admin or a czar")
             # Check if the preferredUserName already is in use
             preferredUserName = thereq.preferredUserName
             if not preferredUserName:
@@ -532,6 +539,33 @@ class Mutation:
     def requestRefire(self, id: str, info: Info) -> bool:
         thereq = info.context.db.find_request({ "_id": ObjectId(id) })
         thereq.refire(info)
+        return True
+
+    @strawberry.field
+    def requestApprovePreApproved(self, id: str, info: Info) -> bool:
+        """
+        Separate mutation for preapproved requests; this use case may not have authentication.
+        For now, we only support PreApproved UserAccount requests.
+        This also gives us a chance to check external systems for username overlap etc.
+        """
+        LOG.debug(id)
+        thereq = info.context.db.find_request({ "_id": ObjectId(id) })
+        isRegis, eppn = info.context.isUserRegistered()
+        oktoapprove = thereq.reqtype == "UserAccount" and thereq.approvalstatus == CoactRequestStatus.PreApproved and eppn == thereq.eppn
+        if not oktoapprove:
+            raise Exception("Cannot approve preapproved request " + id)
+        if isRegis:
+            raise Exception("User is already registered for request " + id)
+        preferredUserName = thereq.preferredUserName
+        if not preferredUserName:
+            raise Exception("Account request without a preferred user id - cannot approve.")
+        alreadyExistingUser = info.context.db.collection("users").find_one( { "username": preferredUserName} )
+        if alreadyExistingUser:
+            raise Exception("User with username " + preferredUserName + " already exists - cannot approve.")
+        thefacility = thereq.facilityname
+        if not thefacility:
+            raise Exception("Account request without a facility - cannot approve.")
+        thereq.approve(info)
         return True
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )

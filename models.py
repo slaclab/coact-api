@@ -43,6 +43,15 @@ class CoactRequestType(Enum):
     FacilityComputeAllocation = "FacilityComputeAllocation"
     FacilityStorageAllocation = "FacilityStorageAllocation"
 
+@strawberry.enum
+class CoactRequestStatus(IntEnum):
+    NotActedOn = 0
+    Approved = 1
+    Rejected = -1
+    Incomplete = 2
+    Completed = 3
+    PreApproved = 4
+
 @strawberry.input
 class CoactRequestInput:
     reqtype: Optional[CoactRequestType] = UNSET
@@ -68,20 +77,12 @@ class CoactRequestInput:
     inodes: Optional[float] = 0
     notes: Optional[str] = UNSET
     dontsendemail: Optional[bool] = UNSET # Tells the ansible scripts that this request is being created by automation and will be approved immediately. No need to notify czars that a request is pending.
-
-@strawberry.enum
-class CoactRequestStatus(IntEnum):
-    NotActedOn = 0
-    Approved = 1
-    Rejected = -1
-    Incomplete = 2
-    Completed = 3
+    approvalstatus: Optional[CoactRequestStatus] = CoactRequestStatus.NotActedOn
 
 
 @strawberry.type
 class CoactRequest(CoactRequestInput):
     _id: Optional[MongoId] = UNSET
-    approvalstatus: Optional[CoactRequestStatus] = CoactRequestStatus.NotActedOn
     actedby: Optional[str] = UNSET
     actedat: Optional[datetime] = None
 
@@ -166,6 +167,12 @@ class UserRegistration(EppnInput):
     isRegistered: Optional[bool] = UNSET
     isRegistrationPending: Optional[bool] = UNSET
     fullname: Optional[str] = UNSET
+    requestId: Optional[MongoId] = UNSET
+    @strawberry.field
+    def requestObj(self, info) -> Optional[CoactRequest]:
+        if not self.requestId:
+            return UNSET
+        return info.context.db.find_request({"_id": self.requestId})
 
 @strawberry.input
 class UserInput:

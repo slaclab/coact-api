@@ -48,6 +48,19 @@ class IsFacilityCzar(BasePermission):
 class IsFacilityCzarOrAdmin(BasePermission):
     LOG = logging.getLogger(__name__)
     message = "User is not czar of facility"
+
+    @classmethod
+    def isFacilityCzarOrAdmin(cls, facilityname, info):
+        user = info.context.authn()
+        if info.context.is_admin:
+            LOG.debug(f"  user {user} is admin user and is permitted to modify")
+            return True
+        facility = info.context.db.find_facility( { 'name': facilityname })
+        if user in facility.czars:
+            LOG.debug(f"  user {user} permitted to modify facility {facilityname}")
+            return True
+        return False
+    
     def has_permission(self, source: Any, info: Info, **kwargs) -> bool:
         user = info.context.authn()
         if info.context.is_admin:

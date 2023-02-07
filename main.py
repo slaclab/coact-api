@@ -54,6 +54,7 @@ class CustomContext(BaseContext):
     LOG = logging.getLogger(__name__)
 
     username: str = None
+    eppn: str = None
     fullname: str = None
     origin_username: str = None
     is_admin: bool = False
@@ -68,29 +69,29 @@ class CustomContext(BaseContext):
         return f"CustomContext User: {self.username} is_admin {self.is_admin}"
 
     def isUserRegistered(self, **kwargs):
-        eppn = None
+        self.eppn = None
         if bool(environ.get('PREFER_EPPN',False)):
-            eppn = self.request.headers.get(environ.get('EPPN_FIELD',None), None)
-            if eppn:
-                users = self.db.find_users( { 'eppns': eppn } )
-                self.LOG.debug(f"found eppn {eppn} as user {users}")
+            self.eppn = self.request.headers.get(environ.get('EPPN_FIELD',None), None)
+            if self.eppn:
+                users = self.db.find_users( { 'eppns': self.eppn } )
+                self.LOG.debug(f"found eppn {self.eppn} as user {users}")
                 self.fullname = self.request.headers.get(environ.get('FULLNAME_FIELD','REMOTE_GECOS'), None)
-                return len(users) > 0, eppn
+                return len(users) > 0, self.eppn
 
         username = self.request.headers.get(USER_FIELD_IN_HEADER, None)
         if username:
             users = self.db.find_users( { 'username': username } )
-            return len(users) > 0, eppn
+            return len(users) > 0, self.eppn
 
         return False, None
 
     def authn(self, **kwargs):
         if bool(environ.get('PREFER_EPPN',False)):
-            eppn = self.request.headers.get(environ.get('EPPN_FIELD',None), None)
+            self.eppn = self.request.headers.get(environ.get('EPPN_FIELD',None), None)
             # hack to lookup User collection for username
-            if eppn:
-                user = self.db.find_user( { 'eppns': eppn } )
-                self.LOG.debug(f"found eppn {eppn} as user {user}")
+            if self.eppn:
+                user = self.db.find_user( { 'eppns': self.eppn } )
+                self.LOG.debug(f"found eppn {self.eppn} as user {user}")
                 self.origin_username = user.username
 
         if not self.origin_username:
@@ -139,7 +140,7 @@ class CustomContext(BaseContext):
         this_frame = inspect.currentframe()
         caller = inspect.getouterframes(this_frame, 2)[1][3]
         request_type = f"{request.reqtype}"
-        request_status = f"{CoactRequestStatus(request.approvalstatus).name}"
+        request_status = f"{request.approvalstatus}"
         template_prefix = f"{request_type}_{request_status}"
         facility = request.facilityname
         czars = self.db.czars( facility )
@@ -278,7 +279,7 @@ class DB:
             raise Exception( f"input did not contain required fields {failed}")
         for k, v in vars(data).items():
             if isinstance(v, Enum):
-                setattr(data, k, v.name)
+                setattr(data, k, v.value)
         the_thing = klass( **vars(data) )
         self.LOG.info(f"adding {thing} with {data} -> {the_thing}")
         db = self.collection(thing)
