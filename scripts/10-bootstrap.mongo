@@ -11,11 +11,12 @@ db.getSiblingDB("iris").users.insertOne({ "username": "yemi", "uidnumber": 5275,
 db.getSiblingDB("iris").users.insertOne({ "username": "vossj", "uidnumber": 11954, "eppns": [ "vossj@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "vossj@slac.stanford.edu" })
 db.getSiblingDB("iris").users.insertOne({ "username": "richard", "uidnumber": 1088, "eppns": [ "richard@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "richard@slac.stanford.edu" })
 db.getSiblingDB("iris").users.insertOne({ "username": "kterao", "uidnumber": 15334, "eppns": [ "kterao@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "kterao@slac.stanford.edu" })
+db.getSiblingDB("iris").users.insertOne({ "username": "dratner", "uidnumber": 8998, "eppns": [ "dratner@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "dratner@slac.stanford.edu" })
 
 
 // User_Volume_Storage_Allocation
 
-["mshankar", "ytl", "wilko", "perazzo", "yemi", "vossj", "richard", "kterao"].forEach(function(u){
+["mshankar", "ytl", "wilko", "perazzo", "yemi", "vossj", "richard", "kterao", "dratner"].forEach(function(u){
   db.getSiblingDB("iris").user_storage_allocation.insertOne({
     "username": u,
     "storagename": "sdfhome",
@@ -27,7 +28,7 @@ db.getSiblingDB("iris").users.insertOne({ "username": "kterao", "uidnumber": 153
 })
 
 
-["mshankar", "ytl", "wilko", "perazzo", "yemi", "vossj", "richard", "kterao"].forEach(function(u){
+["mshankar", "ytl", "wilko", "perazzo", "yemi", "vossj", "richard", "kterao", "dratner"].forEach(function(u){
   let allocid = db.getSiblingDB("iris").user_storage_allocation.findOne({"username": u, "purpose": "home" })["_id"]
   db.getSiblingDB("iris").user_storage_usage.insertOne({
     "allocid": allocid,
