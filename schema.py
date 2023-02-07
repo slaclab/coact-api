@@ -79,6 +79,13 @@ class Query:
         return info.context.db.find_facilities( filter)
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def facilitiesIManage(self, info: Info ) -> List[Facility]:
+        filter = { "czars" : info.context.username }
+        if info.context.is_admin:
+            filter = {}        
+        return info.context.db.find_facilities( filter)
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def requests(self, info: Info, fetchprocessed: Optional[bool]=False, showmine: Optional[bool]=True) -> Optional[List[CoactRequest]]:
         """
         Separate queries for admin/czar/leader/user
