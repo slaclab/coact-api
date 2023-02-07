@@ -46,10 +46,10 @@ query = gql(
 )
 
 
-userCreate = gql(
+userUpsert = gql(
     """
-    mutation userCreate($user: UserInput!) {
-        userCreate(user: $user) {
+    mutation userUpsert($user: UserInput!) {
+        userUpsert(user: $user) {
             Id
         }
     }
@@ -228,7 +228,7 @@ class ProcessRequests:
         Process UserAccount approvals
         """
         # TODO Put in the uidnumber number here
-        resp = self.mutateclient.execute(userCreate, variable_values={"user": {
+        resp = self.mutateclient.execute(userUpsert, variable_values={"user": {
             "username": theReq["preferredUserName"],
             "eppns": [ theReq["eppn"] ],
             "shell": "/bin/bash",
