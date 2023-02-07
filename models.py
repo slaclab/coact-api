@@ -171,7 +171,7 @@ class UserRegistration(EppnInput):
     @strawberry.field
     def requestObj(self, info) -> Optional[CoactRequest]:
         if not self.requestId:
-            return UNSET
+            return CoactRequest()
         return info.context.db.find_request({"_id": self.requestId})
 
 @strawberry.input
