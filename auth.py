@@ -53,6 +53,13 @@ class IsFacilityCzarOrAdmin(BasePermission):
         if info.context.is_admin:
             self.LOG.debug(f"  user {user} is admin user and is permitted to modify")
             return True
+        if 'facility' in kwargs:
+            facility = info.context.db.find_facility( { 'name': kwargs['facility']['name'] })
+            if user in facility.czars:
+                self.LOG.debug(f"  user {user} permitted to modify facility {facility}")
+                return True
+            else:
+                return False
         reponame = None
         if 'repo' in kwargs:
             reponame = kwargs['repo']['name']

@@ -678,6 +678,21 @@ class Mutation:
         info.context.db.collection("repo_storage_allocations").replace_one({"repo": rs["repo"], "storagename": rs["storagename"], "purpose": rs["purpose"], "start": rs["start"]}, rs, upsert=True)
         info.context.audit(AuditTrailObjectType.Repo, repo.name, "repoStorageAllocationUpsert", details=repostorage.purpose+"="+str(repostorage.gigabytes))
         return info.context.db.find_repo( { "name": repo.name } )
+    
+    @strawberry.field( permission_classes=[ IsFacilityCzarOrAdmin ] )
+    def facilityAddCzar(self, facility: FacilityInput, user: UserInput, info: Info) -> Facility:
+        filter = {"name": facility.name}
+        info.context.db.collection("facilities").update_one(filter, { "$addToSet": {"czars": user.username}})
+        info.context.audit(AuditTrailObjectType.User, user.username, "+FacilityCzar", details=facility.name)
+        return info.context.db.find_facility(filter)
+
+    @strawberry.field( permission_classes=[ IsFacilityCzarOrAdmin ] )
+    def facilityRemoveCzar(self, facility: FacilityInput, user: UserInput, info: Info) -> Facility:
+        filter = {"name": facility.name}
+        info.context.db.collection("facilities").update_one(filter, { "$pull": {"czars": user.username}})
+        info.context.audit(AuditTrailObjectType.User, user.username, "-FacilityCzar", details=facility.name)
+        return info.context.db.find_facility(filter)
+
 
     @strawberry.mutation
     def importJobs(self, jobs: List[Job], info: Info) -> str:
