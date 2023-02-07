@@ -6,10 +6,12 @@ TAG ?= latest
 MONGOD ?= /usr/local/Cellar/mongodb-community@4.4/4.4.13/bin/mongod
 WORK_DIR ?= new-iris
 
-build:
+all: build push
+
+build: FORCE
 	$(DOCKER) build . -f Dockerfile -t $(REPO)/$(IMAGE):$(TAG)
 
-push: build
+push: build FORCE
 	$(DOCKER) push $(REPO)/$(IMAGE):$(TAG)
 
 apply:
@@ -25,3 +27,5 @@ start-mongod:
 	
 start-app:
 	./bin/uvicorn main:app  --reload
+
+FORCE: ;
