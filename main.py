@@ -397,6 +397,8 @@ class Email:
             status = request_status
             if status == 'NotActedOn':
                 status = 'Pending'
+            elif status == 'PreApproved':
+                status = 'Pre-Approved'
             email = self.create( to, f'{req_type} {status}', body, cc=cc, bcc=bcc )
             LOG.debug(f"sending email from template {t}: {email}")
             if not dry_run:

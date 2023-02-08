@@ -9,6 +9,7 @@ keti mongo-rs0-0 -- mongo -u $(kubectl get secret mongo -o jsonpath="{.data.COAC
 
 ## delete a user
 db.users.remove( { "username": "pav" } );
+db.requests.remove( { "reqtype": "UserAccount", "eppn": "pav@slac.stanford.edu" } );
 
 ## clear request from database (no history)
 
