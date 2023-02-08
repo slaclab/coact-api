@@ -140,7 +140,7 @@ class CustomContext(BaseContext):
         this_frame = inspect.currentframe()
         caller = inspect.getouterframes(this_frame, 2)[1][3]
         request_type = f"{request.reqtype}"
-        request_status = f"{request.approvalstatus}"
+        request_status = f"{CoactRequestStatus(request.approvalstatus).name}"
         template_prefix = f"{request_type}_{request_status}"
         facility = request.facilityname
         czars = self.db.czars( facility )
