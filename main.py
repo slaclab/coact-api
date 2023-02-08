@@ -292,21 +292,21 @@ class DB:
         inserted = klass( **v )
         return inserted
 
-    def update( self, thing, data, required_fields=[ 'Id', ], find_existing={} ):
-        klass = self.KLASSES[thing]
-
+    def update( self, thing, data, required_fields=[ 'Id', ], find_existing={}, upsert=False ):
         for k,v in find_existing.items():
             if v is UNSET:
                 raise Exception(f'unknown value for {k}')
+        new = {}
+        # no need to do search here if upserting
+        if not upsert:
+            things = self.find( thing, find_existing )
+            # houdl probably assert
+            if len(things) == 0:
+                raise Exception(f"{thing} not found with {find_existing}")
+            elif len(things) > 1:
+                raise Exception(f"too many {thing} matched with {find_existing}")
+            new = self.to_dict(things[0])
 
-        things = self.find( thing, find_existing )
-        # houdl probably assert
-        if len(things) == 0:
-            raise Exception(f"{thing} not found with {find_existing}")
-        elif len(things) > 1:
-            raise Exception(f"too many {thing} matched with {find_existing}")
-
-        new = self.to_dict(things[0])
         for k,v in vars(data).items():
             if v:
                 new[k] = v
@@ -314,7 +314,13 @@ class DB:
             if not r in new:
                 raise Exception(f'required field {r} not supplied')
         db = self.collection(thing)
-        db.update_one( { '_id': new['_id'] }, { "$set": new } )
+        filtr = find_existing if upsert and len(find_existing) else { '_id': new['_id'] }
+        res = db.update_one( filtr, { "$set": new }, upsert=upsert )
+        if not '_id' in new:
+            the_thing = db.find_one( find_existing )
+            new['_id'] = the_thing['_id']
+            # check rest of object or match?
+        klass = self.KLASSES[thing]
         item = klass( **new )
         return item
 
