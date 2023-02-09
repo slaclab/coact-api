@@ -69,9 +69,9 @@ class Query:
         return info.context.db.find_user( user )
 
     @strawberry.field
-    def getuserforeppn(self, info: Info, eppn: str) -> User:
+    def getuserforeppn(self, info: Info, eppn: str) -> Optional[User]:
         user = info.context.db.collection("users").find_one( {"eppns": eppn} )
-        return User(**user)
+        return User(**user) if user else None
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def clusters(self, info: Info, filter: Optional[ClusterInput]={} ) -> List[Cluster]:
