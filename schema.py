@@ -72,6 +72,11 @@ class Query:
     def getuserforeppn(self, info: Info, eppn: str) -> Optional[User]:
         user = info.context.db.collection("users").find_one( {"eppns": eppn} )
         return User(**user) if user else None
+    
+    @strawberry.field
+    def usersMatchingUserName(self, info: Info, regex: str) -> Optional[List[User]]:
+        users = info.context.db.collection("users").find( {"username": {"$regex": regex}} )
+        return [ User(**user) for user in users ] if users else []
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def clusters(self, info: Info, filter: Optional[ClusterInput]={} ) -> List[Cluster]:
