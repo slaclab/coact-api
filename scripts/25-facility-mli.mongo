@@ -3,7 +3,7 @@ db.getSiblingDB("iris").facilities.insertOne({
   "resources": ["compute", "storage"],
   "serviceaccount": "", // set primary uid on all volumes
   "servicegroup": "", // set primary gid on all volumes
-  "czars": [ "dratner", "kterao" ]
+  "czars": [ "dratner", "kterao", "ynashed" ]
 })
 
 db.getSiblingDB("iris").facility_compute_purchases.insertOne({
