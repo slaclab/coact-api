@@ -268,7 +268,7 @@ class Query:
 @strawberry.type
 class Mutation:
 
-    @strawberry.field( permission_classes=[ IsAdmin ] )
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def userUpsert(self, user: UserInput, info: Info) -> User:
         user = info.context.db.update( 'users', user, required_fields=[ 'username', 'eppns', 'shell', 'preferredemail' ], find_existing={ 'username': user.username }, upsert=True )
         info.context.audit(AuditTrailObjectType.User, user.username, "userUpsert")
@@ -589,6 +589,12 @@ class Mutation:
         group_after_update = info.context.db.update( 'access_groups', info, access_group, required_fields=[ 'Id', ], find_existing={ '_id': accesss_group._id } )
         info.context.audit(AuditTrailObjectType.Repo, repo.name, "accessGroupUpdate", details=info.context.dict_diffs(group_before_update, group_after_update))
         return group_after_update
+
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    def repoUpsert(self, repo: RepoInput, info: Info) -> Repo:
+        repo = info.context.db.update( 'repos', repo, required_fields=[ 'name', 'facility', 'principal' ], find_existing={ 'name': repo.name }, upsert=True )
+        info.context.audit(AuditTrailObjectType.Repo, repo.name, "RepoUpsert")
+        return repo
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def repoCreate(self, repo: RepoInput, info: Info) -> Repo:
