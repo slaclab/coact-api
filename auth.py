@@ -4,6 +4,8 @@ from strawberry.types import Info
 from functools import wraps
 from typing import Any
 
+from bson import ObjectId
+
 import logging
 
 LOG = logging.getLogger(__name__)
@@ -73,11 +75,20 @@ class IsFacilityCzarOrAdmin(BasePermission):
                 return True
             else:
                 return False
+        if 'id' in kwargs:
+            therequests = info.context.db.find_requests( { '_id': ObjectId(kwargs['id']) })
+            if therequests and therequests[0].facilityname:
+                return self.isFacilityCzarOrAdmin(therequests[0].facilityname, info)
+
         reponame = None
         if 'repo' in kwargs:
             reponame = kwargs['repo']['name']
         elif 'request' in kwargs:
             reponame = kwargs['request']['reponame']
+        elif 'id' in kwargs:
+            therequests = info.context.db.find_requests( { '_id': kwargs['id'] })
+            if therequests:
+                reponame = therequests[0]['reponame']
         else:
             reponame = kwargs['data']['name']
         repo = info.context.db.find_repo( { 'name': reponame })
