@@ -843,15 +843,21 @@ class Mutation:
         return info.context.notify_raw(to=msg.to,subject=msg.subject,body=msg.body)
 
 
-requests_queue = asyncio.Queue()
+queue_of_queues = list()
 
 @strawberry.type
 class Subscription:
     @strawberry.subscription
     async def requests(self, info: Info) -> AsyncGenerator[CoactRequestEvent, None]:
-        while True:
-            req = await requests_queue.get()
-            yield req
+        my_requests_queue = asyncio.Queue()
+        queue_of_queues.append(my_requests_queue)
+        try:
+            while True:
+                req = await my_requests_queue.get()
+                yield req
+        except:
+            pass
+        queue_of_queues.remove(my_requests_queue)
 
 def start_change_stream_queues(db):
     """
@@ -864,12 +870,12 @@ def start_change_stream_queues(db):
                 change = change_stream.try_next()
                 while change is not None:
                     try:
-                        LOG.info("Publishing a request")
+                        LOG.info("Publishing a request to %s queues", len(queue_of_queues))
                         LOG.info(dumps(change))
                         theId = change["documentKey"]["_id"]
                         theRq = db["requests"].find_one({"_id": theId})
                         req = CoactRequest(**theRq) if theRq else None
-                        await requests_queue.put(CoactRequestEvent(operationType=change["operationType"], theRequest=req))
+                        await asyncio.gather(*[requests_queue.put(CoactRequestEvent(operationType=change["operationType"], theRequest=req)) for requests_queue in queue_of_queues ])
                         change = change_stream.try_next()
                     except Exception as e:
                         LOG.exception("Exception processing change")
