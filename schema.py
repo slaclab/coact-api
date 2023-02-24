@@ -843,21 +843,32 @@ class Mutation:
         return info.context.notify_raw(to=msg.to,subject=msg.subject,body=msg.body)
 
 
-queue_of_queues = list()
+all_subscriptions = list()
+
+class RequestSubscription:
+    def __init__(self, requestType):
+        self.requestType = requestType
+        self.requests_queue = asyncio.Queue()
+    async def push_request(self, request: CoactRequest, change):
+        if self.requestType:
+            if self.requestType == request.reqtype:
+                await self.requests_queue.put(CoactRequestEvent(operationType=change["operationType"], theRequest=request))
+        else:
+            await self.requests_queue.put(CoactRequestEvent(operationType=change["operationType"], theRequest=request))
 
 @strawberry.type
 class Subscription:
     @strawberry.subscription
-    async def requests(self, info: Info) -> AsyncGenerator[CoactRequestEvent, None]:
-        my_requests_queue = asyncio.Queue()
-        queue_of_queues.append(my_requests_queue)
+    async def requests(self, info: Info, requestType: Optional[CoactRequestType]=UNSET) -> AsyncGenerator[CoactRequestEvent, None]:
+        my_subscription = RequestSubscription(requestType)
+        all_subscriptions.append(my_subscription)
         try:
             while True:
-                req = await my_requests_queue.get()
+                req = await my_subscription.requests_queue.get()
                 yield req
         except:
             pass
-        queue_of_queues.remove(my_requests_queue)
+        all_subscriptions.remove(my_subscription)
 
 def start_change_stream_queues(db):
     """
@@ -870,12 +881,13 @@ def start_change_stream_queues(db):
                 change = change_stream.try_next()
                 while change is not None:
                     try:
-                        LOG.info("Publishing a request to %s queues", len(queue_of_queues))
+                        LOG.info("Publishing a request to %s queues", len(all_subscriptions))
                         LOG.info(dumps(change))
                         theId = change["documentKey"]["_id"]
                         theRq = db["requests"].find_one({"_id": theId})
-                        req = CoactRequest(**theRq) if theRq else None
-                        await asyncio.gather(*[requests_queue.put(CoactRequestEvent(operationType=change["operationType"], theRequest=req)) for requests_queue in queue_of_queues ])
+                        if theRq:
+                            req = CoactRequest(**theRq)
+                            await asyncio.gather(*[subscription.push_request(req, change) for subscription in all_subscriptions ])
                         change = change_stream.try_next()
                     except Exception as e:
                         LOG.exception("Exception processing change")
