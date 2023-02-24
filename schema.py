@@ -851,7 +851,7 @@ class RequestSubscription:
         self.requests_queue = asyncio.Queue()
     async def push_request(self, request: CoactRequest, change):
         if self.requestType:
-            if self.requestType == request.reqtype:
+            if self.requestType.value == request.reqtype:
                 await self.requests_queue.put(CoactRequestEvent(operationType=change["operationType"], theRequest=request))
         else:
             await self.requests_queue.put(CoactRequestEvent(operationType=change["operationType"], theRequest=request))
