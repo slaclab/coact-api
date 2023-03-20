@@ -371,7 +371,7 @@ class Email:
         self._smtp.send_message(email)
         return True
 
-    def notify(self, request_type: str, request_status: str, data: dict, template_prefix: str, user: str, czars: List[str] = [], dry_run: bool = False ) -> bool:
+    def notify(self, request_type: str, request_status: str, data: dict, template_prefix: str, user: str, czars: List[str] = [], admins: List[str] = [ 'sdf-help@slac.stanford.edu', ], dry_run: bool = False ) -> bool:
         # one request may need to inform multiple parties, so we
         # assume that any files with the prefix template_prefix should be
         # send to the parties in the template file name's suffix
