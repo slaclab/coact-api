@@ -625,6 +625,16 @@ class Mutation:
     def repoAddUser(self, repo: RepoInput, user: UserInput, info: Info ) -> Repo:
         filter = {"name": repo.name}
         info.context.db.collection("repos").update_one(filter, { "$addToSet": {"users": user.username}})
+        request: CoactRequestInput = CoactRequestInput()
+        request.reqtype = CoactRequestType.RepoMembership
+        request.reponame = repo.name
+        request.username = user.username
+        request.requestedby = info.context.username
+        request.timeofrequest = datetime.datetime.utcnow()
+        request.actedby = info.context.username
+        request.actedat = datetime.datetime.utcnow()
+        request.approvalstatus = 1
+        info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
         info.context.audit(AuditTrailObjectType.Repo, repo.name, "repoAddUser", details=user.username)
         info.context.audit(AuditTrailObjectType.User, user.username, "+RepoMembership", details=repo.name)
         return info.context.db.find_repo(filter)
