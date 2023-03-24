@@ -628,6 +628,7 @@ class Mutation:
         request: CoactRequestInput = CoactRequestInput()
         request.reqtype = CoactRequestType.RepoMembership
         request.reponame = repo.name
+        request.facilityname = repo.facility
         request.username = user.username
         request.requestedby = info.context.username
         request.timeofrequest = datetime.datetime.utcnow()
