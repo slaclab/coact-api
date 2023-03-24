@@ -625,10 +625,11 @@ class Mutation:
     def repoAddUser(self, repo: RepoInput, user: UserInput, info: Info ) -> Repo:
         filter = {"name": repo.name}
         info.context.db.collection("repos").update_one(filter, { "$addToSet": {"users": user.username}})
+        repoObj = info.context.db.find_repo(filter)
         request: CoactRequestInput = CoactRequestInput()
         request.reqtype = CoactRequestType.RepoMembership
         request.reponame = repo.name
-        request.facilityname = repo.facility
+        request.facilityname = repoObj.facility
         request.username = user.username
         request.requestedby = info.context.username
         request.timeofrequest = datetime.datetime.utcnow()
@@ -638,7 +639,7 @@ class Mutation:
         info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
         info.context.audit(AuditTrailObjectType.Repo, repo.name, "repoAddUser", details=user.username)
         info.context.audit(AuditTrailObjectType.User, user.username, "+RepoMembership", details=repo.name)
-        return info.context.db.find_repo(filter)
+        return repoObj
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def repoAddLeader(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
