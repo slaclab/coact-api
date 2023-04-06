@@ -320,6 +320,8 @@ class Mutation:
         if request.approvalstatus == CoactRequestStatus.PreApproved:
             if not IsFacilityCzarOrAdmin.isFacilityCzarOrAdmin(request.facilityname, info):
                 raise Exception("Only facility czars and admin can create preapproved requests")
+        eppnparts = request.eppn.split("@")
+        request.eppn = eppnparts[0] + "@" + eppnparts[1].lower()
         this_req = info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
         info.context.notify( this_req )
         return this_req
