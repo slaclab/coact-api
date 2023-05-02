@@ -49,7 +49,7 @@ class Query:
         isRegis, eppn = info.context.isUserRegistered()
         regis_pending = False
         if not isRegis:
-            regis_pending = len(info.context.db.find("requests", {"reqtype" : "UserAccount", "eppn" : eppn})) == 1
+            regis_pending = len(info.context.db.find("requests", {"reqtype" : "UserAccount", "eppn" : eppn})) >= 1
             if regis_pending:
                 request_id = info.context.db.find("requests", {"reqtype" : "UserAccount", "eppn" : eppn})[0]._id
         return UserRegistration(**{ "isRegistered": isRegis, "eppn": eppn, "isRegistrationPending": regis_pending, "fullname": info.context.fullname, "requestId": request_id })
@@ -320,7 +320,9 @@ class Mutation:
         if request.approvalstatus == CoactRequestStatus.PreApproved:
             if not IsFacilityCzarOrAdmin.isFacilityCzarOrAdmin(request.facilityname, info):
                 raise Exception("Only facility czars and admin can create preapproved requests")
-        this_req = info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
+        eppnparts = request.eppn.split("@")
+        request.eppn = eppnparts[0] + "@" + eppnparts[1].lower()
+        this_req = info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing={'reqtype': 'UserAccount', 'eppn': request.eppn} )
         info.context.notify( this_req )
         return this_req
 
