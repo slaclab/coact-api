@@ -123,12 +123,12 @@ class CustomContext(BaseContext):
 
         return self.username
 
-    def audit(self, type: AuditTrailObjectType, name: str, action: str, actedby=None, actedat=None, details=""):
+    def audit(self, type: AuditTrailObjectType, actedon: ObjectId, action: str, actedby=None, actedat=None, details=""):
         if not actedby:
             actedby = self.username
         if not actedat:
             actedat = datetime.utcnow()
-        atrail = AuditTrail(type=type, name=name, action=action, actedby=actedby, actedat=actedat, details=details)
+        atrail = AuditTrail(type=type, actedon=actedon, action=action, actedby=actedby, actedat=actedat, details=details)
         return self.db.create("audit_trail", atrail)
 
     def notify_raw(self, to: List[str], subject: str, body: str) -> bool:

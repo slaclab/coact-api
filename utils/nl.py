@@ -17,18 +17,23 @@ class NodeList(object):
         self.nodes = set()
         m = re.match(r"^(.*?)\[(.*?)\]$", str)
         if m:
-            prefix = self.fix_str(m.group(1))
+            self.prefix = self.fix_str(m.group(1))
             a = m.group(2)
             for s in a.split(","):
                 s = s.strip()
                 p = s.split("-")
                 if len(p) == 1:
-                    self.nodes.add(self.fix_str("%s%s" % (prefix, int(s))))
+                    self.nodes.add(self.fix_str("%s%s" % (self.prefix, int(s))))
                 else:
                     for i in range(int(p[0]), int(p[1]) + 1):
-                        self.nodes.add(self.fix_str("%s%s" % (prefix, i)))
+                        self.nodes.add(self.fix_str("%s%s" % (self.prefix, i)))
         else:
-            self.nodes.add(self.fix_str(str))
+            m = re.match(r"^([^0-9]+)([0-9]+)$", str)
+            if m:
+                self.prefix = self.fix_str(m.group(1))
+                self.nodes.add(self.fix_str(str))
+            else:
+                raise Exception()
 
 
     def fix_str(self, s):

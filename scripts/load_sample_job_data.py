@@ -68,6 +68,7 @@ if __name__ == '__main__':
     q = """
         query{
             repos(filter:{}){
+                Id
                 name
                 facility
                 principal
@@ -87,6 +88,7 @@ if __name__ == '__main__':
                 name
                 chargefactor
                 members
+                memberprefixes
             }
         }
     """
@@ -104,12 +106,12 @@ if __name__ == '__main__':
         repo["qos2cf"] = qos2cf
         logging.info("found repo {repo}")
 
-    nodename2cf = {}
-    nodename2clustername = {}
+    nodeprefix2cf = {}
+    nodeprefix2clustername = {}
     for cluster in reporesp.json()["data"]["clusters"]:
-        for member in cluster.get("members", []):
-            nodename2cf[member] = cluster["chargefactor"]
-            nodename2clustername[member] = cluster["name"]
+        for memberprefix in cluster.get("memberprefixes", []):
+            nodeprefix2cf[memberprefix] = cluster["chargefactor"]
+            nodeprefix2clustername[memberprefix] = cluster["name"]
 
     for job in jobs:
         # Fix up everything with a "_ts"
@@ -120,15 +122,19 @@ if __name__ == '__main__':
 
         # Map job to repo.
         acc_name = job.get("accountName", None)
-        if acc_name and acc_name in repos.keys():
-            job["repo"] = acc_name
-            job["facility"] = repos[acc_name]["facility"]
-            nodelist = NodeList(job["nodelist"]).sorted()
-            clustername = nodename2clustername[nodelist[0]]
+        facilityname_from_acc = acc_name.split(":")[0]
+        reponame_from_acc = acc_name.split(":")[1]
+        if reponame_from_acc and reponame_from_acc in repos.keys():
+            job["repo"] = reponame_from_acc
+            job["repoid"] = repos[reponame_from_acc]["Id"]
+            job["facility"] = facilityname_from_acc
+            nodelist = NodeList(job["nodelist"])
+            clustername = nodeprefix2clustername[nodelist.prefix]
             job["clustername"] = clustername
-            job["allocationid"] = repos[acc_name]["qos2allocid"][(job["qos"], clustername)]
-            job["priocf"] = repos[acc_name]["qos2cf"][(job["qos"], clustername)]
-            job["hwcf"] = mean(map(lambda x : nodename2cf[x], nodelist))
+            print(repos[reponame_from_acc]["qos2allocid"])
+            job["allocationid"] = repos[reponame_from_acc]["qos2allocid"][(job["qos"], clustername)]
+            job["priocf"] = repos[reponame_from_acc]["qos2cf"][(job["qos"], clustername)]
+            job["hwcf"] = nodeprefix2cf[nodelist.prefix]
             job["finalcf"] = job["priocf"] * job["hwcf"]
             job["rawsecs"] = job["elapsedSecs"] * job["allocNodes"] # elapsed seconds * number of nodes
             job["machinesecs"] = job["rawsecs"] * job["hwcf"] # raw seconds after applying the hardware charge factor

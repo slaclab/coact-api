@@ -1,6 +1,6 @@
 import os
 import dataclasses
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Union
 import strawberry
 from strawberry.types import Info
 from strawberry.arguments import UNSET
@@ -250,6 +250,7 @@ class ClusterInput:
     chargefactor: Optional[float] = UNSET
     nodecpusmt: Optional[int] = UNSET
     members: Optional[List[str]] = UNSET
+    memberprefixes: Optional[List[str]] = UNSET
 
 @strawberry.type
 class Cluster(ClusterInput):
@@ -325,7 +326,7 @@ class Facility( FacilityInput ):
         purchases = { x["_id"]["clustername"]: { "purchased": x["slachours"] } for x in aggs }
         aaggs = info.context.db.collection("repos").aggregate([
             { "$match": { "facility": self.name}},
-            { "$lookup": { "from": "repo_compute_allocations", "localField": "name", "foreignField": "repo", "as": "allocation"}},
+            { "$lookup": { "from": "repo_compute_allocations", "localField": "_id", "foreignField": "repoid", "as": "allocation"}},
             { "$unwind": "$allocation" },
             { "$replaceRoot": { "newRoot": "$allocation" } },
             { "$match": { "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }}
@@ -333,7 +334,7 @@ class Facility( FacilityInput ):
         allocs = { x["clustername"]: sum([y["slachours"] for y in x["qoses"].values()]) for x in aaggs }
         uaggs = info.context.db.collection("repos").aggregate([
             { "$match": { "facility": self.name}},
-            { "$lookup": { "from": "repo_compute_allocations", "localField": "name", "foreignField": "repo", "as": "allocation"}},
+            { "$lookup": { "from": "repo_compute_allocations", "localField": "_id", "foreignField": "repoid", "as": "allocation"}},
             { "$unwind": "$allocation" },
             { "$replaceRoot": { "newRoot": "$allocation" } },
             { "$match": { "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }}, # This gives us current allocations
@@ -353,7 +354,7 @@ class Facility( FacilityInput ):
         todaysdate = datetime.utcnow()
         current_allocs = info.context.db.collection("repos").aggregate([
             { "$match": { "facility": self.name}},
-            { "$lookup": { "from": "repo_compute_allocations", "localField": "name", "foreignField": "repo", "as": "allocation"}},
+            { "$lookup": { "from": "repo_compute_allocations", "localField": "_id", "foreignField": "repoid", "as": "allocation"}},
             { "$unwind": "$allocation" },
             { "$replaceRoot": { "newRoot": "$allocation" } },
             { "$match": { "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }},
@@ -373,7 +374,7 @@ class Facility( FacilityInput ):
         LOG.error("Purchases for %s is %s", self.name, purchases)
         aaggs = info.context.db.collection("repos").aggregate([
             { "$match": { "facility": self.name}},
-            { "$lookup": { "from": "repo_storage_allocations", "localField": "name", "foreignField": "repo", "as": "allocation"}},
+            { "$lookup": { "from": "repo_storage_allocations", "localField": "_id", "foreignField": "repoid", "as": "allocation"}},
             { "$unwind": "$allocation" },
             { "$replaceRoot": { "newRoot": "$allocation" } },
             { "$match": { "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }},
@@ -383,7 +384,7 @@ class Facility( FacilityInput ):
         LOG.error("Allocations for %s is %s", self.name, allocs)
         uaggs = info.context.db.collection("repos").aggregate([
             { "$match": { "facility": self.name}},
-            { "$lookup": { "from": "repo_storage_allocations", "localField": "name", "foreignField": "repo", "as": "allocation"}},
+            { "$lookup": { "from": "repo_storage_allocations", "localField": "_id", "foreignField": "repoid", "as": "allocation"}},
             { "$unwind": "$allocation" },
             { "$replaceRoot": { "newRoot": "$allocation" } },
             { "$match": { "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }},
@@ -414,6 +415,7 @@ class Qos(QosInput):
 class UsageInput:
     facility: Optional[str] = UNSET
     repo: Optional[str] = UNSET
+    repoid: Optional[MongoId] = UNSET
     qos: Optional[str] = UNSET
     clustername: Optional[str] = UNSET
     storagename: Optional[str] = UNSET
@@ -459,7 +461,7 @@ class UserAllocation(UserAllocationInput):
 @strawberry.input
 class RepoComputeAllocationInput:
     _id: Optional[MongoId] = UNSET
-    repo: Optional[str] = UNSET
+    repoid: Optional[MongoId] = UNSET
     clustername: Optional[str] = UNSET
     start: Optional[datetime] = UNSET
     end: Optional[datetime] = UNSET
@@ -486,14 +488,14 @@ class RepoComputeAllocation(RepoComputeAllocationInput):
         """
         Overall usage; so pick up from the cached collections.
         """
-        LOG.debug("Getting the total usage for repo %s", self.repo)
+        LOG.debug("Getting the total usage for repo %s", self.repoid)
         usages = []
         for qos in self.qoses(info):
             usg = info.context.db.collection("repo_overall_compute_usage").find_one({"allocationid": self._id, "qos": qos.name})
             if not usg:
                 continue
             usages.append({
-                "repo": self.repo,
+                "repoid": self.repoid,
                 "clustername": self.clustername,
                 "qos": qos.name,
                 "rawsecs": usg["rawsecs"],
@@ -515,7 +517,7 @@ class RepoComputeAllocation(RepoComputeAllocationInput):
 @strawberry.input
 class RepoStorageAllocationInput:
     _id: Optional[MongoId] = UNSET
-    repo: Optional[str] = UNSET
+    repoid: Optional[MongoId] = UNSET
     storagename: Optional[str] = UNSET
     purpose: Optional[str] = UNSET
     rootfolder: Optional[str] = UNSET
@@ -531,13 +533,13 @@ class RepoStorageAllocation(RepoStorageAllocationInput):
         """
         Overall usage; so pick up from the cached collections.
         """
-        LOG.debug("Getting the total storage usage for repo %s", self.repo)
+        LOG.debug("Getting the total storage usage for repo %s", self.repoid)
         usgs = list(info.context.db.collection("repo_overall_storage_usage").find({"allocationid": self._id}).sort([("date", -1)]).limit(1))
         if not usgs:
-            return Usage(**{ "repo": self.repo, "storagename": self.storagename })
+            return Usage(**{ "repo": self.repoid, "storagename": self.storagename })
         usg = usgs[0]
         return Usage(**{
-            "repo": self.repo,
+            "repoid": self.repoid,
             "storagename": self.storagename,
             "gigabytes": usg["gigabytes"],
             "inodes": usg["inodes"]
@@ -560,7 +562,7 @@ class AccessGroupInput:
     state: Optional[str] = UNSET
     gidnumber: Optional[int] = None # perhaps we should use a linux non-specific name?
     name: Optional[str] = UNSET
-    repo: Optional[str] = UNSET
+    repoid: Optional[MongoId] = UNSET
     members: Optional[List[str]] = UNSET
 
 @strawberry.type
@@ -598,7 +600,7 @@ class Repo( RepoInput ):
 
     @strawberry.field
     def accessGroupObjs(self, info) ->List[AccessGroup]:
-        return info.context.db.find_access_groups({"repo": self.name})
+        return info.context.db.find_access_groups({"repoid": self._id})
 
     @strawberry.field
     def currentComputeAllocations(self, info) ->List[RepoComputeAllocation]:
@@ -606,23 +608,23 @@ class Repo( RepoInput ):
         Each repo can have multiple allocation objects.
         This call should return an array of "current" allocations; one for each compute resource.
         """
-        rc_filter = { "facility": self.facility, "repo": self.name}
+        rc_filter = { "facility": self.facility, "repoid": self._id}
         todaysdate = datetime.utcnow()
         # More complex; we want to return the "current" per resource type.
         current_allocs = info.context.db.collection("repo_compute_allocations").aggregate([
-            { "$match": { "repo": self.name, "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }},
+            { "$match": { "repoid": self._id, "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }},
             { "$sort": { "end": -1 }},
-            { "$group": { "_id": {"repo": "$repo", "clustername": "$clustername"}, "origid": {"$first": "$_id"}}},
+            { "$group": { "_id": {"repoid": "$repoid", "clustername": "$clustername"}, "origid": {"$first": "$_id"}}},
         ])
         current_alloc_ids = list(map(lambda x: x["origid"], current_allocs))
-        return [ RepoComputeAllocation(**{k:x.get(k, 0) for k in ["_id", "repo", "clustername", "start", "end" ] }) for x in  info.context.db.collection("repo_compute_allocations").find({"_id" : {"$in": current_alloc_ids}})]
+        return [ RepoComputeAllocation(**{k:x.get(k, 0) for k in ["_id", "repoid", "clustername", "start", "end" ] }) for x in  info.context.db.collection("repo_compute_allocations").find({"_id" : {"$in": current_alloc_ids}})]
 
     @strawberry.field
     def computeAllocation(self, info, allocationid: MongoId) -> Optional[RepoComputeAllocation]:
         """
         Return the specific storage allocation for this repo
         """
-        rc_filter = { "_id": allocationid, "repo": self.name}
+        rc_filter = { "_id": allocationid, "repoid": self._id}
         alloc = info.context.db.collection("repo_compute_allocations").find_one(rc_filter)
         if not alloc:
             return None
@@ -635,23 +637,23 @@ class Repo( RepoInput ):
         Each repo can have multiple allocation objects.
         This call should return an array of "current" allocations; one for each compute resource.
         """
-        rc_filter = { "facility": self.facility, "repo": self.name}
+        rc_filter = { "facility": self.facility, "repoid": self._id}
         todaysdate = datetime.utcnow()
         # More complex; we want to return the "current" per resource type.
         current_allocs = info.context.db.collection("repo_storage_allocations").aggregate([
-            { "$match": { "repo": self.name, "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }},
+            { "$match": { "repoid": self._id, "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }},
             { "$sort": { "end": -1 }},
-            { "$group": { "_id": {"repo": "$repo", "purpose": "$purpose"}, "origid": {"$first": "$_id"}}},
+            { "$group": { "_id": {"repoid": "$repoid", "purpose": "$purpose"}, "origid": {"$first": "$_id"}}},
         ])
         current_alloc_ids = list(map(lambda x: x["origid"], current_allocs))
-        return [ RepoStorageAllocation(**{k:x.get(k, 0) for k in ["_id", "repo", "storagename", "purpose", "rootfolder", "start", "end", "gigabytes", "inodes" ] }) for x in  info.context.db.collection("repo_storage_allocations").find({"_id" : {"$in": current_alloc_ids}})]
+        return [ RepoStorageAllocation(**{k:x.get(k, 0) for k in ["_id", "repoid", "storagename", "purpose", "rootfolder", "start", "end", "gigabytes", "inodes" ] }) for x in  info.context.db.collection("repo_storage_allocations").find({"_id" : {"$in": current_alloc_ids}})]
 
     @strawberry.field
     def storageAllocation(self, info, allocationid: MongoId) -> Optional[RepoStorageAllocation]:
         """
         Return the specific storage allocation for this repo
         """
-        rc_filter = { "_id": allocationid, "repo": self.name}
+        rc_filter = { "_id": allocationid, "repoid": self._id}
         alloc = info.context.db.collection("repo_storage_allocations").find_one(rc_filter)
         if not alloc:
             return None
@@ -687,6 +689,7 @@ class Job:
     machinesecs: float # raw seconds after applying the hardware charge factor
     slachours: float # machinesecs after applying the priority charge factor
     repo: str
+    repoid: str
     year: int
     facility: str
     clustername: str
@@ -706,12 +709,13 @@ class StorageDailyUsage(StorageDailyUsageInput):
 class AuditTrailObjectType(Enum):
     User = "User"
     Repo = "Repo"
+    Facility = "Facility"
 
 @strawberry.input
 class AuditTrailInput:
     _id: Optional[MongoId] = UNSET
     type: Optional[AuditTrailObjectType] = UNSET
-    name: Optional[str] = UNSET # username in case of user; reponame in case of repo
+    actedon: Optional[MongoId] = UNSET # userid in case of user; repoid in case of repo; facilityid in the case of facility
     action: Optional[str] = UNSET
     actedby: Optional[str] = UNSET
     actedat: Optional[datetime] = UNSET
@@ -719,7 +723,17 @@ class AuditTrailInput:
 
 @strawberry.type
 class AuditTrail(AuditTrailInput):
-    pass
+    @strawberry.field
+    def actedonObj(self, info) -> Optional[Union[User, Repo, Facility]]:
+        """
+        Return the object that is being acted on.
+        """
+        if self.type == AuditTrailObjectType.User:
+            return info.context.db.find_user({"_id": self.actedon})
+        elif self.type == AuditTrailObjectType.Repo:
+            return info.context.db.find_repo({"_id": self.actedon})
+        if self.type == AuditTrailObjectType.Facility:
+            return info.context.db.find_facility({"_id": self.actedon})
 
 @strawberry.input
 class NotificationInput:
