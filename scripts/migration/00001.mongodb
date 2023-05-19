@@ -1,0 +1,49 @@
+// This script drops the repos, access_groups, repo_compute_allocations and repo_storage_allocations collections
+if(!db.getSiblingDB("iris").getCollectionNames().includes("versions")) {
+    print("Need to create the versions collection")
+    db.getSiblingDB("iris").versions.insertOne({"dbschema": "0.0.1"})
+    print("Done creating the versions collection")
+}
+
+db.getSiblingDB("iris").versions.findOne({dbschema: "0.0.1"})
+
+if(db.getSiblingDB("iris").versions.findOne({dbschema: "0.0.1"})) {
+    print("Dropping the repos, repo_compute_allocations and repo_storage_allocations collections")
+    db.getSiblingDB("iris").repos.drop()
+    db.getSiblingDB("iris").access_groups.drop()
+    db.getSiblingDB("iris").repo_compute_allocations.drop()
+    db.getSiblingDB("iris").repo_storage_allocations.drop()
+    print("Dropped the repos, repo_compute_allocations and repo_storage_allocations collections")
+
+    db.getSiblingDB("iris").access_groups.createIndex({"name": 1}, {unique: true})
+    db.getSiblingDB("iris").access_groups.createIndex({"gidnumber": 1}, {unique: true, partialFilterExpression: { gidnumber: { $type: "number" } } })
+    db.getSiblingDB("iris").access_groups.createIndex({"repoid": 1}) // For performance
+
+    db.getSiblingDB("iris").repos.createIndex({"name": 1, "facility": 1}, {unique: true})
+    db.getSiblingDB("iris").repos.createIndex({"leader": 1}) // For performance
+    
+    db.getSiblingDB("iris").repo_compute_allocations.createIndex({"repoid": 1, "clustername": 1, "start": -1}, {unique: true})
+    
+    db.getSiblingDB("iris").repo_storage_allocations.createIndex({"repoid": 1, "storagename": 1, "purpose": 1, "start": -1}, {unique: true})
+
+    // Add prefixes to the known clusters.
+    db.getSiblingDB("iris").clusters.updateOne({"name": "roma"}, {"$set": {"memberprefixes": [ "sdfrome" ]}})
+    db.getSiblingDB("iris").clusters.updateOne({"name": "milano"}, {"$set": {"memberprefixes": [ "sdfmilan" ]}})
+    db.getSiblingDB("iris").clusters.updateOne({"name": "ampere"}, {"$set": {"memberprefixes": [ "sdfampere" ]}})
+
+    db.getSiblingDB("iris").audit_trail.dropIndex("type_1_name_1_actedat_-1")
+    db.getSiblingDB("iris").audit_trail.createIndex({"type": 1, "actedon": 1, "actedat": -1})
+
+    db.getSiblingDB("iris").audit_trail.find({"type": "User"}).forEach(function(aa){ 
+        const userobj = db.getSiblingDB("iris").users.findOne({"username": aa["name"]});
+        if(userobj != null) {
+            db.getSiblingDB("iris").audit_trail.updateOne({"_id": aa["_id"]}, {"$set": {"actedon": userobj["_id"]}});
+            db.getSiblingDB("iris").audit_trail.updateOne({"_id": aa["_id"]}, {"$unset": {"name": 1}});
+        } else {
+            print("Cannot find user record for " + aa["name"]);
+        }
+    })
+
+
+    db.getSiblingDB("iris").versions.updateOne({}, {"$set": {"dbschema": "0.0.2"}})
+}

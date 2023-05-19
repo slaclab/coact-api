@@ -193,6 +193,16 @@ repoAddUser = gql(
     """
 )
 
+allAccessGroupos = gql(
+    """
+    query allAccesGroups($filter: AccessGroupInput!) {
+        accessGroups(filter: $filter) {
+            name
+        }
+    }
+    """
+)
+
 class ProcessRequests:
     def __init__(self, args):
         self.reqtransport = RequestsHTTPTransport(url=args.mutationurl, verify=True, retries=3)
@@ -306,7 +316,7 @@ class ProcessRequests:
             "users": [ theReq["principal"] ]
         }})
 
-        repo = self.mutateclient.execute(findrepo, variable_values={"filter": { "name": theReq["reponame"] }})["repo"]
+        repo = self.mutateclient.execute(findrepo, variable_values={"filter": { "name": theReq["reponame"], "facility": theReq["facilityname"] }})["repo"]
         LOG.info(repo)
         fac2cluster = {
             "LCLS": ["roma", "milano"],
@@ -410,13 +420,14 @@ class ProcessRequests:
             except Exception as e:
                 LOG.exception(e)
         # Create the main access group
-        alreadyCreatedAccessGroups = map(lambda x: x["name"], repo["accessGroupObjs"])
+        alreadyCreatedAccessGroups = [ x["name"] for x in self.mutateclient.execute(allAccessGroupos, variable_values={"filter": { "name": repo["name"] }})["accessGroups"]]
+        LOG.info(alreadyCreatedAccessGroups)
         if repo["name"] in alreadyCreatedAccessGroups:
             LOG.info("Repo %s already has the primary access group", repo["name"])
         else:
             try:
                 allusers = list(set([repo["principal"]] + repo["users"]))
-                result = self.mutateclient.execute(accessgroupcreate, variable_values={ "repo": {"name": repo["name"]}, "accessgroup": { "name": repo["name"], "repo": repo["name"], "members": allusers } })
+                result = self.mutateclient.execute(accessgroupcreate, variable_values={ "repo": {"Id": repo["Id"]}, "accessgroup": { "name": repo["name"], "repoid": repo["Id"], "members": allusers } })
                 print(result)
             except Exception as e:
                 LOG.exception(e)
@@ -425,7 +436,7 @@ class ProcessRequests:
         thereponame = theReq["reponame"]
         if not thereponame:
             LOG.error(f"RepoComputeAllocation request without a repo name - cannot approve {theReq['Id']}")
-        therepo = self.mutateclient.execute(findrepo, variable_values={"filter": { "name": theReq["reponame"] }}).get("repo", None)
+        therepo = self.mutateclient.execute(findrepo, variable_values={"filter": { "name": theReq["reponame"], "facility": theReq["facilityname"] }}).get("repo", None)
         if not therepo:
             LOG.error(f"Repo with name {thereponame} does not exist - cannot approve {theReq['Id']}")
         LOG.info(therepo)
@@ -443,9 +454,9 @@ class ProcessRequests:
 
         try:
             result = self.mutateclient.execute(repoComputeAllocationUpsert, variable_values={
-                "repo": {"name": thereponame},
+                "repo": {"Id": therepo["Id"]},
                 "repocompute": {
-                    "repo": thereponame,
+                    "repoid": therepo["Id"],
                     "clustername": theReq["clustername"],
                     "start": theReq["start"].isoformat(),
                     "end": theReq["end"].isoformat(),
@@ -463,7 +474,7 @@ class ProcessRequests:
         thereponame = theReq["reponame"]
         if not thereponame:
             LOG.error(f"RepoStorageAllocation request without a repo name - cannot approve {theReq['Id']}")
-        therepo = self.mutateclient.execute(findrepo, variable_values={"filter": { "name": theReq["reponame"] }}).get("repo", None)
+        therepo = self.mutateclient.execute(findrepo, variable_values={"filter": { "name": theReq["reponame"], "facility": theReq["facilityname"] }}).get("repo", None)
         if not therepo:
             LOG.error(f"Repo with name {thereponame} does not exist - cannot approve {theReq['Id']}")
         LOG.info(therepo)
@@ -479,9 +490,9 @@ class ProcessRequests:
 
         try:
             result = self.mutateclient.execute(repoStorageAllocationUpsert, variable_values={
-                "repo": {"name": thereponame},
+                "repo": {"Id": therepo["Id"]},
                 "repostorage": {
-                    "repo": thereponame,
+                    "repoid": therepo["Id"],
                     "purpose": theReq["purpose"],
                     "storagename": theReq["storagename"],
                     "purpose": theReq["purpose"],
@@ -497,7 +508,7 @@ class ProcessRequests:
 
     def processRepoMembership(self, theReq):
         try:
-            resp = self.mutateclient.execute(repoAddUser, variable_values={"repo": { "name": theReq["reponame"] }, "user": { "username": theReq["username"] }})
+            resp = self.mutateclient.execute(repoAddUser, variable_values={"repo": { "name": theReq["reponame"], "facility": theReq["facilityname"] }, "user": { "username": theReq["username"] }})
         except Exception as e:
             LOG.exception(e)
 
