@@ -91,6 +91,7 @@ getuserforeppn = gql(
     """
     query getuserforeppn($eppn: String!){
         getuserforeppn(eppn: $eppn) {
+            Id
             username
         }
     }
@@ -269,7 +270,7 @@ class ProcessRequests:
             print(result)
             result = self.mutateclient.execute(createAuditTrail, variable_values={ "theaud": {
                 "type": "User",
-                "name": username,
+                "actedon": resp["getuserforeppn"]["Id"],
                 "action": "UserAccountDone",
                 "details": "Test audit trail from scripts"
             }})

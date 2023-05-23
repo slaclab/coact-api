@@ -323,8 +323,14 @@ class Mutation:
                 raise Exception("Only facility czars and admin can create preapproved requests")
         eppnparts = request.eppn.split("@")
         request.eppn = eppnparts[0] + "@" + eppnparts[1].lower()
-        this_req = info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing={'reqtype': 'UserAccount', 'eppn': request.eppn} )
-        info.context.notify( this_req )
+        userAlreadyExists = info.context.db.collection("users").find_one( {"eppns": request.eppn} ) != None
+        LOG.info(f"Check for user already exists yields {userAlreadyExists}")
+        this_req = info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing={'reqtype': 'UserAccount', 'eppn': request.eppn, 'facilityname': request.facilityname, 'approvalstatus': { "$exists": False }} )
+        if request.approvalstatus == CoactRequestStatus.PreApproved and userAlreadyExists:
+            LOG.info("The user account for %s has already been created; approving the preapproved request and skipping sending emails", request.eppn)
+            this_req.approve(info)
+        else:
+            info.context.notify( this_req )
         return this_req
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
@@ -426,7 +432,7 @@ class Mutation:
                 raise Exception("Account request without a preferred user id - cannot approve.")
             alreadyExistingUser = info.context.db.collection("users").find_one( { "username": preferredUserName} )
             if alreadyExistingUser:
-                raise Exception("User with username " + preferredUserName + " already exists - cannot approve.")
+                LOG.info("User with username " + preferredUserName + " already exists")
             thefacility = thereq.facilityname
             if not thefacility:
                 raise Exception("Account request without a facility - cannot approve.")
@@ -863,8 +869,8 @@ class Mutation:
 
     @strawberry.mutation(permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
     def auditTrailAdd(self, theaud: AuditTrailInput, info: Info) -> AuditTrail:
-        if not theaud.type or not theaud.name or not theaud.action:
-            raise Exception("Audit trails need type, name and action information")
+        if not theaud.type or not theaud.actedon or not theaud.action:
+            raise Exception("Audit trails need type, actedon and action information")
         if not theaud.actedby:
             theaud.actedby = info.context.username
         if not theaud.actedat:
