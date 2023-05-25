@@ -180,6 +180,8 @@ class Query:
         username = info.context.username
         assert username != None
         if info.context.showallforczars:
+            if info.context.is_admin:
+                return info.context.db.find_repos( { } )
             LOG.error("Need to show all repos for a czar")
             facilities = info.context.db.find_facilities({ 'czars': username })
             if not facilities:
