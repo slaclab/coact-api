@@ -147,8 +147,9 @@ class CustomContext(BaseContext):
         czar_emails = self.db.email_for( czars )
         user_email = [ request.eppn, ]
         user = [ request.preferredUserName, ]
+        skip_czar_emails = request.dontsendemail
         LOG.info(f">>> TEMPLATE: {template_prefix}, FACILITY: {facility}, CZARS: {czars}, CZAR EMAIL: {czar_emails}, USER: {user}, EMAIL: {user_email}, DATA: {self.db.to_dict(request)}")
-        return self.email.notify( request_type=request_type, request_status=request_status, data=self.db.to_dict(request), template_prefix=template_prefix, user=user_email, czars=czar_emails )
+        return self.email.notify( request_type=request_type, request_status=request_status, data=self.db.to_dict(request), template_prefix=template_prefix, user=user_email, czars=czar_emails, skip_czar_emails=skip_czar_emails )
 
 
     def dict_diffs(self, prev, curr):
@@ -371,7 +372,7 @@ class Email:
         self._smtp.send_message(email)
         return True
 
-    def notify(self, request_type: str, request_status: str, data: dict, template_prefix: str, user: str, czars: List[str] = [], admins: List[str] = [ 'sdf-help@slac.stanford.edu', ], dry_run: bool = False ) -> bool:
+    def notify(self, request_type: str, request_status: str, data: dict, template_prefix: str, user: str, czars: List[str] = [], skip_czar_emails = False, admins: List[str] = [ 'sdf-help@slac.stanford.edu', ], dry_run: bool = False ) -> bool:
         # one request may need to inform multiple parties, so we
         # assume that any files with the prefix template_prefix should be
         # send to the parties in the template file name's suffix
@@ -384,10 +385,13 @@ class Email:
             bcc = []
             email = None
             if t.endswith( '_czar' + self.template_extension ):
+                if skip_czar_emails:
+                    continue
                 to = czars
             elif t.endswith( '_user' + self.template_extension ):
                 to = user
-                cc = czars
+                if not skip_czar_emails:
+                    cc = czars
             elif t.endswith( '_admin' + self.template_extension ):
                 to = admins
             body = self.render( t, data ) 

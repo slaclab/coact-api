@@ -16,9 +16,9 @@ db.getSiblingDB("iris").users.insertOne({ "username": "cartaro", "uidnumber": 57
 
 
 // User_Volume_Storage_Allocation
-let bootstrapusers = ["mshankar", "ytl", "wilko", "perazzo", "yemi", "vossj", "richard", "kterao", "dratner"];
+let bootstrapusers = ["mshankar", "ytl", "wilko", "perazzo", "yemi", "vossj", "richard", "kterao", "dratner", "cartaro"];
 
-["mshankar", "ytl", "wilko", "perazzo", "yemi", "vossj", "richard", "kterao", "dratner", "cartaro"].forEach(function(u){
+bootstrapusers.forEach(function(u){
   db.getSiblingDB("iris").user_storage_allocation.insertOne({
     "username": u,
     "storagename": "sdfhome",
@@ -30,7 +30,7 @@ let bootstrapusers = ["mshankar", "ytl", "wilko", "perazzo", "yemi", "vossj", "r
 })
 
 
-["mshankar", "ytl", "wilko", "perazzo", "yemi", "vossj", "richard", "kterao", "dratner", "cartaro"].forEach(function(u){
+bootstrapusers.forEach(function(u){
   let allocid = db.getSiblingDB("iris").user_storage_allocation.findOne({"username": u, "purpose": "home" })["_id"]
   db.getSiblingDB("iris").user_storage_usage.insertOne({
     "allocid": allocid,

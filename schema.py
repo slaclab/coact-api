@@ -644,6 +644,7 @@ class Mutation:
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def repoAddUser(self, repo: RepoInput, user: UserInput, info: Info ) -> Repo:
         filter = {"name": repo.name, "facility": repo.facility}
+        repoObj = info.context.db.find_repo(filter)
         userObj = info.context.db.find_user({"username": user.username})
         info.context.db.collection("repos").update_one(filter, { "$addToSet": {"users": user.username}})
         repoObj = info.context.db.find_repo(filter)
