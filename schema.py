@@ -610,7 +610,7 @@ class Mutation:
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def repoUpsert(self, repo: RepoInput, info: Info) -> Repo:
-        repo = info.context.db.update( 'repos', repo, required_fields=[ 'name', 'facility', 'principal' ], find_existing={ 'name': repo.name }, upsert=True )
+        repo = info.context.db.update( 'repos', repo, required_fields=[ 'name', 'facility', 'principal' ], find_existing={ 'name': repo.name, 'facility': repo.facility }, upsert=True )
         info.context.audit(AuditTrailObjectType.Repo, repo._id, "RepoUpsert")
         return repo
 
