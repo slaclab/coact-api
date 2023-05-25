@@ -18,7 +18,6 @@ db.getSiblingDB("iris").users.insertOne({ "username": "cartaro", "uidnumber": 57
 // User_Volume_Storage_Allocation
 let bootstrapusers = ["mshankar", "ytl", "wilko", "perazzo", "yemi", "vossj", "richard", "kterao", "dratner"];
 
-<<<<<<< HEAD:scripts/10-bootstrap.mongo
 ["mshankar", "ytl", "wilko", "perazzo", "yemi", "vossj", "richard", "kterao", "dratner", "cartaro"].forEach(function(u){
   db.getSiblingDB("iris").user_storage_allocation.insertOne({
     "username": u,
