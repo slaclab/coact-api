@@ -42,6 +42,7 @@ class CoactRequestType(Enum):
     RepoStorageAllocation = "RepoStorageAllocation"
     FacilityComputeAllocation = "FacilityComputeAllocation"
     FacilityStorageAllocation = "FacilityStorageAllocation"
+    RepoChangeComputeRequirement = "RepoChangeComputeRequirement"
 
 @strawberry.enum
 class CoactRequestStatus(IntEnum):
@@ -51,6 +52,12 @@ class CoactRequestStatus(IntEnum):
     Incomplete = 2
     Completed = 3
     PreApproved = 4
+
+@strawberry.enum
+class ComputeRequirement(Enum):
+    OnShift = "OnShift"
+    OffShift = "OffShift"
+    Normal = "Normal"
 
 @strawberry.input
 class CoactRequestInput:
@@ -69,6 +76,7 @@ class CoactRequestInput:
     chargefactor: Optional[float] = 1.0
     storagename: Optional[str] = UNSET
     qosname: Optional[str] = UNSET
+    computerequirement: Optional[ComputeRequirement] = ComputeRequirement.Normal
     purpose: Optional[str] = UNSET
     rootfolder: Optional[str] = UNSET
     allocationid: Optional[MongoId] = UNSET
@@ -465,6 +473,7 @@ class RepoComputeAllocationInput:
     clustername: Optional[str] = UNSET
     start: Optional[datetime] = UNSET
     end: Optional[datetime] = UNSET
+    computerequirement: Optional[ComputeRequirement] = "Normal"
 
 @strawberry.type
 class RepoComputeAllocation(RepoComputeAllocationInput):

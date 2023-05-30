@@ -38,6 +38,7 @@ query = gql(
             actedby
             requestedby
             timeofrequest
+            computerequirement
         }
         operationType
       }
@@ -204,6 +205,19 @@ allAccessGroupos = gql(
     """
 )
 
+
+repoChangeComputeRequirement = gql(
+    """
+    mutation repoChangeComputeRequirement($repo: RepoInput!, $computerequirement: ComputeRequirement!) {
+        repoChangeComputeRequirement(repo: $repo, computerequirement: $computerequirement) {
+            name
+        }
+    }
+    """
+)
+
+
+
 class ProcessRequests:
     def __init__(self, args):
         self.reqtransport = RequestsHTTPTransport(url=args.mutationurl, verify=True, retries=3)
@@ -231,6 +245,8 @@ class ProcessRequests:
                             self.processRepoStorageAllocations(theReq)
                         elif theReq.get("reqtype", None) == "RepoMembership":
                             self.processRepoMembership(theReq)
+                        elif theReq.get("reqtype", None) == "RepoChangeComputeRequirement":
+                            self.processRepoChangeComputeRequirement(theReq)
             except Exception as e:
                 LOG.exception(e)
 
@@ -512,6 +528,21 @@ class ProcessRequests:
             resp = self.mutateclient.execute(repoAddUser, variable_values={"repo": { "name": theReq["reponame"], "facility": theReq["facilityname"] }, "user": { "username": theReq["username"] }})
         except Exception as e:
             LOG.exception(e)
+
+    def processRepoChangeComputeRequirement(self, theReq):
+        therepo = self.mutateclient.execute(findrepo, variable_values={"filter": { "name": theReq["reponame"], "facility": theReq["facilityname"] }})["repo"]
+        if not therepo:
+            LOG.error("Cannot find repo %s  in facility %s", theReq["reponame"], theReq["facilityname"])
+            return
+        try:
+            result = self.mutateclient.execute(repoChangeComputeRequirement, variable_values={
+                "repo": {"Id": therepo["Id"]},
+                "computerequirement": theReq["computerequirement"]
+                })
+            print(result)
+        except Exception as e:
+            LOG.exception(e)
+
 
 
 if __name__ == '__main__':

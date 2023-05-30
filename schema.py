@@ -35,7 +35,7 @@ from models import \
         ReportRangeInput, PerDateUsage, PerUserUsage, \
         RepoComputeAllocationInput, QosInput, RepoStorageAllocationInput, \
         AuditTrailObjectType, AuditTrail, AuditTrailInput, \
-        NotificationInput, Notification
+        NotificationInput, Notification, ComputeRequirement
 
 import logging
 LOG = logging.getLogger(__name__)
@@ -208,6 +208,17 @@ class Query:
         return info.context.db.find_repos( { "principal": username } )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def reposInFacilityWithComputeRequirement( self, info: Info, facility: str, computerequirement: ComputeRequirement ) -> List[str]:
+        matches = info.context.db.collection("repo_compute_allocations").aggregate([
+            {"$match": {"computerequirement": computerequirement.name }},
+            { "$lookup": { "from": "repos", "localField": "repoid", "foreignField": "_id", "as": "repo"}},
+            { "$unwind": "$repo" },
+            {"$match": {"repo.facility": facility }},
+            { "$project": { "name": "$repo.name" }}
+        ])
+        return list(set([ x["name"] for x in matches ]))
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def reportFacilityComputeByDay( self, info: Info, clustername: str, range: ReportRangeInput, group: str ) -> List[PerDateUsage]:
         LOG.debug("Getting compute daily data for cluster %s from %s to %s grouped by %s", clustername, range.start, range.end, group)
         if group == "Day":
@@ -371,6 +382,15 @@ class Mutation:
         request.timeofrequest = datetime.datetime.utcnow()
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype', "allocationid", "gigabytes" ], find_existing=None)
 
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
+    def requestRepoChangeComputeRequirement(self, request: CoactRequestInput, info: Info) -> CoactRequest:
+        if request.reqtype != CoactRequestType.RepoChangeComputeRequirement or not request.reponame or not request.facilityname:
+            raise Exception()
+        request.username = info.context.username
+        request.requestedby = info.context.username
+        request.timeofrequest = datetime.datetime.utcnow()
+        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
+
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def requestUserQuota(self, request: CoactRequestInput, info: Info) -> CoactRequest:
         if request.reqtype != CoactRequestType.UserStorageAllocation or not request.storagename or not request.gigabytes:
@@ -532,6 +552,22 @@ class Mutation:
 
             thereq.approve(info)
             return True
+        elif thereq.reqtype == "RepoChangeComputeRequirement":
+            if not isAdmin and not isCzar:
+                raise Exception("User is not an admin or a czar")
+            thereponame = thereq.reponame
+            if not thereponame:
+                raise Exception("RepoComputeAllocation request without a repo name - cannot approve.")
+            thefacility = thereq.facilityname
+            if not thefacility:
+                raise Exception("RepoComputeAllocation request without a facility - cannot approve.")
+            therepo = info.context.db.find_repo( {"name": thereponame, "facility": thefacility} )
+            if not therepo:
+                raise Exception(f"Repo with name {thereponame} does not exist")
+            if not thereq.computerequirement:
+                raise Exception(f"The new compute requirement was not specified")
+            thereq.approve(info)
+            return True            
         else:
             if not isAdmin and not isCzar:
                 raise Exception("User is not an admin or a czar")
@@ -735,7 +771,7 @@ class Mutation:
         clustername = repocompute.clustername
         if not info.context.db.find_clusters({"name": clustername}):
             raise Exception("Cannot find cluster with name " + clustername)
-
+        
         rc["clustername"] = clustername
         rc["start"] = repocompute.start.astimezone(pytz.utc)
         rc["end"] = repocompute.end.astimezone(pytz.utc)
@@ -745,6 +781,13 @@ class Mutation:
         LOG.info(rc)
         info.context.db.collection("repo_compute_allocations").replace_one({"repoid": rc["repoid"], "clustername": rc["clustername"], "start": rc["start"]}, rc, upsert=True)
         info.context.audit(AuditTrailObjectType.Repo, repo._id, "repoComputeAllocationUpsert", details=clustername+"="+json.dumps(rc["qoses"]))
+        return info.context.db.find_repo( repo )
+    
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
+    def repoChangeComputeRequirement(self, repo: RepoInput, computerequirement: ComputeRequirement, info: Info) -> Repo:
+        repo = info.context.db.find_repo( repo )
+        for computeAllocation in repo.currentComputeAllocations(info):
+            info.context.db.collection("repo_compute_allocations").update_one({"_id": computeAllocation._id}, {"$set": {"computerequirement": computerequirement.name}})
         return info.context.db.find_repo( repo )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )

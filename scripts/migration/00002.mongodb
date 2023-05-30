@@ -1,0 +1,4 @@
+if(db.getSiblingDB("iris").versions.findOne({dbschema: "0.0.2"})) {
+    db.getSiblingDB("iris").repo_compute_allocations.createIndex({"computerequirement": 1})
+    db.getSiblingDB("iris").versions.updateOne({}, {"$set": {"dbschema": "0.0.3"}})
+}
