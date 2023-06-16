@@ -719,7 +719,7 @@ class Mutation:
     def repoRemoveUser(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
         filter = {"name": repo.name, "facility": repo.facility}
         therepo =  info.context.db.find_repo( filter )
-        userObj = info.context.db.find_repo( { "username": user.username } )
+        userObj = info.context.db.find_user( { "username": user.username } )
         theuser = user.username
         if theuser not in therepo.users:
             raise Exception(theuser + " is not a user in repo " + repo.name)
