@@ -54,7 +54,7 @@ class CoactRequestStatus(IntEnum):
     PreApproved = 4
 
 @strawberry.enum
-class ComputeRequirement(Enum):
+class ComputeRequirement(str, Enum):
     OnShift = "OnShift"
     OffShift = "OffShift"
     Normal = "Normal"
@@ -84,7 +84,7 @@ class CoactRequestInput:
     gigabytes: Optional[float] = 0
     inodes: Optional[float] = 0
     notes: Optional[str] = UNSET
-    dontsendemail: Optional[bool] = UNSET # Tells the ansible scripts that this request is being created by automation and will be approved immediately. No need to notify czars that a request is pending.
+    dontsendemail: Optional[bool] = False # Tells the ansible scripts that this request is being created by automation and will be approved immediately. No need to notify czars that a request is pending.
     approvalstatus: Optional[CoactRequestStatus] = CoactRequestStatus.NotActedOn
 
 

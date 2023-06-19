@@ -139,6 +139,21 @@ class Query:
         crsr = info.context.db.collection("requests").find(finalqueryterms).sort([("timeofrequest", -1)])
         return info.context.db.cursor_to_objlist(crsr, CoactRequest, exclude_fields={})
 
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    def requestsExistingForEPPN(self, info: Info, eppn: str) -> Optional[List[CoactRequest]]:
+        crsr = info.context.db.collection("requests").find({"eppn": eppn}).sort([("timeofrequest", -1)])
+        return info.context.db.cursor_to_objlist(crsr, CoactRequest, exclude_fields={})
+
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    def requestsExistingForUser(self, info: Info, username: str) -> Optional[List[CoactRequest]]:
+        crsr = info.context.db.collection("requests").find({"username": username}).sort([("timeofrequest", -1)])
+        return info.context.db.cursor_to_objlist(crsr, CoactRequest, exclude_fields={})
+
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    def requestsExistingForRepo(self, info: Info, reponame: str, facilityname: str) -> Optional[List[CoactRequest]]:
+        crsr = info.context.db.collection("requests").find({"reponame": reponame, "facilityname": facilityname}).sort([("timeofrequest", -1)])
+        return info.context.db.cursor_to_objlist(crsr, CoactRequest, exclude_fields={})
+
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def facility(self, info: Info, filter: Optional[FacilityInput]) -> Facility:
         return info.context.db.find_facilities( filter )[0]
