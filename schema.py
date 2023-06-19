@@ -714,6 +714,20 @@ class Mutation:
         info.context.audit(AuditTrailObjectType.User, userObj._id, "+RepoMembership", details=repo.name)
         return repoObj
 
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    def repoAppendMember(self, repo: RepoInput, user: UserInput, info: Info ) -> Repo:
+        """
+        Add a user to a repo without creating a request. This is meant to be used by backend processors after updating the various external systems.
+        """
+        filter = {"name": repo.name, "facility": repo.facility}
+        repoObj = info.context.db.find_repo(filter)
+        userObj = info.context.db.find_user({"username": user.username})
+        info.context.db.collection("repos").update_one(filter, { "$addToSet": {"users": user.username}})
+        repoObj = info.context.db.find_repo(filter)
+        info.context.audit(AuditTrailObjectType.Repo, repoObj._id, "repoAddUser", details=user.username)
+        info.context.audit(AuditTrailObjectType.User, userObj._id, "+RepoMembership", details=repo.name)
+        return repoObj
+
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def repoAddLeader(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
         filter = {"name": repo.name, "facility": repo.facility}
