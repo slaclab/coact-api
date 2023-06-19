@@ -25,6 +25,9 @@ class IsValidEPPN(BasePermission):
     LOG = logging.getLogger(__name__)
     message = "User does not have a valid EPPN"
     def has_permission(self, source: Any, info: Info, **kwargs) -> bool:
+        if info.context.isUserBot():
+            self.LOG.debug("Bot users dont really have an EPPN")
+            return True
         regis, eppn = info.context.isUserRegistered(**kwargs)
         self.LOG.debug(f"attempting permissions with {type(self).__name__} for eppn {eppn} at path {info.path.key} for privilege {kwargs}")
         if eppn:

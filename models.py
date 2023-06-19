@@ -192,6 +192,7 @@ class UserInput:
     preferredemail: Optional[str] = UNSET
     shell: Optional[str] = UNSET
     publichtml: bool = False
+    isbot: bool = False
 
 @strawberry.type
 class User(UserInput):

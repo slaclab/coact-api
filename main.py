@@ -84,6 +84,17 @@ class CustomContext(BaseContext):
             return len(users) > 0, self.eppn
 
         return False, None
+    
+    def isUserBot(self, **kwargs):
+        username = self.request.headers.get(USER_FIELD_IN_HEADER, None)
+        if username:
+            users = self.db.find_users( { 'username': username } )
+            if users:
+                if users[0].isbot:
+                    self.LOG.debug(f"{username} is a bot user")
+                    return True
+        return False
+
 
     def authn(self, **kwargs):
         if bool(environ.get('PREFER_EPPN',False)):
