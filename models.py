@@ -94,8 +94,6 @@ class CoactRequest(CoactRequestInput):
     actedby: Optional[str] = UNSET
     actedat: Optional[datetime] = None
 
-    LOG = logging.getLogger(__name__)
-
     def approve(self, info):
         info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Approved.value, "actedby": info.context.username, "actedat": datetime.utcnow() }})
         return info.context.db.find_request( { "_id": ObjectId(self._id) } )
@@ -126,6 +124,10 @@ class CoactRequest(CoactRequestInput):
             v['approvalstatus'] = CoactRequestStatus.Approved
         return info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": v})
 
+@strawberry.type
+class CoactRequestWithPerms(CoactRequest):
+    canapprove: Optional[bool] = False # Transient property used to indicate if the current user is a leader in the repo. This should NOT be stored in the database
+    canrefire: Optional[bool] = False # Transient property used to indicate if the current user has permission to approve. This should NOT be stored in the database
 
 @strawberry.type
 class CoactRequestEvent:

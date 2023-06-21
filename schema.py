@@ -29,7 +29,7 @@ from models import \
         Facility, FacilityInput, Job, \
         UserAllocationInput, UserAllocation, \
         ClusterInput, Cluster, \
-        CoactRequestInput, CoactRequest, CoactRequestType, CoactRequestEvent, CoactRequestStatus, \
+        CoactRequestInput, CoactRequest, CoactRequestType, CoactRequestEvent, CoactRequestStatus, CoactRequestWithPerms, \
         RepoFacilityName, \
         Usage, UsageInput, StorageDailyUsageInput, \
         ReportRangeInput, PerDateUsage, PerUserUsage, \
@@ -93,51 +93,64 @@ class Query:
         return info.context.db.find_facilities( filter)
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def requests(self, info: Info, fetchprocessed: Optional[bool]=False, showmine: Optional[bool]=True) -> Optional[List[CoactRequest]]:
+    def requests(self, info: Info, fetchprocessed: Optional[bool]=False, showmine: Optional[bool]=True) -> Optional[List[CoactRequestWithPerms]]:
         """
         Separate queries for admin/czar/leader/user
         """
-        queryterms = []
-        if showmine:
-            username = info.context.username
-            if not username:
-                return []
-            queryterms.append({ "requestedby": username })
-            crsr = info.context.db.collection("requests").find( {"$or": queryterms } ).sort([("timeofrequest", -1)])
-            return info.context.db.cursor_to_objlist(crsr, CoactRequest, exclude_fields={})
-        if not fetchprocessed:
-            queryterms.append({"approvalstatus": {"$exists": False}})
-        if info.context.is_admin:
-            queryterms.append({"reqtype": {"$not": {"$in": [ "RepoMembership" ]}}})
-        else:
-            username = info.context.username
-            assert username != None
-            myfacs = list(info.context.db.find_facilities({"czars": username}))
-            if myfacs:
-                czarqueryterms = [{"facilityname": {"$in": [ x.name for x in myfacs ]}}]
-                myfacnms = [ x.name for x in myfacs ]
-                myrepos = info.context.db.find_repos( { '$or': [
-                    { "leaders": username },
-                    { "principal": username },
-                    { "facility": {"$in": myfacnms }}
-                    ] } )
-                reponames = [ x.name for x in myrepos ]
-                czarqueryterms.append({ "reponame": {"$in": reponames } })
-                queryterms.append({ "$or": czarqueryterms })
-            else:
-                queryterms.append({"reqtype": "RepoMembership"})
-                myrepos = info.context.db.find_repos( { '$or': [
-                    { "leaders": username },
-                    { "principal": username }
-                    ] } )
-                if myrepos:
-                    reponames = [ x.name for x in myrepos ]
-                    queryterms.append({ "reponame": {"$in": reponames } })
+        def __fetch_requests__(qterms, applyperms=None):
+            LOG.info("Looking for requests using %s",  json.dumps(qterms, indent=4))
+            crsr = info.context.db.collection("requests").find(qterms).sort([("timeofrequest", -1)])
+            rqs = info.context.db.cursor_to_objlist(crsr, CoactRequestWithPerms, exclude_fields={})
+            if applyperms:
+                for rq in rqs:
+                    applyperms(rq)
+            return rqs
 
-        finalqueryterms = {"$and": queryterms }
-        LOG.info("Looking for requests using %s",  finalqueryterms)
-        crsr = info.context.db.collection("requests").find(finalqueryterms).sort([("timeofrequest", -1)])
-        return info.context.db.cursor_to_objlist(crsr, CoactRequest, exclude_fields={})
+        username = info.context.username
+        assert username != None
+
+        if showmine:
+            return __fetch_requests__({"$or": [{ "requestedby": username }, { "username": username }, { "preferredUserName": username }]})
+
+        myfacs = list(x.name for x in info.context.db.find_facilities({"czars": username}))
+        isadmin = info.context.is_admin and not info.context.is_impersonating
+        isczar = len(myfacs) != 0
+        if isadmin:
+            def __set_both_true__(rq):
+                rq.canapprove = True
+                rq.canrefire = True
+            LOG.info("Requests for admin")
+            queryterms = {}
+            if not fetchprocessed:
+                queryterms = {"$or": [{"approvalstatus": {"$exists": False}}, {"approvalstatus": {"$in": [0]}}]}
+            return __fetch_requests__(queryterms, __set_both_true__)
+        elif isczar:
+            def __set_czar_perm__(rq):
+                rq.canapprove = True
+                rq.canrefire = True
+            LOG.info("Requests for czar")
+            queryterms = [{"facilityname": {"$in": myfacs }}]
+            if not fetchprocessed:
+                queryterms.append({"$or": [{"approvalstatus": {"$exists": False}}, {"approvalstatus": {"$in": [0]}}]}) # NotActedOn = 0
+            return __fetch_requests__({"$and": queryterms }, __set_czar_perm__)
+        else:
+            LOG.info("Requests for regular user")
+            leaderrepos = [ { "reponame": x.name, "facilityname": x.facility } for x in info.context.db.find_repos( { '$or': [ { "leaders": username }, { "principal": username } ] } ) ]
+            queryterms = []
+            permsfn = None
+            if leaderrepos:
+                myreqs = [{ "requestedby": username }, { "username": username }, { "preferredUserName": username }]
+                myreqs.extend(leaderrepos)
+                queryterms.append({"$or": myreqs })
+                def __leaderpermfn__(rq):
+                    if rq.reqtype == CoactRequestType.RepoMembership.name and { "reponame": rq.reponame, "facilityname": rq.facilityname } in leaderrepos:
+                        rq.canapprove = True
+                permsfn = __leaderpermfn__
+            else:
+                queryterms.append({"$or": [{ "requestedby": username }, { "username": username }, { "preferredUserName": username }]})
+            if not fetchprocessed:
+                queryterms.append({"$or": [{"approvalstatus": {"$exists": False}}, {"approvalstatus": {"$in": [0]}}]}) # NotActedOn = 0
+            return __fetch_requests__({"$and": queryterms }, permsfn)
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def requestsExistingForEPPN(self, info: Info, eppn: str) -> Optional[List[CoactRequest]]:

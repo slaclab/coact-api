@@ -185,10 +185,10 @@ repoStorageAllocationUpsert = gql(
     """
 )
 
-repoAddUser = gql(
+repoAppendMember = gql(
     """
-    mutation repoAddUser($repo: RepoInput!, $user: UserInput!) {
-        repoAddUser(repo: $repo, user: $user) {
+    mutation repoAppendMember($repo: RepoInput!, $user: UserInput!) {
+        repoAppendMember(repo: $repo, user: $user) {
             Id
         }
     }
@@ -525,7 +525,7 @@ class ProcessRequests:
 
     def processRepoMembership(self, theReq):
         try:
-            resp = self.mutateclient.execute(repoAddUser, variable_values={"repo": { "name": theReq["reponame"], "facility": theReq["facilityname"] }, "user": { "username": theReq["username"] }})
+            resp = self.mutateclient.execute(repoAppendMember, variable_values={"repo": { "name": theReq["reponame"], "facility": theReq["facilityname"] }, "user": { "username": theReq["username"] }})
         except Exception as e:
             LOG.exception(e)
 
