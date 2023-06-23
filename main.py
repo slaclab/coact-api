@@ -47,7 +47,9 @@ USER_FIELD_IN_HEADER = environ.get('USERNAME_FIELD','REMOTE_USER')
 
 EMAIL_SERVER_HOST = os.getenv( 'COACT_EMAIL_SERVER_HOST', 'smtp.slac.stanford.edu' )
 EMAIL_SERVER_PORT = os.getenv( 'COACT_EMAIL_SERVER_PORT', 25 )
-
+ADMINS = re.sub( "\s", "", environ.get("ADMIN_USERNAMES",'')).split(',')
+# Assume that we introduce bot users once in a while; so we load these up on startup
+BOT_USERS = [ x["username"] for x in mongo[DB_NAME]["users"].find( { 'isbot': True } ) ]
 
 class CustomContext(BaseContext):
 
@@ -107,13 +109,17 @@ class CustomContext(BaseContext):
 
         if not self.origin_username:
             user = self.request.headers.get(USER_FIELD_IN_HEADER, None)
-            self.origin_username = self.db.find_user( { 'username': user } ).username
+            if user and user in BOT_USERS:
+                self.LOG.warn(f"{user} is a bot")
+                self.origin_username = user
+                self.is_admin = True
+            else:
+                self.origin_username = self.db.find_user( { 'username': user } ).username
 
         if self.origin_username:
             self.username = self.origin_username
             self.fullname = self.request.headers.get(environ.get('FULLNAME_FIELD','REMOTE_GECOS'), None)
-            admins = re.sub( "\s", "", environ.get("ADMIN_USERNAMES",'')).split(',')
-            if self.origin_username in admins:
+            if self.origin_username in ADMINS:
                 self.is_admin = True
                 self.LOG.warn(f"admin user {self.username} identified")
                 if 'coactimp' in self.request.headers and self.request.headers['coactimp'] and self.request.headers['coactimp'] != 'null':

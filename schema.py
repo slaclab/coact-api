@@ -8,7 +8,7 @@ from auth import IsAuthenticated, \
 import asyncio
 from threading import Thread
 from typing import List, Optional, AsyncGenerator
-import copy
+import math
 import datetime
 import pytz
 import json
@@ -29,8 +29,9 @@ from models import \
         Facility, FacilityInput, Job, \
         UserAllocationInput, UserAllocation, \
         ClusterInput, Cluster, \
-        CoactRequestInput, CoactRequest, CoactRequestType, CoactRequestEvent, CoactRequestStatus, CoactRequestWithPerms, \
-        RepoFacilityName, \
+        CoactRequestInput, CoactRequest, CoactRequestType, \
+        CoactRequestEvent, CoactRequestStatus, CoactRequestWithPerms, \
+        CoactRequestFilter, RepoFacilityName, \
         Usage, UsageInput, StorageDailyUsageInput, \
         ReportRangeInput, PerDateUsage, PerUserUsage, \
         RepoComputeAllocationInput, QosInput, RepoStorageAllocationInput, \
@@ -39,6 +40,18 @@ from models import \
 
 import logging
 LOG = logging.getLogger(__name__)
+
+class JSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, ObjectId):
+            return str(o)
+        elif isinstance(o, float) and not math.isfinite(o):
+            return str(o)
+        elif isinstance(o, datetime.datetime):
+            # Use var d = new Date(str) in JS to deserialize
+            # d.toJSON() in JS to convert to a string readable by datetime.strptime(str, '%Y-%m-%dT%H:%M:%S.%fZ')
+            return o.isoformat()
+        return json.JSONEncoder.default(self, o)
 
 @strawberry.type
 class Query:
@@ -93,12 +106,52 @@ class Query:
         return info.context.db.find_facilities( filter)
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def requests(self, info: Info, fetchprocessed: Optional[bool]=False, showmine: Optional[bool]=True) -> Optional[List[CoactRequestWithPerms]]:
+    def requestTypes(self, info: Info ) -> List[str]:
+        return [x[0] for x in CoactRequestType.__members__.items()]
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def requestStatuses(self, info: Info ) -> List[str]:
+        return [x[0] for x in CoactRequestStatus.__members__.items()]
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def requests(self, info: Info, fetchprocessed: Optional[bool]=False, showmine: Optional[bool]=True, filter: Optional[CoactRequestFilter]=UNSET) -> Optional[List[CoactRequestWithPerms]]:
         """
         Separate queries for admin/czar/leader/user
         """
+        def __filter_to_query__():
+            qterms = []
+            if filter.reqtype:
+                qterms.append({"reqtype": filter.reqtype.name})
+            if filter.approvalstatus != UNSET:
+                if filter.approvalstatus == 0:
+                    qterms.append({"$or": [{"approvalstatus": filter.approvalstatus}, {"approvalstatus": {"$exists": False}}]})
+                else:
+                    qterms.append({"approvalstatus": filter.approvalstatus})
+            if filter.reponame:
+                qterms.append({"reponame": filter.reponame})
+            if filter.facilityname:
+                qterms.append({"facilityname": filter.facilityname})
+            if filter.foruser:
+                qterms.append({"$or": [{ "username": {"$regex": filter.foruser} }, { "preferredUserName": {"$regex": filter.foruser}}]})
+            if filter.windowbegin and filter.windowend:
+                qterms.append({"$and": [ { "timeofrequest": { "$gte": filter.windowbegin.astimezone(pytz.utc) } }, { "timeofrequest": { "$lt": filter.windowend.astimezone(pytz.utc) } } ]})
+            return qterms
+
         def __fetch_requests__(qterms, applyperms=None):
-            LOG.info("Looking for requests using %s",  json.dumps(qterms, indent=4))
+            if filter:
+                LOG.info(filter)
+                # We only use certain terms from the filter; this is mainly a bug from the GraphQL defaults getting in the way of filter
+                fqterms = __filter_to_query__()
+                LOG.info(fqterms)
+                if fqterms:
+                    if "$and" in qterms:
+                        qterms["$and"].extend(fqterms)
+                    else:
+                        if qterms:
+                            fqterms.append(qterms)
+                        qterms = {"$and": fqterms}
+
+            LOG.info("Looking for requests using %s",  JSONEncoder(indent=4).encode(qterms))
             crsr = info.context.db.collection("requests").find(qterms).sort([("timeofrequest", -1)])
             rqs = info.context.db.cursor_to_objlist(crsr, CoactRequestWithPerms, exclude_fields={})
             if applyperms:
@@ -198,6 +251,23 @@ class Query:
         All the repo names and their facility. No authentication needed. Just the names
         """
         return [ RepoFacilityName(**x) for x in info.context.db.collection("repos").find({}, {"_id": 0, "name": 1, "facility": 1}) ]
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def myreposandfacility(self, info: Info) -> List[RepoFacilityName]:
+        """
+        My repo names and their facility. Just the names
+        """
+        username = info.context.username
+        assert username != None
+        myfacs = list(x.name for x in info.context.db.find_facilities({"czars": username}))
+        isadmin = info.context.is_admin and not info.context.is_impersonating
+        isczar = len(myfacs) != 0
+        if isadmin:
+            return [ RepoFacilityName(**x) for x in info.context.db.collection("repos").find({}, {"_id": 0, "name": 1, "facility": 1}) ]
+        elif isczar:
+            return [ RepoFacilityName(**x) for x in info.context.db.collection("repos").find({"facility": {"$in": myfacs}}, {"_id": 0, "name": 1, "facility": 1}) ]
+        else:
+            return [ RepoFacilityName(**x) for x in info.context.db.collection("repos").find({ '$or': [ { "users": username }, { "leaders": username }, { "principal": username }]}, {"_id": 0, "name": 1, "facility": 1}) ]
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def repo(self, filter: RepoInput, info: Info) -> Repo:

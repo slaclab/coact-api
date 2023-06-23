@@ -135,6 +135,16 @@ class CoactRequestEvent:
     theRequest: Optional[CoactRequest] = UNSET
 
 @strawberry.input
+class CoactRequestFilter:
+    reqtype: Optional[CoactRequestType] = UNSET
+    approvalstatus: Optional[CoactRequestStatus] = UNSET
+    reponame: Optional[str] = UNSET
+    facilityname: Optional[str] = UNSET
+    windowbegin: Optional[datetime] = UNSET
+    windowend: Optional[datetime] = UNSET
+    foruser: Optional[str] = UNSET
+
+@strawberry.input
 class EppnInput:
     eppn: Optional[str] = UNSET
     fullname: Optional[str] = UNSET
