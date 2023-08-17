@@ -222,6 +222,9 @@ class User(UserInput):
                 ret.append(Eppn(**{ "eppn": x.split("@")[0], "fullname": x, "email": x, "organization": x.split("@")[1] }))
         return ret
     @strawberry.field
+    def facilities(self, info) -> List[str]:
+        return sorted(list(set([x["facility"] for x in info.context.db.collection("repos").find({"name": "default", "users": self.username}, {"_id": 0, "facility": 1})])))
+    @strawberry.field
     def isAdmin(self, info) -> bool:
         admins = re.sub( "\s", "", os.environ.get("ADMIN_USERNAMES",'')).split(',')
         return self.username in admins
