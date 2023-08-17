@@ -256,6 +256,10 @@ class User(UserInput):
                 storage["usage"] = UserStorageUsage(**{"_id": None, "allocid": storage["_id"], "gigabytes": 0, "inodes": 0, "date": datetime.utcnow() })
         print(storages)
         return [ UserStorage(**storage) for storage in storages ]
+    @strawberry.field
+    def earliestCompletedUserAccountRegistration(self, info) -> Optional[datetime]:
+        req = info.context.db.collection("requests").find({"eppn": info.context.eppn, "reqtype": "UserAccount", "approvalstatus": { "$in": [ 1, 3 ]}}).sort([("timeofrequest", 1)]).limit(1)
+        return list(req)[0].get("timeofrequest", None) if req else None
 
 @strawberry.type
 class RepoFacilityName:
