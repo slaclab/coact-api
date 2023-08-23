@@ -13,6 +13,7 @@ db.getSiblingDB("iris").users.insertOne({ "username": "richard", "uidnumber": 10
 db.getSiblingDB("iris").users.insertOne({ "username": "kterao", "uidnumber": 15334, "eppns": [ "kterao@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "kterao@slac.stanford.edu" })
 db.getSiblingDB("iris").users.insertOne({ "username": "dratner", "uidnumber": 8998, "eppns": [ "dratner@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "dratner@slac.stanford.edu" })
 db.getSiblingDB("iris").users.insertOne({ "username": "cartaro", "uidnumber": 5788, "eppns": [ "cartaro@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "cartaro@slac.stanford.edu" })
+db.getSiblingDB("iris").users.insertOne({ "username": "ritis", "uidnumber": 9156, "eppns": [ "ritis@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "ritis@slac.stanford.edu" })
 
 
 // User_Volume_Storage_Allocation

@@ -1,0 +1,50 @@
+db.getSiblingDB("iris").facilities.insertOne({
+  "name" : "SSRL",
+  "resources": ["compute", "storage"],
+  "serviceaccount": "", // set primary uid on all volumes
+  "servicegroup": "", // set primary gid on all volumes
+  "czars": [ "ritis" ]
+})
+
+db.getSiblingDB("iris").facility_compute_purchases.insertOne({
+  "facility": "SSRL",
+  "clustername": "roma",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "slachours": 100000
+})
+db.getSiblingDB("iris").facility_compute_purchases.insertOne({
+  "facility": "SSRL",
+  "clustername": "milano",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "slachours": 200000
+})
+
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility": "SSRL",
+  "storagename": "sdfdata",
+  "purpose": "data",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 20000000,
+  "inodes": 100000000,
+})
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility": "SSRL",
+  "storagename": "sdfhome",
+  "purpose": "group",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 200000,
+  "inodes": 100000,
+})
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility": "SSRL",
+  "storagename": "sdfhome",
+  "purpose": "scratch",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 200000,
+  "inodes": 100000,
+})
