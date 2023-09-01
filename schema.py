@@ -436,6 +436,10 @@ class Mutation:
         request.eppn = eppnparts[0] + "@" + eppnparts[1].lower()
         userAlreadyExists = info.context.db.collection("users").find_one( {"eppns": request.eppn} ) != None
         LOG.info(f"Check for user already exists yields {userAlreadyExists}")
+        # Check if the user already has a pending/completed request for this facility
+        exis_req = info.context.db.find_requests({'reqtype': 'UserAccount', 'eppn': request.eppn, 'facilityname': request.facilityname})
+        if exis_req:
+            raise Exception(f"There is aready a request for this user in this facility with status {CoactRequestStatus(exis_req[0].approvalstatus).name}")
         this_req = info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing={'reqtype': 'UserAccount', 'eppn': request.eppn, 'facilityname': request.facilityname, 'approvalstatus': { "$exists": False }} )
         if request.approvalstatus == CoactRequestStatus.PreApproved and userAlreadyExists:
             LOG.info("The user account for %s has already been created; approving the preapproved request and skipping sending emails", request.eppn)
