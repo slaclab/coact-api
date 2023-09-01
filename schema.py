@@ -501,6 +501,16 @@ class Mutation:
         request.requestedby = info.context.username
         request.timeofrequest = datetime.datetime.utcnow()
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
+    
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def requestUserChangeShell(self, request: CoactRequestInput, info: Info) -> CoactRequest:
+        if request.reqtype != CoactRequestType.UserChangeShell or not request.shell:
+            raise Exception()
+        request.username = info.context.username
+        request.requestedby = info.context.username
+        request.timeofrequest = datetime.datetime.utcnow()
+        request.approvalstatus = CoactRequestStatus.Approved
+        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def requestCreate(self, request: CoactRequestInput, info: Info) -> CoactRequest:

@@ -43,6 +43,8 @@ class CoactRequestType(Enum):
     FacilityComputeAllocation = "FacilityComputeAllocation"
     FacilityStorageAllocation = "FacilityStorageAllocation"
     RepoChangeComputeRequirement = "RepoChangeComputeRequirement"
+    UserChangeShell = "UserChangeShell"
+    UserPublicHtml = "UserPublicHtml"
 
 @strawberry.enum
 class CoactRequestStatus(IntEnum):
@@ -83,6 +85,8 @@ class CoactRequestInput:
     slachours: Optional[float] = 0
     gigabytes: Optional[float] = 0
     inodes: Optional[float] = 0
+    shell: Optional[str] = UNSET
+    publichtml: Optional[str] = UNSET
     notes: Optional[str] = UNSET
     dontsendemail: Optional[bool] = False # Tells the ansible scripts that this request is being created by automation and will be approved immediately. No need to notify czars that a request is pending.
     approvalstatus: Optional[CoactRequestStatus] = CoactRequestStatus.NotActedOn
@@ -259,7 +263,7 @@ class User(UserInput):
     @strawberry.field
     def earliestCompletedUserAccountRegistration(self, info) -> Optional[datetime]:
         req = info.context.db.collection("requests").find({"eppn": info.context.eppn, "reqtype": "UserAccount", "approvalstatus": { "$in": [ 1, 3 ]}}).sort([("timeofrequest", 1)]).limit(1)
-        return list(req)[0].get("timeofrequest", None) if req else None
+        return list(req)[0].get("timeofrequest", None) if list(req) else None
 
 @strawberry.type
 class RepoFacilityName:
