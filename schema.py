@@ -95,6 +95,14 @@ class Query:
         return info.context.db.find_clusters( filter )
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def storagenames(self, info: Info ) -> List[str]:
+        return [x["name"] for x in info.context.db.collection("physical_volumes").find({})]
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def storagepurposes(self, info: Info ) -> List[str]:
+        return [ "data", "group", "scratch" ]
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def facilities(self, info: Info, filter: Optional[FacilityInput]={} ) -> List[Facility]:
         return info.context.db.find_facilities( filter)
 
@@ -951,6 +959,46 @@ class Mutation:
         info.context.audit(AuditTrailObjectType.User, userObj._id, "-FacilityCzar", details=facility.name)
         return info.context.db.find_facility(filter)
 
+    @strawberry.field( permission_classes=[ IsAdmin ] )
+    def facilityAddUpdateComputePurchase(self, facility: FacilityInput, cluster: ClusterInput, purchase: float, info: Info) -> Facility:
+        facility = info.context.db.find_facility(filter=facility)
+        if not facility:
+            raise Exception("Cannot find requested facility " + str(facility))
+        cluster = info.context.db.find_cluster(filter=cluster)
+        if not cluster:
+            raise Exception("Cannot find requested cluster " + str(cluster))
+        if not purchase or purchase < 0.0:
+            raise Exception("Invalid purchase amount")
+
+        todaysdate = datetime.datetime.utcnow()
+        cp = list(info.context.db.collection("facility_compute_purchases").find({"facility": facility.name, "clustername": cluster.name, "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }).sort([("start", -1)]).limit(1))
+        if cp:
+            info.context.db.collection("facility_compute_purchases").update_one({"_id": cp[0]["_id"]}, {"$set": {"slachours": purchase}}) 
+        else:
+            info.context.db.collection("facility_compute_purchases").insert_one({ "facility": facility.name, "clustername": cluster.name, "start": todaysdate, "end": datetime.datetime.fromisoformat("2100-01-01T00:00:00").replace(tzinfo=datetime.timezone.utc), "slachours": purchase })
+
+        return info.context.db.find_facility(facility)
+
+    @strawberry.field( permission_classes=[ IsAdmin ] )
+    def facilityAddUpdateStoragePurchase(self, facility: FacilityInput, purpose: str, storagename: Optional[str], purchase: float, info: Info) -> Facility:
+        facility = info.context.db.find_facility(filter=facility)
+        if not facility:
+            raise Exception("Cannot find requested facility " + str(facility))
+        if not purchase or purchase < 0.0:
+            raise Exception("Invalid purchase amount")
+        if not purpose or len(purpose) < 2:
+            raise Exception("For storage purposes, one needs to have a purpose")
+
+        todaysdate = datetime.datetime.utcnow()
+        cp = list(info.context.db.collection("facility_storage_purchases").find({"facility": facility.name, "purpose": purpose, "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }).sort([("start", -1)]).limit(1))
+        if cp:
+            info.context.db.collection("facility_storage_purchases").update_one({"_id": cp[0]["_id"]}, {"$set": {"gigabytes": purchase}}) 
+        else:
+            if not storagename:
+                raise Exception("When purchasing new storage, please specify a storage name")
+            info.context.db.collection("facility_storage_purchases").insert_one({ "facility": facility.name, "purpose": purpose, "storagename": storagename, "start": todaysdate, "end": datetime.datetime.fromisoformat("2100-01-01T00:00:00").replace(tzinfo=datetime.timezone.utc), "gigabytes": purchase })
+
+        return info.context.db.find_facility(facility)
 
     @strawberry.mutation
     def importJobs(self, jobs: List[Job], info: Info) -> str:

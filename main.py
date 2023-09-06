@@ -266,14 +266,18 @@ class DB:
         return self.find("clusters", filter)
     def find_user(self, filter):
         return self.assert_one( self.find_users( filter ), filter )
-    def find_facilities(self, filter, exclude_fields: Optional[list[str]]=[] ):
+    def find_facilities(self, filter, exclude_fields: Optional[List[str]]=[] ):
         return self.find("facilities", filter, exclude_fields)
+    def find_clusters(self, filter, exclude_fields: Optional[List[str]]=[] ):
+        return self.find("clusters", filter, exclude_fields)
     def find_request(self, filter):
         return self.assert_one(self.find("requests", filter), filter)
-    def find_requests(self, filter, exclude_fields: Optional[list[str]]=[] ):
+    def find_requests(self, filter, exclude_fields: Optional[List[str]]=[] ):
         return self.find("requests", filter, exclude_fields)
-    def find_facility(self, filter, exclude_fields: Optional[list[str]]=[] ):
+    def find_facility(self, filter, exclude_fields: Optional[List[str]]=[] ):
         return self.assert_one( self.find_facilities( filter, exclude_fields ), filter )
+    def find_cluster(self, filter, exclude_fields: Optional[List[str]]=[] ):
+        return self.assert_one( self.find_clusters( filter, exclude_fields ), filter )
     def find_access_groups(self, filter):
         return self.find("access_groups", filter, exclude_fields=["repo"])
     def find_access_group(self, filter):
