@@ -86,7 +86,7 @@ class CoactRequestInput:
     gigabytes: Optional[float] = 0
     inodes: Optional[float] = 0
     shell: Optional[str] = UNSET
-    publichtml: Optional[str] = UNSET
+    publichtml: bool = False
     notes: Optional[str] = UNSET
     dontsendemail: Optional[bool] = False # Tells the ansible scripts that this request is being created by automation and will be approved immediately. No need to notify czars that a request is pending.
     approvalstatus: Optional[CoactRequestStatus] = CoactRequestStatus.NotActedOn

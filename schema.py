@@ -520,6 +520,19 @@ class Mutation:
         request.approvalstatus = CoactRequestStatus.Approved
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
 
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def requestUserPublicHtml(self, request: CoactRequestInput, info: Info) -> CoactRequest:
+        if request.reqtype != CoactRequestType.UserPublicHtml or request.publichtml is UNSET:
+            raise Exception("Incorrect request type")
+        existing = info.context.db.find_requests(CoactRequestInput(username=info.context.username, reqtype=CoactRequestType.UserPublicHtml.name, publichtml=request.publichtml))
+        if existing and any(map(lambda x : x.approvalstatus != CoactRequestStatus.Completed, existing)):
+            raise Exception("A request for turning on public HTML already exists and will be processed shortly.")
+        request.username = info.context.username
+        request.requestedby = info.context.username
+        request.timeofrequest = datetime.datetime.utcnow()
+        request.approvalstatus = CoactRequestStatus.Approved
+        return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
+
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def requestCreate(self, request: CoactRequestInput, info: Info) -> CoactRequest:
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
