@@ -63,7 +63,7 @@ class Query:
         if not isRegis:
             regis_pending = len(info.context.db.find("requests", {"reqtype" : "UserAccount", "eppn" : eppn})) >= 1
             if regis_pending:
-                request_id = info.context.db.find("requests", {"reqtype" : "UserAccount", "eppn" : eppn})[0]._id
+                request_id = list(info.context.db.collection("requests").find({"reqtype" : "UserAccount", "eppn" : eppn}).sort([("approvalstatus", -1), ("timeofrequest", -1)]))[0]["_id"]
         return UserRegistration(**{ "isRegistered": isRegis, "eppn": eppn, "isRegistrationPending": regis_pending, "fullname": info.context.fullname, "requestId": request_id })
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
@@ -758,6 +758,12 @@ class Mutation:
         if not thefacility:
             raise Exception("Account request without a facility - cannot approve.")
         thereq.approve(info)
+        other_preapproved_requests = info.context.db.find_requests({"reqtype" : "UserAccount", "eppn" : eppn, "approvalstatus": 4})
+        if other_preapproved_requests:
+            LOG.info("Automatically approving other preapproved requests for the same user")
+            for oreq in other_preapproved_requests:
+                LOG.info("Approving another preapproved request %s for the facility %s", oreq._id, oreq.facilityname)
+                oreq.approve(info)
         return True
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
