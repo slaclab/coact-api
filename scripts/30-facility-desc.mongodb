@@ -1,0 +1,64 @@
+db.getSiblingDB("iris").users.insertOne({ "username": "richard", "uidnumber": 1088, "eppns": [ "richard@slac.stanford.edu" ], "shell": "/bin/bash", "preferredemail": "richard@slac.stanford.edu" })
+
+
+// User_Volume_Storage_Allocation
+let bootstrapusers = ["richard"];
+
+bootstrapusers.forEach(function(u){
+  db.getSiblingDB("iris").user_storage_allocation.insertOne({
+    "username": u,
+    "storagename": "sdfhome",
+    "purpose": "home",
+    "gigabytes": 25,
+    "inodes": 1000000,
+    "rootfolder": "<prefix>/home/" + u[0] + "/" + u
+  })
+})
+
+bootstrapusers.forEach(function(u){
+  let allocid = db.getSiblingDB("iris").user_storage_allocation.findOne({"username": u, "purpose": "home" })["_id"]
+  db.getSiblingDB("iris").user_storage_usage.insertOne({
+    "allocid": allocid,
+    "date": new Date(),
+    "gigabytes": Math.random()*25,
+    "inodes": Math.random()*1000000,
+  })
+})
+
+db.getSiblingDB("iris").facilities.insertOne({
+  "name" : "DESC",
+  "resources": ["compute", "storage"],
+  "serviceaccount": "", // set primary uid on all volumes
+  "servicegroup": "", // set primary gid on all volumes
+  "czars": [ "richard" ]
+})
+
+db.getSiblingDB("iris").repos.insertOne({ "facility": "DESC", "name" : "default", "leaders" : [ "richard" ], "principal" : "richard", "users" : [ "richard" ] })
+
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility": "DESC",
+  "storagename": "sdfdata",
+  "purpose": "data",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 20000000,
+  "inodes": 100000000,
+})
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility": "DESC",
+  "storagename": "sdfhome",
+  "purpose": "group",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 200000,
+  "inodes": 100000,
+})
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility": "DESC",
+  "storagename": "sdfhome",
+  "purpose": "scratch",
+  "start": ISODate("2021-05-01T00:00:00-07:00"),
+  "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
+  "gigabytes": 200000,
+  "inodes": 100000,
+})
