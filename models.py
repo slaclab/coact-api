@@ -239,6 +239,10 @@ class User(UserInput):
             return True
         return False
     @strawberry.field
+    def subjectFacilities(self, info) -> List[str]:
+        """ Facilities for which I am a czar """
+        return [ x["name"] for x in info.context.db.collection("facilities").find({"czars": self.username}, {"_id": 0, "name": 1})]
+    @strawberry.field
     def isImpersonating(self, info) -> bool:
         return info.context.is_impersonating
     @strawberry.field

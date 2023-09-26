@@ -800,7 +800,7 @@ class Mutation:
     @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
     def repoUpdate(self, repo: RepoInput, info: Info) -> Repo:
         repo_before_update = info.context.db.find_repo({ 'name': repo.name, "facility": repo.facility })
-        repo_after_update = info.context.db.update( 'repos', info, repo, required_fields=[ 'name' ], find_existing={ 'name': repo.name } )
+        repo_after_update = info.context.db.update( 'repos', repo, required_fields=[ 'name', 'facility' ], find_existing={ 'name': repo.name, "facility": repo.facility } )
         info.context.audit(AuditTrailObjectType.Repo, repo_after_update._id, "repoUpdate", details=info.context.dict_diffs(repo_before_update, repo_after_update))
         return repo_after_update
 
@@ -860,9 +860,12 @@ class Mutation:
         info.context.audit(AuditTrailObjectType.Repo, ret._id, "repoAddLeader", details=user.username)
         return ret
 
-    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsRepoPrincipal ] )
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
     def repoChangePrincipal(self, repo: RepoInput, user: UserInput, info: Info) -> Repo:
         filter = {"name": repo.name, "facility": repo.facility}
+        repoObj = info.context.db.find_repo(filter)
+        if user.username not in repoObj.users:
+            raise Exception(user.username + " is not a user in repo " + repo.name)        
         info.context.db.collection("repos").update_one(filter, { "$set": {"principal": user.username}})
         ret = info.context.db.find_repo(filter)
         info.context.audit(AuditTrailObjectType.Repo, ret._id, "repoChangePrincipal", details=user.username)
