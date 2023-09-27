@@ -12,7 +12,8 @@ import math
 import datetime
 import pytz
 import json
-from string import Template
+import random
+import string
 
 import strawberry
 from strawberry.types import Info
@@ -1124,7 +1125,7 @@ class Mutation:
         return info.context.notify_raw(to=msg.to,subject=msg.subject,body=msg.body)
 
 
-all_subscriptions = list()
+all_subscriptions = dict()
 
 class RequestSubscription:
     def __init__(self, requestType):
@@ -1140,16 +1141,25 @@ class RequestSubscription:
 @strawberry.type
 class Subscription:
     @strawberry.subscription
-    async def requests(self, info: Info, requestType: Optional[CoactRequestType]=UNSET) -> AsyncGenerator[CoactRequestEvent, None]:
-        my_subscription = RequestSubscription(requestType)
-        all_subscriptions.append(my_subscription)
+    async def requests(self, info: Info, requestType: Optional[CoactRequestType]=UNSET, clientName: Optional[str]=None) -> AsyncGenerator[CoactRequestEvent, None]:
+        generatedClientName = False
+        if not clientName:
+            clientName = ''.join(random.choices(string.ascii_letters+string.digits, k=20))
+            generatedClientName = True
+        if clientName not in all_subscriptions:
+            my_subscription = RequestSubscription(requestType)
+            all_subscriptions[clientName] = my_subscription
         try:
             while True:
-                req = await my_subscription.requests_queue.get()
+                req = await all_subscriptions[clientName].requests_queue.get()
                 yield req
         except:
             pass
-        all_subscriptions.remove(my_subscription)
+        if generatedClientName:
+            LOG.warn("Removing anonymous subsctiption %s", clientName)
+            del all_subscriptions[clientName]
+        else:
+            LOG.warn("Keeping long lived subsctiption for client with name %s around", clientName)
 
 def start_change_stream_queues(db):
     """
@@ -1168,7 +1178,7 @@ def start_change_stream_queues(db):
                         theRq = db["requests"].find_one({"_id": theId})
                         if theRq:
                             req = CoactRequest(**theRq)
-                            await asyncio.gather(*[subscription.push_request(req, change) for subscription in all_subscriptions ])
+                            await asyncio.gather(*[subscription.push_request(req, change) for subscription in all_subscriptions.values() ])
                         change = change_stream.try_next()
                     except Exception as e:
                         LOG.exception("Exception processing change")

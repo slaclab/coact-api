@@ -13,8 +13,8 @@ LOG = logging.getLogger(__name__)
 # Provide a GraphQL query
 query = gql(
     """
-    subscription {
-      requests {
+    subscription($clientName: String) {
+      requests(clientName: $clientName) {
         theRequest {
             Id
         	reqtype
@@ -229,7 +229,7 @@ class ProcessRequests:
                 transport = WebsocketsTransport(url=args.url)
                 client = Client(transport=transport, fetch_schema_from_transport=False)
 
-                for request in client.subscribe(query):
+                for request in client.subscribe(query, variable_values={"clientName": "TestSubscription"}):
                     LOG.info(request)
                     theReq = request["requests"].get("theRequest", {})
                     if request["requests"]["operationType"] == "update" and theReq.get("approvalstatus", None) == "Approved":
