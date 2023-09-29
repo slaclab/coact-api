@@ -1,6 +1,6 @@
 DOCKER ?= docker
 REPO ?= slaclab
-IMAGE ?= coact
+IMAGE ?= coact-api
 TAG ?= latest
 
 MONGOD ?= /usr/local/Cellar/mongodb-community@4.4/4.4.13/bin/mongod

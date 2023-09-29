@@ -36,12 +36,12 @@ LOG = logging.getLogger(__name__)
 DB_NAME = environ.get("DB_NAME", "iris")
 MONGODB_URL=environ.get("MONGODB_URL", "mongodb://127.0.0.1:27017/")
 if not MONGODB_URL:
-    print("Please use the enivironment variable MONGODB_URL to configure the database connection.")
+    LOG.error("Please use the enivironment variable MONGODB_URL to configure the database connection.")
 mongo = MongoClient(
         host=MONGODB_URL, tz_aware=True, connect=True,
         username=environ.get("MONGODB_USER", None),
         password=environ.get("MONGODB_PASSWORD", None) )
-LOG.info("connected to %s" % (mongo,))
+LOG.info(f"Connected to database at {mongo}")
 
 USER_FIELD_IN_HEADER = environ.get('USERNAME_FIELD','REMOTE_USER')
 
@@ -437,6 +437,7 @@ def custom_context_dependency() -> CustomContext:
 async def get_context(custom_context: CustomContext = Depends(custom_context_dependency),):
     return custom_context
 
+# intiate change logs from database
 start_change_stream_queues(mongo[DB_NAME])
 
 # normal graphql api
@@ -453,6 +454,7 @@ graphql_service_app = GraphQLRouter(
   context_getter=get_context,
 )
 
+# initiate fastapi app
 app = FastAPI()
 origins = [
     "*",
@@ -465,5 +467,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.include_router(graphql_app, prefix="/graphql")
-app.include_router(graphql_service_app, prefix="/graphql-service")
+
+GRAPHQL_PREFIX = environ.get('COACT_GRAPHQL_PREFIX','/graphql')
+app.include_router(graphql_app, prefix=GRAPHQL_PREFIX)
+GRAPHQL_SERVICE_PREFIX = environ.get('COACT_GRAPHQL_SERVICE_PREFIX','/graphql-service-dev')
+app.include_router(graphql_service_app, prefix=GRAPHQL_SERVICE_PREFIX)
+
