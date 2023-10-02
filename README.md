@@ -39,4 +39,3 @@ then initiate the uvicorn server with
 ## testing
 
 you can then go to http://localhost:8000/graphql to test the graphql interface and issue queries etc.
-# pav test pull branch changes
