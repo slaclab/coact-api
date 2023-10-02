@@ -990,8 +990,8 @@ class Mutation:
         cluster = info.context.db.find_cluster(filter=cluster)
         if not cluster:
             raise Exception("Cannot find requested cluster " + str(cluster))
-        if not purchase or purchase < 0.0:
-            raise Exception("Invalid purchase amount")
+        if purchase and purchase < 0.0:
+            raise Exception("Invalid purchase amount " + str(purchase))
 
         todaysdate = datetime.datetime.utcnow()
         cp = list(info.context.db.collection("facility_compute_purchases").find({"facility": facility.name, "clustername": cluster.name, "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }).sort([("start", -1)]).limit(1))
