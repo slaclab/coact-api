@@ -943,8 +943,7 @@ class Mutation:
     @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
     def repoChangeComputeRequirement(self, repo: RepoInput, computerequirement: ComputeRequirement, info: Info) -> Repo:
         repo = info.context.db.find_repo( repo )
-        for computeAllocation in repo.currentComputeAllocations(info):
-            info.context.db.collection("repo_compute_allocations").update_one({"_id": computeAllocation._id}, {"$set": {"computerequirement": computerequirement.name}})
+        info.context.db.collection("repos").update_one({"_id": repo._id}, {"$set": {"computerequirement": computerequirement.name}})
         return info.context.db.find_repo( repo )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )

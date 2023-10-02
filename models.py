@@ -501,7 +501,6 @@ class RepoComputeAllocationInput:
     clustername: Optional[str] = UNSET
     start: Optional[datetime] = UNSET
     end: Optional[datetime] = UNSET
-    computerequirement: Optional[ComputeRequirement] = "Normal"
 
 @strawberry.type
 class RepoComputeAllocation(RepoComputeAllocationInput):
@@ -620,6 +619,8 @@ class RepoInput:
     principal: Optional[str] = UNSET
     leaders: Optional[List[str]] = UNSET
     users: Optional[List[str]] = UNSET
+
+    computerequirement: Optional[ComputeRequirement] = None
 
     group: Optional[str] = UNSET
     description: Optional[str] = UNSET

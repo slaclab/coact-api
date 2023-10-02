@@ -470,6 +470,6 @@ app.add_middleware(
 
 GRAPHQL_PREFIX = environ.get('COACT_GRAPHQL_PREFIX','/graphql')
 app.include_router(graphql_app, prefix=GRAPHQL_PREFIX)
-GRAPHQL_SERVICE_PREFIX = environ.get('COACT_GRAPHQL_SERVICE_PREFIX','/graphql-service-dev')
+GRAPHQL_SERVICE_PREFIX = environ.get('COACT_GRAPHQL_SERVICE_PREFIX','/graphql-service')
 app.include_router(graphql_service_app, prefix=GRAPHQL_SERVICE_PREFIX)
 
