@@ -1,0 +1,10 @@
+if(db.getSiblingDB("iris").versions.findOne({dbschema: "0.0.3"})) {
+    db.getSiblingDB("iris").requests.find({}).forEach(function(rq) {
+        if(rq.actedby == undefined) return;
+        rq.audit = [ { "actedby": rq.actedby, "actedat": rq.actedat, "previous": 0  } ];
+        delete rq["actedby"];
+        delete rq["actedat"];
+        db.getSiblingDB("iris").requests.replaceOne({"_id": rq["_id"]}, rq);
+    })
+    db.getSiblingDB("iris").versions.updateOne({}, {"$set": {"dbschema": "0.0.4"}})
+}

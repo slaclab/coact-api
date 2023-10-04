@@ -91,30 +91,41 @@ class CoactRequestInput:
     dontsendemail: Optional[bool] = False # Tells the ansible scripts that this request is being created by automation and will be approved immediately. No need to notify czars that a request is pending.
     approvalstatus: Optional[CoactRequestStatus] = CoactRequestStatus.NotActedOn
 
+@strawberry.type
+class CoactRequestAudit:
+    actedby: Optional[str] = UNSET
+    actedat: Optional[datetime] = None
+    notes: Optional[str] = UNSET
+    previous: Optional[CoactRequestStatus] = CoactRequestStatus.NotActedOn
 
 @strawberry.type
 class CoactRequest(CoactRequestInput):
     _id: Optional[MongoId] = UNSET
-    actedby: Optional[str] = UNSET
-    actedat: Optional[datetime] = None
+    audit: Optional[List[CoactRequestAudit]] = UNSET
+
+    def __init__(self, **kwargs):
+        self._id = kwargs["_id"]
+        self.audit = [ CoactRequestAudit(**x) for x in kwargs.get("audit", []) ]
+        LOG.warning("*********************************************************************************************************")
+        super(CoactRequest, self).__init__(**{ k : v for k,v in kwargs.items() if k not in [ "_id", "audit"]})
 
     def approve(self, info):
-        info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Approved.value, "actedby": info.context.username, "actedat": datetime.utcnow() }})
+        info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Approved.value }, "$push": {"audit": { "previous": self.approvalstatus, "actedby": info.context.username, "actedat": datetime.utcnow()}} })
         return info.context.db.find_request( { "_id": ObjectId(self._id) } )
     def reject(self, notes, info):
         curreq = info.context.db.collection("requests").find_one({"_id": self._id})
         notes = curreq.get("notes", "") + "\n" + notes
-        info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Rejected.value, "actedby": info.context.username, "actedat": datetime.utcnow(), "notes": notes }})
+        info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Rejected.value }, "$push": {"audit": { "previous": self.approvalstatus, "actedby": info.context.username, "actedat": datetime.utcnow(), "notes": notes }}})
         return info.context.db.find_request( { "_id": ObjectId(self._id) } )
     def complete(self, notes, info):
         curreq = info.context.db.collection("requests").find_one({"_id": self._id})
         notes = curreq.get("notes", "") + "\n" + notes
-        info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Completed.value, "actedby": info.context.username, "actedat": datetime.utcnow(), "notes": notes }})
+        info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Completed.value }, "$push": {"audit": { "previous": self.approvalstatus, "actedby": info.context.username, "actedat": datetime.utcnow(), "notes": notes }}})
         return info.context.db.find_request( { "_id": ObjectId(self._id) } )
     def incomplete(self, notes, info):
         curreq = info.context.db.collection("requests").find_one({"_id": self._id})
         notes = curreq.get("notes", "") + "\n" + notes
-        info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Incomplete.value, "actedby": info.context.username, "actedat": datetime.utcnow(), "notes": notes }})
+        info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Incomplete.value }, "$push": {"audit": { "previous": self.approvalstatus, "actedby": info.context.username, "actedat": datetime.utcnow(), "notes": notes }}})
         return info.context.db.find_request( { "_id": ObjectId(self._id) } )
     def refire(self, info) -> bool:
         curreq = info.context.db.collection("requests").find_one({"_id": self._id})
@@ -126,12 +137,16 @@ class CoactRequest(CoactRequestInput):
         # if the current status is Complete, then assume that we have an idempotent workflow to rerun
         if self.approvalstatus in [ CoactRequestStatus.Incomplete, CoactRequestStatus.Completed ]:
             v['approvalstatus'] = CoactRequestStatus.Approved
-        return info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": v})
+        return info.context.db.collection("requests").update_one({"_id": self._id}, {"$push": {"audit": v}})
+
 
 @strawberry.type
 class CoactRequestWithPerms(CoactRequest):
     canapprove: Optional[bool] = False # Transient property used to indicate if the current user is a leader in the repo. This should NOT be stored in the database
     canrefire: Optional[bool] = False # Transient property used to indicate if the current user has permission to approve. This should NOT be stored in the database
+
+    def __init__(self, **kwargs):
+        super(CoactRequestWithPerms, self).__init__(**kwargs)
 
 @strawberry.type
 class CoactRequestEvent:
