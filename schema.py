@@ -91,6 +91,15 @@ class Query:
         users = info.context.db.collection("users").find( {"username": {"$regex": regex}} )
         return [ User(**user) for user in users ] if users else []
 
+    @strawberry.field
+    def usersMatchingUserNames(self, info: Info, regexes: List[str]) -> Optional[List[User]]:
+        userlist = {}
+        for regex in regexes:
+            LOG.info("Searching for users matching %s", regex)
+            users = info.context.db.collection("users").find( {"username": {"$regex": regex}} )
+            userlist.update({x["username"]: x for x in users})
+        return [ User(**user) for user in userlist.values() ] if userlist else []
+
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def clusters(self, info: Info, filter: Optional[ClusterInput]={} ) -> List[Cluster]:
         return info.context.db.find_clusters( filter )
@@ -831,8 +840,6 @@ class Mutation:
         request.username = user.username
         request.requestedby = info.context.username
         request.timeofrequest = datetime.datetime.utcnow()
-        request.actedby = info.context.username
-        request.actedat = datetime.datetime.utcnow()
         request.approvalstatus = 1
         info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
         info.context.audit(AuditTrailObjectType.Repo, repoObj._id, "repoAddUser", details=user.username)

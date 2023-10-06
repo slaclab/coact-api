@@ -104,9 +104,8 @@ class CoactRequest(CoactRequestInput):
     audit: Optional[List[CoactRequestAudit]] = UNSET
 
     def __init__(self, **kwargs):
-        self._id = kwargs["_id"]
+        self._id = kwargs.get("_id", None)
         self.audit = [ CoactRequestAudit(**x) for x in kwargs.get("audit", []) ]
-        LOG.warning("*********************************************************************************************************")
         super(CoactRequest, self).__init__(**{ k : v for k,v in kwargs.items() if k not in [ "_id", "audit"]})
 
     def approve(self, info):
