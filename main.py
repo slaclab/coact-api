@@ -136,7 +136,8 @@ class CustomContext(BaseContext):
             if self.showallforczars:
                 facilities = self.db.find_facilities({ 'czars': self.username })
                 if not facilities and not self.is_admin:
-                    raise Exception(f"Showall is set for user {self.username} who is not an admin  czar")
+                    LOG.warning(f"Showall is set for user {self.username} who is not an admin or czar. Ignoring")
+                    self.showallforczars = False
 
         return self.username
 

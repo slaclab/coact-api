@@ -295,20 +295,24 @@ class Query:
     def myRepos(self, info: Info) -> List[Repo]:
         username = info.context.username
         assert username != None
+        allrepos = {}
+        allrepos.update({ x.name : x for x in info.context.db.find_repos( { '$or': [
+            { "users": username },
+            { "leaders": username },
+            { "principal": username }
+        ] } )})
+        
         if info.context.showallforczars:
             if info.context.is_admin:
-                return info.context.db.find_repos( { } )
-            LOG.error("Need to show all repos for a czar")
-            facilities = info.context.db.find_facilities({ 'czars': username })
-            if not facilities:
-                raise Exception("No facilities found for czar " + username)
-            return info.context.db.find_repos( { "facility": { "$in": [ x.name for x in facilities ] } } )
-        else:
-            return info.context.db.find_repos( { '$or': [
-                { "users": username },
-                { "leaders": username },
-                { "principal": username }
-                ] } )
+                allrepos = info.context.db.find_repos( { } )
+            else:
+                LOG.error("Need to show all repos for a czar")
+                facilities = info.context.db.find_facilities({ 'czars': username })
+                if not facilities:
+                    raise Exception("No facilities found for czar " + username)
+                allrepos.update({ x.name : x for x in info.context.db.find_repos( { "facility": { "$in": [ x.name for x in facilities ] } } )})
+        
+        return sorted(allrepos.values(), key=lambda x: x.name)
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def reposWithUser( self, info: Info, username: str ) -> List[Repo]:
