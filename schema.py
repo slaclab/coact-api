@@ -296,7 +296,7 @@ class Query:
         username = info.context.username
         assert username != None
         allrepos = {}
-        allrepos.update({ x.name : x for x in info.context.db.find_repos( { '$or': [
+        allrepos.update({ (x.facility, x.name) : x for x in info.context.db.find_repos( { '$or': [
             { "users": username },
             { "leaders": username },
             { "principal": username }
@@ -304,13 +304,13 @@ class Query:
         
         if info.context.showallforczars:
             if info.context.is_admin:
-                allrepos = info.context.db.find_repos( { } )
+                allrepos = { (x.facility, x.name) : x for x in info.context.db.find_repos( { } )}
             else:
                 LOG.error("Need to show all repos for a czar")
                 facilities = info.context.db.find_facilities({ 'czars': username })
                 if not facilities:
                     raise Exception("No facilities found for czar " + username)
-                allrepos.update({ x.name : x for x in info.context.db.find_repos( { "facility": { "$in": [ x.name for x in facilities ] } } )})
+                allrepos.update({ (x.facility, x.name) : x for x in info.context.db.find_repos( { "facility": { "$in": [ x.name for x in facilities ] } } )})
         
         return sorted(allrepos.values(), key=lambda x: x.name)
 
