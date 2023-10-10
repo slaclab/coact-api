@@ -1,4 +1,4 @@
-DOCKER ?= docker
+CONTAINER_RT ?= podman
 REPO ?= slaclab
 IMAGE ?= coact-api
 TAG ?= latest
@@ -9,10 +9,10 @@ WORK_DIR ?= new-iris
 all: build push
 
 build: FORCE
-	$(DOCKER) build . -f Dockerfile -t $(REPO)/$(IMAGE):$(TAG)
+	$(CONTAINER_RT) build . -f Dockerfile -t $(REPO)/$(IMAGE):$(TAG)
 
 push: build FORCE
-	$(DOCKER) push $(REPO)/$(IMAGE):$(TAG)
+	$(CONTAINER_RT) push $(REPO)/$(IMAGE):$(TAG)
 
 apply:
 	cd kubernetes/overlays/dev/ && make apply
