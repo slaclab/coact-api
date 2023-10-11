@@ -410,10 +410,14 @@ class Mutation:
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def userUpdate(self, user: UserInput, info: Info) -> User:
-        user_before_update = info.context.db.find_user({'_id': user._id})
+        u = info.context.db.to_dict(user)
+        for k in list(u.keys()):
+          if not k in ( '_id', 'username' ):
+            del u[k]
+        user_before_update = info.context.db.find_user( u )
         if not info.context.username == user_before_update.username and not info.context.is_admin:
             raise Exception(f"Only admins can update other users - {info.context.username} wants to update {user.username}")
-        user_after_update = info.context.db.update( 'users', user, required_fields=[ '_id' ], find_existing={ '_id': user._id } )
+        user_after_update = info.context.db.update( 'users', user, required_fields=[ '_id' ], find_existing={ '_id': user_before_update._id } )
         info.context.audit(AuditTrailObjectType.User, user_after_update._id, "userUpdate", details=info.context.dict_diffs(user_before_update, user_after_update))
         return user_after_update
 
