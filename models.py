@@ -136,7 +136,7 @@ class CoactRequest(CoactRequestInput):
         # if curreq's status is Incomplete, assume we are reiring to fix incomplete, so set it to Approved again
         # if the current status is Complete, then assume that we have an idempotent workflow to rerun
         if self.approvalstatus in [ CoactRequestStatus.Incomplete, CoactRequestStatus.Completed ]:
-            v['approvalstatus'] = CoactRequestStatus.Approved
+            v['previous'] = CoactRequestStatus.Approved
         return info.context.db.collection("requests").update_one({"_id": self._id}, {"$push": {"audit": v}})
 
 
