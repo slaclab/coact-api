@@ -160,6 +160,10 @@ class CustomContext(BaseContext):
         request_type = f"{request.reqtype}"
         request_status = f"{CoactRequestStatus(request.approvalstatus).name}"
         template_prefix = f"{request_type}_{request_status}"
+        user_email = None
+        czars = []
+        czar_emails = []
+        skip_czar_emails = True
         try:
             facility = request.facilityname
             czars = self.db.czars( facility )
