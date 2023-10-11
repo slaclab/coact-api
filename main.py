@@ -160,12 +160,15 @@ class CustomContext(BaseContext):
         request_type = f"{request.reqtype}"
         request_status = f"{CoactRequestStatus(request.approvalstatus).name}"
         template_prefix = f"{request_type}_{request_status}"
-        facility = request.facilityname
-        czars = self.db.czars( facility )
-        czar_emails = self.db.email_for( czars )
-        user_email = [ request.eppn, ]
-        user = [ request.preferredUserName, ]
-        skip_czar_emails = request.dontsendemail
+        try:
+            facility = request.facilityname
+            czars = self.db.czars( facility )
+            czar_emails = self.db.email_for( czars )
+            user_email = [ request.eppn, ]
+            user = [ request.preferredUserName, ]
+            skip_czar_emails = request.dontsendemail
+        except Exception as e:
+            LOG.warning(f"could not parse certain notification fields: {e}")
         LOG.info(f">>> TEMPLATE: {template_prefix}, FACILITY: {facility}, CZARS: {czars}, CZAR EMAIL: {czar_emails}, USER: {user}, EMAIL: {user_email}, DATA: {self.db.to_dict(request)}")
         return self.email.notify( request_type=request_type, request_status=request_status, data=self.db.to_dict(request), template_prefix=template_prefix, user=user_email, czars=czar_emails, skip_czar_emails=skip_czar_emails )
 
