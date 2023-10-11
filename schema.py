@@ -893,6 +893,15 @@ class Mutation:
             raise Exception(theuser + " is not a user in repo " + repo.name)
         if theuser == therepo.principal:
             raise Exception(theuser + " is a PI in repo " + repo.name + ". Cannot be removed from the repo")
+        request: CoactRequestInput = CoactRequestInput()
+        request.reqtype = CoactRequestType.RepoRemoveUser
+        request.reponame = repo.name
+        request.facilityname = repo.facility
+        request.username = user.username
+        request.requestedby = info.context.username
+        request.timeofrequest = datetime.datetime.utcnow()
+        request.approvalstatus = 1
+        info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
         info.context.db.collection("repos").update_one(filter, { "$pull": {"leaders": theuser, "users": theuser}})
         info.context.audit(AuditTrailObjectType.Repo, therepo._id, "repoRemoveUser", details=user.username)
         info.context.audit(AuditTrailObjectType.User, userObj._id, "-RepoMembership", details=repo.name)

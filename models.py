@@ -37,6 +37,7 @@ class CoactRequestType(Enum):
     NewRepo = "NewRepo"
     NewFacility = "NewFacility"
     RepoMembership = "RepoMembership"
+    RepoRemoveUser = "RepoRemoveUser"
     UserStorageAllocation = "UserStorageAllocation"
     RepoComputeAllocation = "RepoComputeAllocation"
     RepoStorageAllocation = "RepoStorageAllocation"
