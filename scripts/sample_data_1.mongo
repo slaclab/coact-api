@@ -92,16 +92,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
   "clustername": "roma",
   "start": ISODate("2021-05-01T00:00:00-07:00"),
   "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
-  "qoses": {
-    "cxi12345": {
-      "slachours": 500,
-      "chargefactor": 0.7765
-    },
-    "cxi12345-priority": {
-      "slachours": 500,
-      "chargefactor": 1.25
-    }
-  }
+  "percent_of_facility": 10.0
 })
 
 db.getSiblingDB("iris").repo_compute_allocations.insertOne({
@@ -109,16 +100,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
   "clustername": "milano",
   "start": ISODate("2021-05-01T00:00:00-07:00"),
   "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
-  "qoses": {
-    "cxi12345": {
-      "slachours": 600,
-      "chargefactor": 0.7765
-    },
-    "cxi12345-priority": {
-      "slachours": 600,
-      "chargefactor": 1.25
-    }
-  }
+  "percent_of_facility": 10.0
 })
 
 // This is last years allocation for the same repo
@@ -127,16 +109,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
   "clustername": "roma",
   "start": ISODate("2020-05-01T00:00:00-07:00"), // Last years allocations
   "end": ISODate("2020-12-31T00:00:00Z"),
-  "qoses": {
-    "cxi12345": {
-      "slachours": 7865320,
-      "chargefactor": 1.0
-    },
-    "cxi12345-priority": {
-      "slachours": 1,
-      "chargefactor": 1.25
-    }
-  }
+  "percent_of_facility": 10.0
 })
 
 db.getSiblingDB("iris").repo_compute_allocations.insertOne({
@@ -144,16 +117,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
   "clustername": "milano",
   "start": ISODate("2021-05-01T00:00:00-07:00"),
   "end": ISODate("2100-01-01T00:00:00Z"), // Distant future
-  "qoses": {
-    "CA104": {
-      "slachours": 400,
-      "chargefactor": 0.7765
-    },
-    "CA104-priority": {
-      "slachours": 400,
-      "chargefactor": 1.25
-    }
-  }
+  "percent_of_facility": 10.0
 })
 
 

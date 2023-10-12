@@ -17,16 +17,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "cxic00121": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "cxic00121-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -68,16 +59,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "cxil1000121": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "cxil1000121-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -119,16 +101,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "cxil1002721": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "cxil1002721-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -170,16 +143,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "cxil1005321": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "cxil1005321-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -221,16 +185,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "cxil1006021": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "cxil1006021-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -272,16 +227,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "cxil1007021": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "cxil1007021-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -323,16 +269,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "cxil1013521": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "cxil1013521-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -374,16 +311,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "cxilu8821": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "cxilu8821-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -425,16 +353,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "cxilv3621": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "cxilv3621-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -476,16 +395,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "cxilx7421": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "cxilx7421-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -527,16 +437,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "cxilx8421": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "cxilx8421-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -578,16 +479,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "cxily1321": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "cxily1321-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -629,16 +521,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "cxily3121": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "cxily3121-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -680,16 +563,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "cxily5921": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "cxily5921-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -731,16 +605,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "cxix1000121": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "cxix1000121-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -782,16 +647,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "cxix1001321": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "cxix1001321-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -833,16 +689,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "cxix1003921": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "cxix1003921-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -884,16 +731,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mecc00121": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mecc00121-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -935,16 +773,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mecl1000821": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mecl1000821-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -986,16 +815,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mecl1002021": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mecl1002021-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -1037,16 +857,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mecl1005521": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mecl1005521-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -1088,16 +899,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mecl1007521": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mecl1007521-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -1139,16 +941,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mecl1011621": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mecl1011621-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -1190,16 +983,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mecx1002521": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mecx1002521-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -1241,16 +1025,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mecx1002621": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mecx1002621-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -1292,16 +1067,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mecx1004021": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mecx1004021-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -1343,16 +1109,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mfxc00121": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mfxc00121-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -1394,16 +1151,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mfxl1005721": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mfxl1005721-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -1445,16 +1193,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mfxl1008021": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mfxl1008021-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -1496,16 +1235,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mfxl1010021": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mfxl1010021-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -1547,16 +1277,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mfxl1012721": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mfxl1012721-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -1598,16 +1319,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mfxl1013621": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mfxl1013621-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -1649,16 +1361,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mfxl1013721": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mfxl1013721-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -1700,16 +1403,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mfxl1014021": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mfxl1014021-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -1751,16 +1445,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mfxp1000221": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mfxp1000221-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -1802,16 +1487,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mfxp22421": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mfxp22421-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -1853,16 +1529,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mfxp23121": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mfxp23121-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -1904,16 +1571,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mfxx1001521": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mfxx1001521-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -1955,16 +1613,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mfxx1001621": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mfxx1001621-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -2006,16 +1655,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mfxx1001921": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mfxx1001921-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -2057,16 +1697,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mfxx1002921": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mfxx1002921-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -2108,16 +1739,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mfxx1004121": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mfxx1004121-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -2159,16 +1781,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mfxx1005021": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mfxx1005021-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -2210,16 +1823,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "mobsa0121": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "mobsa0121-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -2261,16 +1865,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "prjs00121": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "prjs00121-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -2312,16 +1907,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "rixc00121": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "rixc00121-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -2363,16 +1949,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "rixlx8521": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "rixlx8521-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -2414,16 +1991,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "rixlz0521": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "rixlz0521-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -2465,16 +2033,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "rixx1003721": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "rixx1003721-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -2516,16 +2075,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "rixx1003821": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "rixx1003821-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -2567,16 +2117,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "rixx1004521": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "rixx1004521-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -2618,16 +2159,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "rixx49021": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "rixx49021-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -2669,16 +2201,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "tmoc00121": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "tmoc00121-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -2720,16 +2243,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "tmox1004221": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "tmox1004221-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -2771,16 +2285,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "tmox1004721": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "tmox1004721-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -2822,16 +2327,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "txic00121": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "txic00121-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -2873,16 +2369,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "txisfx00121": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "txisfx00121-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -2924,16 +2411,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "txispi00121": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "txispi00121-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -2975,16 +2453,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "usrs00121": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "usrs00121-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -3026,16 +2495,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xcsc00121": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xcsc00121-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -3077,16 +2537,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xcsl1002321": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xcsl1002321-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -3128,16 +2579,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xcsl1002521": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xcsl1002521-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -3179,16 +2621,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xcsl1004021": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xcsl1004021-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -3230,16 +2663,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xcsl1004621": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xcsl1004621-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -3281,16 +2705,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xcsl1004821": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xcsl1004821-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -3332,16 +2747,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xcsl1006221": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xcsl1006221-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -3383,16 +2789,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xcsl1008221": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xcsl1008221-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -3434,16 +2831,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xcsl1008621": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xcsl1008621-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -3485,16 +2873,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xcsl1013921": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xcsl1013921-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -3536,16 +2915,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xcslx7821": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xcslx7821-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -3587,16 +2957,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xcslx9221": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xcslx9221-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -3638,16 +2999,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xcsx1000821": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xcsx1000821-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -3689,16 +3041,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xcsx1001121": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xcsx1001121-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -3740,16 +3083,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xcsx1003521": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xcsx1003521-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -3791,16 +3125,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xcsx1004321": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xcsx1004321-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -3842,16 +3167,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xcsx1004821": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xcsx1004821-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -3893,16 +3209,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xcsx1005121": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xcsx1005121-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -3944,16 +3251,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xppc00121": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xppc00121-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -3995,16 +3293,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xppl1002421": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xppl1002421-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -4046,16 +3335,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xppl1009121": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xppl1009121-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -4097,16 +3377,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xppl1010521": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xppl1010521-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -4148,16 +3419,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xppl1010921": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xppl1010921-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -4199,16 +3461,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xppl1012021": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xppl1012021-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -4250,48 +3503,21 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xppl1012921": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xppl1012921-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "repoid": repoid,
                 "clustername": "ampere",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xppl1012921": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xppl1012921-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "repoid": repoid,
                 "clustername": "roma",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xppl1012921": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xppl1012921-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -4333,16 +3559,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xppl1013821": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xppl1013821-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -4384,16 +3601,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xpplx9121": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xpplx9121-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -4435,16 +3643,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xpply4221": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xpply4221-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -4486,16 +3685,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xpply9021": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xpply9021-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -4537,16 +3727,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xpptut21": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xpptut21-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -4588,16 +3769,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xppx1000221": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xppx1000221-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -4639,16 +3811,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xppx1000421": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xppx1000421-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -4690,16 +3853,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xppx1000621": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xppx1000621-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -4741,16 +3895,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xppx1003221": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xppx1003221-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -4792,16 +3937,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xppx1003321": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xppx1003321-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -4843,16 +3979,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xppx1003621": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xppx1003621-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -4894,16 +4021,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xppx1004421": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xppx1004421-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,
@@ -4945,16 +4063,7 @@ db.getSiblingDB("iris").repo_compute_allocations.insertOne({
                 "clustername": "milano",
                 "start": ISODate("2021-05-01T00:00:00-07:00"),
                 "end": ISODate("2100-01-01T00:00:00Z"),
-                "qoses": {
-                    "xppx1004921": {
-                        "slachours": 10000,
-                        "chargefactor": 1.0
-                    },
-                    "xppx1004921-priority": {
-                        "slachours": 500,
-                        "chargefactor": 1.50
-                    }
-                }
+                "percent_of_facility": 10.0
             })
 db.getSiblingDB("iris").repo_storage_allocations.insertOne({
                 "repoid": repoid,

@@ -78,12 +78,11 @@ class CoactRequestInput:
     clustername: Optional[str] = UNSET
     chargefactor: Optional[float] = 1.0
     storagename: Optional[str] = UNSET
-    qosname: Optional[str] = UNSET
     computerequirement: Optional[ComputeRequirement] = ComputeRequirement.Normal
     purpose: Optional[str] = UNSET
     rootfolder: Optional[str] = UNSET
     allocationid: Optional[MongoId] = UNSET
-    slachours: Optional[float] = 0
+    percent_of_facility: Optional[float] = 0
     gigabytes: Optional[float] = 0
     inodes: Optional[float] = 0
     shell: Optional[str] = UNSET
@@ -382,7 +381,7 @@ class Facility( FacilityInput ):
             { "$replaceRoot": { "newRoot": "$allocation" } },
             { "$match": { "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }}
         ])
-        allocs = { x["clustername"]: sum([y["slachours"] for y in x["qoses"].values()]) for x in aaggs }
+        allocs = { x["clustername"]: sum([x["percent_of_facility"]]) for x in aaggs }
         uaggs = info.context.db.collection("repos").aggregate([
             { "$match": { "facility": self.name}},
             { "$lookup": { "from": "repo_compute_allocations", "localField": "_id", "foreignField": "repoid", "as": "allocation"}},
@@ -452,15 +451,6 @@ class Facility( FacilityInput ):
             v["used"] = used.get(k, 0)
         return [ FacilityStoragePurchases(**{k:x.get(k, 0) for k in ["storagename", "purpose", "purchased", "allocated", "used" ] }) for x in purchases.values()]
 
-@strawberry.input
-class QosInput:
-    name: Optional[str] = UNSET
-    slachours: Optional[float] = UNSET
-    chargefactor: Optional[float] = UNSET
-
-@strawberry.type
-class Qos(QosInput):
-    pass
 
 @strawberry.input
 class UsageInput:
@@ -516,20 +506,10 @@ class RepoComputeAllocationInput:
     clustername: Optional[str] = UNSET
     start: Optional[datetime] = UNSET
     end: Optional[datetime] = UNSET
+    percent_of_facility: Optional[float] = UNSET
 
 @strawberry.type
 class RepoComputeAllocation(RepoComputeAllocationInput):
-    qoses: Optional[List[Qos]] = UNSET
-    @strawberry.field
-    def qoses(self, info) ->List[Qos]:
-        me = info.context.db.collection("repo_compute_allocations").find_one({"_id": self._id})
-        qoses = []
-        # GraphQL can't really handle nested dicts. So, we maintain dicts in the database and convert to arrays when sending data across.
-        for k,v in me.get("qoses", {}).items():
-            q = { "name": k }
-            q.update(v)
-            qoses.append(q)
-        return [ Qos(**q) for q in qoses ]
     @strawberry.field
     def userAllocations(self, info) ->List[UserAllocation]:
         rc_filter = { "allocationid": self._id }
@@ -541,14 +521,11 @@ class RepoComputeAllocation(RepoComputeAllocationInput):
         """
         LOG.debug("Getting the total usage for repo %s", self.repoid)
         usages = []
-        for qos in self.qoses(info):
-            usg = info.context.db.collection("repo_overall_compute_usage").find_one({"allocationid": self._id, "qos": qos.name})
-            if not usg:
-                continue
+        usg = info.context.db.collection("repo_overall_compute_usage").find_one({"allocationid": self._id})
+        if usg:
             usages.append({
                 "repoid": self.repoid,
                 "clustername": self.clustername,
-                "qos": qos.name,
                 "rawsecs": usg["rawsecs"],
                 "machinesecs": usg["machinesecs"],
                 "slachours": usg["slachours"],
@@ -670,7 +647,7 @@ class Repo( RepoInput ):
             { "$group": { "_id": {"repoid": "$repoid", "clustername": "$clustername"}, "origid": {"$first": "$_id"}}},
         ])
         current_alloc_ids = list(map(lambda x: x["origid"], current_allocs))
-        return [ RepoComputeAllocation(**{k:x.get(k, 0) for k in ["_id", "repoid", "clustername", "start", "end" ] }) for x in  info.context.db.collection("repo_compute_allocations").find({"_id" : {"$in": current_alloc_ids}})]
+        return [ RepoComputeAllocation(**{k:x.get(k, 0) for k in ["_id", "repoid", "clustername", "start", "end", "percent_of_facility" ] }) for x in  info.context.db.collection("repo_compute_allocations").find({"_id" : {"$in": current_alloc_ids}})]
 
     @strawberry.field
     def computeAllocation(self, info, allocationid: MongoId) -> Optional[RepoComputeAllocation]:
@@ -681,7 +658,6 @@ class Repo( RepoInput ):
         alloc = info.context.db.collection("repo_compute_allocations").find_one(rc_filter)
         if not alloc:
             return None
-        del alloc["qoses"]
         return RepoComputeAllocation(**alloc)
 
     @strawberry.field

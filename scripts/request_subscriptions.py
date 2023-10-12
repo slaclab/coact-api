@@ -29,8 +29,7 @@ query = gql(
             gigabytes
             storagename
             clustername
-            qosname
-            slachours
+            percentOfFacility
             start
             end
             chargefactor
@@ -126,10 +125,6 @@ findrepo = gql(
                 clustername
                 start
                 end
-                qoses {
-                    slachours
-                    chargefactor
-                }
             }
             currentStorageAllocations {
                 purpose
@@ -167,8 +162,8 @@ userStorageAllocationUpsert = gql(
 
 repoComputeAllocationUpsert = gql(
     """
-    mutation repoComputeAllocationUpsert($repo: RepoInput!, $repocompute: RepoComputeAllocationInput!, $qosinputs: [QosInput!]!) {
-        repoComputeAllocationUpsert(repo: $repo, repocompute: $repocompute, qosinputs: $qosinputs) {
+    mutation repoComputeAllocationUpsert($repo: RepoInput!, $repocompute: RepoComputeAllocationInput!) {
+        repoComputeAllocationUpsert(repo: $repo, repocompute: $repocompute) {
             Id
         }
     }
@@ -458,14 +453,14 @@ class ProcessRequests:
             LOG.error(f"Repo with name {thereponame} does not exist - cannot approve {theReq['Id']}")
         LOG.info(therepo)
 
-        for attr in [ "clustername", "qosname", "slachours" ]:
+        for attr in [ "clustername", "percentOfFacility" ]:
             if not theReq.get(attr, None):
                 LOG.error(f"RepoComputeAllocation request without {attr} - cannot approve {theReq['Id']}")
 
         if not theReq["start"]:
-            theReq["start"] = datetime.datetime.utcnow()
+            theReq["start"] = datetime.datetime.utcnow().isoformat()
         if not theReq["end"]:
-            theReq["end"] = datetime.datetime.utcnow().replace(year=2100)
+            theReq["end"] = datetime.datetime.utcnow().replace(year=2100).isoformat()
         if not theReq["chargefactor"]:
             theReq["chargefactor"] = 1.0
 
@@ -475,14 +470,10 @@ class ProcessRequests:
                 "repocompute": {
                     "repoid": therepo["Id"],
                     "clustername": theReq["clustername"],
-                    "start": theReq["start"].isoformat(),
-                    "end": theReq["end"].isoformat(),
-                },
-                "qosinputs": [{
-                    "name": theReq["qosname"],
-                    "slachours": theReq["slachours"],
-                    "chargefactor": theReq["chargefactor"]
-                }]})
+                    "start": theReq["start"],
+                    "end": theReq["end"],
+                    "percentOfFacility":  theReq["percentOfFacility"]
+                }})
             print(result)
         except Exception as e:
             LOG.exception(e)

@@ -1,0 +1,5 @@
+if(db.getSiblingDB("iris").versions.findOne({dbschema: "0.0.4"})) {
+    db.getSiblingDB("iris").repo_compute_allocations.updateMany({}, {"$set": {"percent_of_facility": 10.0}, "$unset": {"qoses": 1}})
+    db.getSiblingDB("iris").requests.deleteMany({"reqtype": "RepoComputeAllocation"});
+    db.getSiblingDB("iris").versions.updateOne({}, {"$set": {"dbschema": "0.0.5"}})
+}

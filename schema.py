@@ -35,7 +35,7 @@ from models import \
         CoactRequestFilter, RepoFacilityName, \
         Usage, UsageInput, StorageDailyUsageInput, \
         ReportRangeInput, PerDateUsage, PerUserUsage, \
-        RepoComputeAllocationInput, QosInput, RepoStorageAllocationInput, \
+        RepoComputeAllocationInput, RepoStorageAllocationInput, \
         AuditTrailObjectType, AuditTrail, AuditTrailInput, \
         NotificationInput, Notification, ComputeRequirement
 
@@ -494,8 +494,8 @@ class Mutation:
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def requestRepoComputeAllocation(self, request: CoactRequestInput, info: Info) -> CoactRequest:
-        if request.reqtype != CoactRequestType.RepoComputeAllocation or not request.reponame or not request.facilityname or not request.clustername or not request.slachours:
-            raise Exception()
+        if request.reqtype != CoactRequestType.RepoComputeAllocation or not request.reponame or not request.facilityname or not request.clustername or request.percent_of_facility < 0.0:
+            raise Exception("Please specify the required parameters")
         request.username = info.context.username
         request.requestedby = info.context.username
         request.timeofrequest = datetime.datetime.utcnow()
@@ -665,11 +665,8 @@ class Mutation:
                 raise Exception("RepoComputeAllocation request without a cluster name - cannot approve.")
             if not info.context.db.find_clusters( {"name": theclustername} ):
                 raise Exception(f"Cluster with name {theclustername} does not exist")
-            theqosname = thereq.qosname
-            if not theqosname:
-                raise Exception("RepoComputeAllocation request without a QOS name - cannot approve.")
-            if not thereq.slachours:
-                raise Exception("RepoComputeAllocation without a slachours - cannot approve.")
+            if thereq.percent_of_facility < 0:
+                raise Exception("RepoComputeAllocation without a percent of facility - cannot approve.")
             if not thereq.start:
                 thereq.start = datetime.datetime.utcnow()
             if not thereq.end:
@@ -946,7 +943,7 @@ class Mutation:
         return info.context.db.find_access_group( grpfilter )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
-    def repoComputeAllocationUpsert(self, repo: RepoInput, repocompute: RepoComputeAllocationInput, qosinputs: List[QosInput], info: Info) -> Repo:
+    def repoComputeAllocationUpsert(self, repo: RepoInput, repocompute: RepoComputeAllocationInput, info: Info) -> Repo:
         repo = info.context.db.find_repo( repo )
         rc = {"repoid": repo._id}
         clustername = repocompute.clustername
@@ -956,12 +953,10 @@ class Mutation:
         rc["clustername"] = clustername
         rc["start"] = repocompute.start.astimezone(pytz.utc)
         rc["end"] = repocompute.end.astimezone(pytz.utc)
-        rc["qoses"] = {}
-        for qosinput in qosinputs:
-            rc["qoses"][qosinput.name] = { "slachours": qosinput.slachours, "chargefactor": qosinput.chargefactor }
+        rc["percent_of_facility"] = repocompute.percent_of_facility
         LOG.info(rc)
         info.context.db.collection("repo_compute_allocations").replace_one({"repoid": rc["repoid"], "clustername": rc["clustername"], "start": rc["start"]}, rc, upsert=True)
-        info.context.audit(AuditTrailObjectType.Repo, repo._id, "repoComputeAllocationUpsert", details=clustername+"="+json.dumps(rc["qoses"]))
+        info.context.audit(AuditTrailObjectType.Repo, repo._id, "repoComputeAllocationUpsert", details=clustername+"="+json.dumps(rc["percent_of_facility"]))
         return info.context.db.find_repo( repo )
     
     @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
@@ -1148,7 +1143,7 @@ class Mutation:
         return info.context.notify_raw(to=msg.to,subject=msg.subject,body=msg.body)
 
 
-all_subscriptions = dict()
+all_request_subscriptions = dict()
 
 class RequestSubscription:
     def __init__(self, requestType):
@@ -1169,18 +1164,18 @@ class Subscription:
         if not clientName:
             clientName = ''.join(random.choices(string.ascii_letters+string.digits, k=20))
             generatedClientName = True
-        if clientName not in all_subscriptions:
+        if clientName not in all_request_subscriptions:
             my_subscription = RequestSubscription(requestType)
-            all_subscriptions[clientName] = my_subscription
+            all_request_subscriptions[clientName] = my_subscription
         try:
             while True:
-                req = await all_subscriptions[clientName].requests_queue.get()
+                req = await all_request_subscriptions[clientName].requests_queue.get()
                 yield req
         except:
             pass
         if generatedClientName:
             LOG.warn("Removing anonymous subsctiption %s", clientName)
-            del all_subscriptions[clientName]
+            del all_request_subscriptions[clientName]
         else:
             LOG.warn("Keeping long lived subsctiption for client with name %s around", clientName)
 
@@ -1195,13 +1190,13 @@ def start_change_stream_queues(db):
                 change = change_stream.try_next()
                 while change is not None:
                     try:
-                        LOG.info("Publishing a request to %s queues", len(all_subscriptions))
+                        LOG.info("Publishing a request to %s queues", len(all_request_subscriptions))
                         LOG.info(dumps(change))
                         theId = change["documentKey"]["_id"]
                         theRq = db["requests"].find_one({"_id": theId})
                         if theRq:
                             req = CoactRequest(**theRq)
-                            await asyncio.gather(*[subscription.push_request(req, change) for subscription in all_subscriptions.values() ])
+                            await asyncio.gather(*[subscription.push_request(req, change) for subscription in all_request_subscriptions.values() ])
                         change = change_stream.try_next()
                     except Exception as e:
                         LOG.exception("Exception processing change")

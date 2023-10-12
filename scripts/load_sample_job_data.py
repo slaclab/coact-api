@@ -77,11 +77,6 @@ if __name__ == '__main__':
                 currentComputeAllocations{
                     Id
                     clustername
-                    qoses{
-                        name
-                        slachours
-                        chargefactor
-                    }
                 }
             }
             clusters(filter:{}){
