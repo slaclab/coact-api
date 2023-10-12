@@ -137,7 +137,7 @@ class CoactRequest(CoactRequestInput):
         # if the current status is Complete, then assume that we have an idempotent workflow to rerun
         if self.approvalstatus in [ CoactRequestStatus.Incomplete, CoactRequestStatus.Completed ]:
             v['previous'] = CoactRequestStatus.Approved
-        return info.context.db.collection("requests").update_one({"_id": self._id}, {"$push": {"audit": v}})
+        return info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Approved.value }, "$push": {"audit": v}})
 
 
 @strawberry.type
