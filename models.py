@@ -83,6 +83,7 @@ class CoactRequestInput:
     rootfolder: Optional[str] = UNSET
     allocationid: Optional[MongoId] = UNSET
     percent_of_facility: Optional[float] = 0
+    allocated: Optional[float] = 0 # Absolute compute allocation; similar to facility
     gigabytes: Optional[float] = 0
     inodes: Optional[float] = 0
     shell: Optional[str] = UNSET
@@ -507,6 +508,7 @@ class RepoComputeAllocationInput:
     start: Optional[datetime] = UNSET
     end: Optional[datetime] = UNSET
     percent_of_facility: Optional[float] = UNSET
+    allocated: Optional[float] = 0 # Absolute compute allocation; similar to facility
 
 @strawberry.type
 class RepoComputeAllocation(RepoComputeAllocationInput):
@@ -647,7 +649,7 @@ class Repo( RepoInput ):
             { "$group": { "_id": {"repoid": "$repoid", "clustername": "$clustername"}, "origid": {"$first": "$_id"}}},
         ])
         current_alloc_ids = list(map(lambda x: x["origid"], current_allocs))
-        return [ RepoComputeAllocation(**{k:x.get(k, 0) for k in ["_id", "repoid", "clustername", "start", "end", "percent_of_facility" ] }) for x in  info.context.db.collection("repo_compute_allocations").find({"_id" : {"$in": current_alloc_ids}})]
+        return [ RepoComputeAllocation(**{k:x.get(k, 0) for k in ["_id", "repoid", "clustername", "start", "end", "percent_of_facility", "allocated" ] }) for x in  info.context.db.collection("repo_compute_allocations").find({"_id" : {"$in": current_alloc_ids}})]
 
     @strawberry.field
     def computeAllocation(self, info, allocationid: MongoId) -> Optional[RepoComputeAllocation]:

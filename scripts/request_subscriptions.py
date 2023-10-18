@@ -30,6 +30,7 @@ query = gql(
             storagename
             clustername
             percentOfFacility
+            allocated
             start
             end
             chargefactor
@@ -472,7 +473,8 @@ class ProcessRequests:
                     "clustername": theReq["clustername"],
                     "start": theReq["start"],
                     "end": theReq["end"],
-                    "percentOfFacility":  theReq["percentOfFacility"]
+                    "percentOfFacility":  theReq["percentOfFacility"],
+                    "allocated": theReq["allocated"]
                 }})
             print(result)
         except Exception as e:

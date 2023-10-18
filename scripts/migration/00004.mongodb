@@ -1,5 +1,15 @@
 if(db.getSiblingDB("iris").versions.findOne({dbschema: "0.0.4"})) {
-    db.getSiblingDB("iris").repo_compute_allocations.updateMany({}, {"$set": {"percent_of_facility": 10.0}, "$unset": {"qoses": 1}})
     db.getSiblingDB("iris").requests.deleteMany({"reqtype": "RepoComputeAllocation"});
+    db.getSiblingDB("iris").repo_compute_allocations.updateMany({}, {"$set": {"percent_of_facility": 10.0}, "$unset": {"qoses": 1}})
+    db.getSiblingDB("iris").repo_compute_allocations.aggregate([
+        { "$lookup": { "from": "repos", "localField": "repoid", "foreignField": "_id", "as": "repo"}},
+        { "$unwind": "$repo" },
+        { "$project": { "_id": 1, "percent_of_facility": 1, "clustername": 1, "facilityname": "$repo.facility"} },
+        { "$lookup": { "from": "facility_compute_purchases", "localField": "facilityname", "foreignField": "facility", "as": "fcp0"}},
+        { "$unwind": "$fcp0" },
+        { "$match": {"$expr": {"$eq": ["$clustername", "$fcp0.clustername"]}}},
+        { "$project": { "_id": 1, "allocated": { "$multiply": [ 0.01, "$percent_of_facility", "$fcp0.slachours" ] } }}
+    ]).forEach(function(rca){  db.getSiblingDB("iris").repo_compute_allocations.updateOne({"_id": rca["_id"]}, {"$set": {"allocated": rca["allocated"]}}); })
     db.getSiblingDB("iris").versions.updateOne({}, {"$set": {"dbschema": "0.0.5"}})
 }
+

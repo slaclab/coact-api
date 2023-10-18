@@ -499,6 +499,11 @@ class Mutation:
         request.username = info.context.username
         request.requestedby = info.context.username
         request.timeofrequest = datetime.datetime.utcnow()
+        facility = info.context.db.find_facility({"name": request.facilityname})
+        current_purchases = [x.purchased for x in facility.computepurchases(info) if x.clustername == request.clustername]
+        current_purchase = current_purchases[0] if current_purchases else 0
+        request.allocated = (current_purchase/100.0)*request.percent_of_facility
+        LOG.info("Current purchase for %s is %s. Allocating %s", request.facilityname, current_purchase, request.allocated)
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
@@ -667,6 +672,8 @@ class Mutation:
                 raise Exception(f"Cluster with name {theclustername} does not exist")
             if thereq.percent_of_facility < 0:
                 raise Exception("RepoComputeAllocation without a percent of facility - cannot approve.")
+            if thereq.allocated < 0:
+                raise Exception("RepoComputeAllocation without an absolute allocation - cannot approve.")
             if not thereq.start:
                 thereq.start = datetime.datetime.utcnow()
             if not thereq.end:
@@ -954,9 +961,10 @@ class Mutation:
         rc["start"] = repocompute.start.astimezone(pytz.utc)
         rc["end"] = repocompute.end.astimezone(pytz.utc)
         rc["percent_of_facility"] = repocompute.percent_of_facility
+        rc["allocated"] = repocompute.allocated
         LOG.info(rc)
         info.context.db.collection("repo_compute_allocations").replace_one({"repoid": rc["repoid"], "clustername": rc["clustername"], "start": rc["start"]}, rc, upsert=True)
-        info.context.audit(AuditTrailObjectType.Repo, repo._id, "repoComputeAllocationUpsert", details=clustername+"="+json.dumps(rc["percent_of_facility"]))
+        info.context.audit(AuditTrailObjectType.Repo, repo._id, "repoComputeAllocationUpsert", details=clustername+"="+json.dumps(rc["allocated"])+"("+json.dumps(rc["percent_of_facility"])+"%)")
         return info.context.db.find_repo( repo )
     
     @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
