@@ -152,6 +152,10 @@ class IsRepoPrincipalOrLeader(BasePermission):
                 return False
             if info.context.is_admin and 'adminOverride' in kwargs and kwargs['adminOverride']:
                 return True
+            facility = info.context.db.find_facility( { 'name': facilityname })
+            if user in facility.czars:
+                self.LOG.debug(f"  user {user} permitted to modify facility {facility}")
+                return True
             if user in repo.leaders or repo.principal == user:
                 self.LOG.debug(f"  user {user} permitted to modify repo {repo}")
                 return True
