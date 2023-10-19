@@ -3,6 +3,7 @@
 import argparse
 import logging
 import datetime
+import pytz
 
 from gql import gql, Client
 from gql.transport.websockets import WebsocketsTransport
@@ -266,7 +267,7 @@ class ProcessRequests:
             "request" : {
                 "reqtype" : "UserStorageAllocation",
                 "requestedby" : username,
-                "timeofrequest" : datetime.datetime.utcnow().isoformat(),
+                "timeofrequest" : datetime.datetime.utcnow().astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
                 "username" : username,
                 "storagename" : "sdfhome",
                 "purpose" : "home",
@@ -386,7 +387,7 @@ class ProcessRequests:
                 "request" : {
                     "reqtype": "RepoComputeAllocation",
                     "requestedby": repo["principal"],
-                    "timeofrequest": datetime.datetime.utcnow().isoformat(),
+                    "timeofrequest": datetime.datetime.utcnow().astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
                     "reponame": repo["name"],
                     "facilityname": repo["facility"],
                     "clustername": clustername,
@@ -414,7 +415,7 @@ class ProcessRequests:
                 "request" : {
                     "reqtype": "RepoStorageAllocation",
                     "requestedby": repo["principal"],
-                    "timeofrequest": datetime.datetime.utcnow().isoformat(),
+                    "timeofrequest": datetime.datetime.utcnow().astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
                     "reponame": repo["name"],
                     "facilityname": repo["facility"],
                     "storagename": reqvals["storagename"],
@@ -459,9 +460,9 @@ class ProcessRequests:
                 LOG.error(f"RepoComputeAllocation request without {attr} - cannot approve {theReq['Id']}")
 
         if not theReq["start"]:
-            theReq["start"] = datetime.datetime.utcnow().isoformat()
+            theReq["start"] = datetime.datetime.utcnow().astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
         if not theReq["end"]:
-            theReq["end"] = datetime.datetime.utcnow().replace(year=2100).isoformat()
+            theReq["end"] = datetime.datetime.utcnow().replace(year=2100).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
         if not theReq["chargefactor"]:
             theReq["chargefactor"] = 1.0
 
@@ -508,8 +509,8 @@ class ProcessRequests:
                     "purpose": theReq["purpose"],
                     "gigabytes": theReq["gigabytes"],
                     "rootfolder": f"/cds/data/{thereponame}/{theReq['purpose']}",
-                    "start": theReq["start"].isoformat(),
-                    "end": theReq["end"].isoformat(),
+                    "start": theReq["start"].astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+                    "end": theReq["end"].astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
                 }
             })
             print(result)

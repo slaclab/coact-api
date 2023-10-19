@@ -28,7 +28,7 @@ class JSONEncoder(json.JSONEncoder):
         elif isinstance(o, datetime.datetime):
             # Use var d = new Date(str) in JS to deserialize
             # d.toJSON() in JS to convert to a string readable by datetime.strptime(str, '%Y-%m-%dT%H:%M:%S.%fZ')
-            return o.isoformat()
+            return o.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
         return json.JSONEncoder.default(self, o)
 
 def fetch_data_from_SLURM(daystr):

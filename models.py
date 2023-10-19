@@ -10,6 +10,7 @@ import re
 import json
 
 from datetime import datetime, date
+import pytz
 from bson import ObjectId
 
 import logging
@@ -25,7 +26,11 @@ MongoId = strawberry.scalar(
     parse_value = lambda v: ObjectId(v),
 )
 
-
+CoactDatetime = strawberry.scalar(
+    NewType("CoactDatetime", object),
+    serialize = lambda v: v.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ'), # Use var d = new Date(str) in JS to deserialize in Javascript
+    parse_value = lambda v: datetime.strptime(v, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone(pytz.utc),
+)
 
 # would this be useful? https://github.com/strawberry-graphql/strawberry/discussions/444
 

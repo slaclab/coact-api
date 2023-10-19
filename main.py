@@ -17,7 +17,7 @@ from strawberry.arguments import UNSET
 from pymongo import MongoClient
 from bson import ObjectId
 
-from models import User, AccessGroup, Repo, Facility, Cluster, CoactRequest, CoactRequestStatus, AuditTrail, AuditTrailObjectType
+from models import User, AccessGroup, Repo, Facility, Cluster, CoactRequest, CoactRequestStatus, AuditTrail, AuditTrailObjectType, CoactDatetime
 from schema import Query, Mutation, Subscription, start_change_stream_queues
 
 import smtplib
@@ -450,17 +450,17 @@ async def get_context(custom_context: CustomContext = Depends(custom_context_dep
 start_change_stream_queues(mongo[DB_NAME])
 
 # normal graphql api
-schema = Schema(query=Query, mutation=Mutation, config=StrawberryConfig(auto_camel_case=True))
+schema = Schema(query=Query, mutation=Mutation, scalar_overrides={ datetime: CoactDatetime }, config=StrawberryConfig(auto_camel_case=True))
 graphql_app = GraphQLRouter(
   schema,
-  context_getter=get_context,
+  context_getter=get_context
 )
 
 # duplicate api at different endpoint for service accounts
-service_schema = Schema(query=Query, mutation=Mutation, subscription=Subscription, config=StrawberryConfig(auto_camel_case=True))
+service_schema = Schema(query=Query, mutation=Mutation, subscription=Subscription, scalar_overrides={ datetime: CoactDatetime }, config=StrawberryConfig(auto_camel_case=True))
 graphql_service_app = GraphQLRouter(
   service_schema,
-  context_getter=get_context,
+  context_getter=get_context
 )
 
 # initiate fastapi app
