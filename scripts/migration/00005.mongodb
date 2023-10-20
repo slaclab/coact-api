@@ -1,0 +1,14 @@
+if(db.getSiblingDB("iris").versions.findOne({dbschema: "0.0.5"})) {
+    db.getSiblingDB("iris").requests.find({"approvalstatus": 3, "notes": {"$regex": "Request .*"}, "audit.previous": 0}).forEach(function(rq){
+        let notes = rq["notes"], notesmoved = false;
+        rq["audit"].forEach(function(a, i){ if(a["previous"] == 0) { rq["audit"][i]["notes"] = notes; notesmoved=true }})
+        if(notesmoved){
+            print("Notes moved for " + rq["_id"]);
+            delete rq["notes"];
+            db.getSiblingDB("iris").requests.replaceOne({"_id": rq["_id"]}, rq);
+        }
+    })
+    db.requests.deleteMany({"reqtype": "RepoChangeComputeRequirement", "approvalstatus": 2})
+    db.getSiblingDB("iris").versions.updateOne({}, {"$set": {"dbschema": "0.0.6"}})
+}
+
