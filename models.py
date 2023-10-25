@@ -9,7 +9,7 @@ from enum import Enum, IntEnum
 import re
 import json
 
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import pytz
 from bson import ObjectId
 
@@ -30,6 +30,13 @@ CoactDatetime = strawberry.scalar(
     NewType("CoactDatetime", object),
     serialize = lambda v: v.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ'), # Use var d = new Date(str) in JS to deserialize in Javascript
     parse_value = lambda v: datetime.strptime(v, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone(pytz.utc),
+)
+
+Int64 = strawberry.scalar(
+    Union[int, str],  # type: ignore
+    serialize=lambda v: int(v),
+    parse_value=lambda v: str(v),
+    description="Int64 field",
 )
 
 # would this be useful? https://github.com/strawberry-graphql/strawberry/discussions/444
@@ -340,7 +347,8 @@ class FacilityComputePurchases:
     clustername: Optional[str] = UNSET
     purchased: Optional[float] = UNSET
     allocated: Optional[float] = UNSET
-    used: Optional[float] = UNSET
+    usedDay: Optional[float] = UNSET
+    usedWeek: Optional[float] = UNSET
 @strawberry.type
 class FacilityStoragePurchases:
     storagename: Optional[str] = UNSET
@@ -385,22 +393,36 @@ class Facility( FacilityInput ):
             { "$match": { "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }}
         ])
         allocs = { x["clustername"]: sum([x["percent_of_facility"]]) for x in aaggs }
-        uaggs = info.context.db.collection("repos").aggregate([
+        duaggs = info.context.db.collection("repos").aggregate([
             { "$match": { "facility": self.name}},
             { "$lookup": { "from": "repo_compute_allocations", "localField": "_id", "foreignField": "repoid", "as": "allocation"}},
             { "$unwind": "$allocation" },
             { "$replaceRoot": { "newRoot": "$allocation" } },
             { "$match": { "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }}, # This gives us current allocations
-            { "$lookup": { "from": "repo_overall_compute_usage", "localField": "_id", "foreignField": "allocationid", "as": "usage"}},
+            { "$lookup": { "from": "repo_daily_compute_usage", "localField": "_id", "foreignField": "allocationId", "as": "usage"}},
             { "$unwind": "$usage" },
-            { "$group": { "_id": {"clustername": "$clustername"}, "slachours": {"$sum": "$usage.slachours"}}},
+            { "$match": { "usage.date": {"$eq": todaysdate} }}, # This gives us today's usage
+            { "$group": { "_id": {"clustername": "$clustername"}, "resourceHours": {"$sum": "$usage.resourceHours"}}},
         ])
-        used = { x["_id"]["clustername"]: x["slachours"] for x in uaggs }
+        wuaggs = info.context.db.collection("repos").aggregate([
+            { "$match": { "facility": self.name}},
+            { "$lookup": { "from": "repo_compute_allocations", "localField": "_id", "foreignField": "repoid", "as": "allocation"}},
+            { "$unwind": "$allocation" },
+            { "$replaceRoot": { "newRoot": "$allocation" } },
+            { "$match": { "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }}, # This gives us current allocations
+            { "$lookup": { "from": "repo_daily_compute_usage", "localField": "_id", "foreignField": "allocationId", "as": "usage"}},
+            { "$unwind": "$usage" },
+            { "$match": { "$and": [ {"usage.date": {"$gte": todaysdate - timedelta(days=7) }}, {"usage.date": {"$lt": todaysdate }} ] }}, # This gives us today's usage
+            { "$group": { "_id": {"clustername": "$clustername"}, "resourceHours": {"$sum": "$usage.resourceHours"}}},
+        ])
+        dused = { x["_id"]["clustername"]: x["resourceHours"] for x in duaggs }
+        wused = { x["_id"]["clustername"]: x["resourceHours"] for x in wuaggs }
         for k,v in purchases.items():
             v["clustername"] = k
             v["allocated"] = allocs.get(k, 0)
-            v["used"] = used.get(k, 0)
-        return [ FacilityComputePurchases(**{k:x.get(k, 0) for k in ["clustername", "purchased", "allocated", "used" ] }) for x in purchases.values()]
+            v["usedDay"] = dused.get(k, 0)
+            v["usedWeek"] = wused.get(k, 0)
+        return [ FacilityComputePurchases(**{k:x.get(k, 0) for k in ["clustername", "purchased", "allocated", "usedDay", "usedWeek" ] }) for x in purchases.values()]
     @strawberry.field
     def computeallocations(self, info) -> Optional[List[FacilityComputeAllocation]]:
         # More complex; we want to return the "current" per resource type.
@@ -464,10 +486,7 @@ class UsageInput:
     clustername: Optional[str] = UNSET
     storagename: Optional[str] = UNSET
     purpose: Optional[str] = UNSET
-    rawsecs: Optional[float] = 0
-    machinesecs: Optional[float] = 0
-    slachours: Optional[float] = 0
-    avgcf: Optional[float] = 0
+    resourceHours: Optional[float] = 0
     gigabytes: Optional[float] = 0
     inodes: Optional[float] = 0
 
@@ -525,26 +544,23 @@ class RepoComputeAllocation(RepoComputeAllocationInput):
         """
         LOG.debug("Getting the total usage for repo %s", self.repoid)
         usages = []
-        usg = info.context.db.collection("repo_overall_compute_usage").find_one({"allocationid": self._id})
+        usg = info.context.db.collection("repo_overall_compute_usage").find_one({"allocationId": self._id})
         if usg:
             usages.append({
                 "repoid": self.repoid,
                 "clustername": self.clustername,
-                "rawsecs": usg["rawsecs"],
-                "machinesecs": usg["machinesecs"],
-                "slachours": usg["slachours"],
-                "avgcf": usg["avgcf"]
+                "resourceHours": usg["resourceHours"]
             })
         return [ Usage(**x) for x in  usages ]
     @strawberry.field
     def perDateUsage(self, info) ->List[PerDateUsage]:
-        results = info.context.db.collection("repo_daily_compute_usage").find({"allocationid": self._id})
-        return info.context.db.cursor_to_objlist(results, PerDateUsage, exclude_fields={"_id", "allocationid"})
+        results = info.context.db.collection("repo_daily_compute_usage").find({"allocationId": self._id})
+        return info.context.db.cursor_to_objlist(results, PerDateUsage, exclude_fields={"_id", "allocationId"})
 
     @strawberry.field
     def perUserUsage(self, info) ->List[PerUserUsage]:
-        results = info.context.db.collection("repo_peruser_compute_usage").find({"allocationid": self._id})
-        return info.context.db.cursor_to_objlist(results, PerUserUsage, exclude_fields={"_id", "allocationid"})
+        results = info.context.db.collection("repo_peruser_compute_usage").find({"allocationId": self._id})
+        return info.context.db.cursor_to_objlist(results, PerUserUsage, exclude_fields={"_id", "allocationId"})
 
 @strawberry.input
 class RepoStorageAllocationInput:
@@ -692,40 +708,21 @@ class Repo( RepoInput ):
             return None
         return RepoStorageAllocation(**alloc)
 
+@strawberry.type
+class BulkOpsResult:
+    insertedCount: int
+    upsertedCount: int
+    modifiedCount: int
+    deletedCount: int
+
 @strawberry.input
 class Job:
-    jobId: str
+    jobId: Int64
     username: str
-    uid: int
-    accountName: str
-    partitionName: str
+    allocationId: MongoId
     qos: str
-    allocationid: MongoId
     startTs: datetime
-    endTs: datetime
-    ncpus: int
-    allocNodes: int
-    allocTres: str
-    nodelist: str
-    reservation: str
-    reservationId: str
-    submitter: str
-    submitTs: datetime
-    officialImport: bool
-    elapsedSecs: float
-    waitSecs: float
-    # After this, all the values are computed ( some of them are matched from info in the database)
-    priocf: float
-    hwcf: float
-    finalcf: float
-    rawsecs: float # elapsed seconds * number of nodes
-    machinesecs: float # raw seconds after applying the hardware charge factor
-    slachours: float # machinesecs after applying the priority charge factor
-    repo: str
-    repoid: str
-    year: int
-    facility: str
-    clustername: str
+    resourceHours: float
 
 @strawberry.input
 class StorageDailyUsageInput:

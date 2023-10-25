@@ -20,6 +20,7 @@ from strawberry.types import Info
 from strawberry.arguments import UNSET
 from bson import ObjectId
 from bson.json_util import dumps
+from pymongo import ReplaceOne
 
 from models import \
         MongoId, \
@@ -37,7 +38,7 @@ from models import \
         ReportRangeInput, PerDateUsage, PerUserUsage, \
         RepoComputeAllocationInput, RepoStorageAllocationInput, \
         AuditTrailObjectType, AuditTrail, AuditTrailInput, \
-        NotificationInput, Notification, ComputeRequirement
+        NotificationInput, Notification, ComputeRequirement, BulkOpsResult
 
 import logging
 LOG = logging.getLogger(__name__)
@@ -1050,80 +1051,34 @@ class Mutation:
         return info.context.db.find_facility(facility)
 
     @strawberry.mutation
-    def importJobs(self, jobs: List[Job], info: Info) -> str:
-        jbs = [dict(j.__dict__.items()) for j in jobs]
-        info.context.db.collection("jobs").insert_many(jbs)
-        allocation_ids = list(map(lambda x: x["allocationid"], jbs))
+    def importJobs(self, jobs: List[Job], info: Info) -> BulkOpsResult:
+        jbs = [ ReplaceOne({"jobId": j.jobId, "startTs": j.startTs }, info.context.db.to_dict(j), upsert=True) for j in jobs ]
+        bulkopsresult = info.context.db.collection("jobs").bulk_write(jbs)
+        LOG.info("Imported jobs Inserted=%s, Upserted=%s, Modified=%s, Deleted=%s,", bulkopsresult.inserted_count, bulkopsresult.upserted_count, bulkopsresult.modified_count, bulkopsresult.deleted_count)
+        allocation_ids = list(set(map(lambda x: x.allocationId, jobs)))
         info.context.db.collection("jobs").aggregate([
-          { "$match": { "allocationid": {"$in":  allocation_ids } }},
-          { "$group": { "_id": {"allocationid": "$allocationid", "qos": "$qos", "repo": "$repo", "facility": "$facility" },
-              "slachours": { "$sum": "$slachours" },
-              "rawsecs": { "$sum": "$rawsecs" },
-              "machinesecs": { "$sum": "$machinesecs" },
-              "avgcf": { "$avg": "$finalcf" }
-          }},
-          { "$project": {
-              "_id": 0,
-              "allocationid": "$_id.allocationid",
-              "qos": "$_id.qos",
-              "repo": "$_id.repo",
-              "facility": "$_id.facility",
-              "slachours": 1,
-              "rawsecs": 1,
-              "machinesecs": 1,
-              "avgcf": 1,
-          }},
-          { "$merge": { "into": "repo_overall_compute_usage", "whenMatched": "replace" } }
+          { "$match": { "allocationId": {"$in":  allocation_ids } }},
+          { "$project": { "allocationId": 1, "username": 1, "resourceHours": 1 }},
+          { "$group": { "_id": {"allocationId": "$allocationId", "username": "$username" }, "resourceHours": { "$sum": "$resourceHours" }}},
+          { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "username": "$_id.username", "resourceHours": 1 }},
+          { "$merge": { "into": "repo_peruser_compute_usage", "on": ["allocationId", "username"],  "whenMatched": "replace" }}
+        ])
+        info.context.db.collection("jobs").aggregate([
+          { "$match": { "allocationId": {"$in":  allocation_ids } }},
+          { "$project": { "allocationId": 1, "startTs": 1, "resourceHours": 1 }},
+          { "$group": { "_id": {"allocationId": "$allocationId", "date" : { "$dateTrunc": {"date": "$startTs", "unit": "day", "timezone": "America/Los_Angeles"}} }, "resourceHours": { "$sum": "$resourceHours" }}},
+          { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "date": "$_id.date", "resourceHours": 1 }},
+          { "$merge": { "into": "repo_daily_compute_usage", "on": ["allocationId", "date"], "whenMatched": "replace" }}
+        ])
+        info.context.db.collection("jobs").aggregate([
+          { "$match": { "allocationId": {"$in":  allocation_ids } }},
+          { "$project": { "allocationId": 1, "resourceHours": 1 }},
+          { "$group": { "_id": {"allocationId": "$allocationId" }, "resourceHours": { "$sum": "$resourceHours" }}},
+          { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "resourceHours": 1 }},
+          { "$merge": { "into": "repo_overall_compute_usage", "on": ["allocationId"], "whenMatched": "replace" }}
         ])
 
-        info.context.db.collection("jobs").aggregate([
-          { "$match": { "allocationid": {"$in":  allocation_ids } }},
-          { "$group":
-            { "_id": {"allocationid": "$allocationid", "username": "$username", "repo": "$repo", "facility": "$facility"},
-                "slachours": { "$sum": "$slachours" },
-                "rawsecs": { "$sum": "$rawsecs" },
-                "machinesecs": { "$sum": "$machinesecs" },
-                "avgcf": { "$avg": "$finalcf" }
-            }},
-            { "$project": {
-                "_id": 0,
-                "allocationid": "$_id.allocationid",
-                "username": "$_id.username",
-                "repo": "$_id.repo",
-                "facility": "$_id.facility",
-                "slachours": 1,
-                "rawsecs": 1,
-                "machinesecs": 1,
-                "avgcf": 1
-            }},
-            { "$merge": { "into": "repo_peruser_compute_usage", "whenMatched": "replace" } }
-        ])
-
-        info.context.db.collection("jobs").aggregate([
-          { "$match": { "allocationid": {"$in":  allocation_ids } }},
-          { "$group":
-            { "_id": { "allocationid": "$allocationid", "repo": "$repo", "facility": "$facility", "date" : { "$dateTrunc": {"date": "$startTs", "unit": "day", "timezone": "America/Los_Angeles"}}},
-                "slachours": { "$sum": "$slachours" },
-                "rawsecs": { "$sum": "$rawsecs" },
-                "machinesecs": { "$sum": "$machinesecs" },
-                "avgcf": { "$avg": "$finalcf" }
-            }
-           },
-           { "$project": {
-                "_id": 0,
-                "allocationid": "$_id.allocationid",
-                "repo": "$_id.repo",
-                "facility": "$_id.facility",
-                "date": "$_id.date",
-                "slachours": 1,
-                "rawsecs": 1,
-                "machinesecs": 1,
-                "avgcf": 1
-            }},
-            { "$merge": { "into": "repo_daily_compute_usage", "whenMatched": "replace" } }
-        ])
-
-        return "Done"
+        return BulkOpsResult(insertedCount=bulkopsresult.inserted_count, upsertedCount=bulkopsresult.upserted_count, deletedCount=bulkopsresult.deleted_count, modifiedCount=bulkopsresult.modified_count)
 
     @strawberry.mutation
     def importRepoStorageUsage(self, usages: List[StorageDailyUsageInput], info: Info) -> str:

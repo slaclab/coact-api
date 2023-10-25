@@ -1,0 +1,21 @@
+if(db.getSiblingDB("iris").versions.findOne({dbschema: "0.0.6"})) {
+    db.getSiblingDB("iris").jobs.deleteMany({})
+    db.getSiblingDB("iris").jobs.dropIndex({repo: 1, year: -1, clustername: 1})
+    db.getSiblingDB("iris").jobs.dropIndex({jobId: 1, startTs: 1, clustername: 1})
+    db.getSiblingDB("iris").jobs.createIndex({jobId: 1, startTs: 1}, {unique: true})
+
+    db.getSiblingDB("iris").repo_overall_compute_usage.deleteMany({})
+    db.getSiblingDB("iris").repo_daily_compute_usage.deleteMany({})
+    db.getSiblingDB("iris").repo_peruser_compute_usage.deleteMany({})
+
+    db.getSiblingDB("iris").repo_overall_compute_usage.dropIndex({"allocationid": 1, "qos": 1})
+    db.getSiblingDB("iris").repo_daily_compute_usage.dropIndex({"allocationid": 1, "date": 1})
+    db.getSiblingDB("iris").repo_peruser_compute_usage.dropIndex({"allocationid": 1, "username": 1})
+
+    db.getSiblingDB("iris").repo_overall_compute_usage.createIndex({"allocationId": 1}, {unique: true})    
+    db.getSiblingDB("iris").repo_daily_compute_usage.createIndex({"allocationId": 1, "date": 1}, {unique: true})
+    db.getSiblingDB("iris").repo_peruser_compute_usage.createIndex({"allocationId": 1, "username": 1}, {unique: true})
+
+    db.getSiblingDB("iris").versions.updateOne({}, {"$set": {"dbschema": "0.0.7"}})
+}
+
