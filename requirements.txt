@@ -1,5 +1,5 @@
 fastapi
-strawberry-graphql[fastapi]
+strawberry-graphql[fastapi]==0.192.0
 uvicorn
 uvicorn[standard]
 pymongo
