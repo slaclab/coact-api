@@ -255,7 +255,21 @@ class Query:
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def repos(self, info: Info, filter: Optional[RepoInput]={} ) -> List[Repo]:
-        return info.context.db.find_repos( filter )
+        username = info.context.username
+        assert username != None
+        myfacs = list(x.name for x in info.context.db.find_facilities({"czars": username}))
+        isczar = len(myfacs) != 0
+        isadmin = info.context.is_admin and not info.context.is_impersonating
+        search = info.context.db.to_dict(filter)
+        if isadmin:
+            pass
+        elif isczar:
+            search["facility"]= { "$in": myfacs }
+        else:
+            search["users"] = username
+        LOG.debug(f"searching for repos using {filter} -> {search}")
+        cursor = info.context.db.collection("repos").find(search)
+        return info.context.db.cursor_to_objlist(cursor, Repo, exclude_fields=["access_groups"])
 
     @strawberry.field
     def facilityNames(self, info: Info) -> List[str]:
@@ -290,7 +304,21 @@ class Query:
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def repo(self, filter: RepoInput, info: Info) -> Repo:
-        return info.context.db.find_repo( filter )
+        username = info.context.username
+        assert username != None
+        myfacs = list(x.name for x in info.context.db.find_facilities({"czars": username}))
+        isczar = len(myfacs) != 0
+        isadmin = info.context.is_admin and not info.context.is_impersonating
+        search = info.context.db.to_dict(filter)
+        if isadmin:
+            pass
+        elif isczar:
+            search["facility"]= { "$in": myfacs }
+        else:
+            search["users"] = username
+        LOG.debug(f"searching for repos using {filter} -> {search}")
+        cursor = info.context.db.collection("repos").find_one(search)
+        return info.context.db.cursor_to_objlist(cursor, Repo, exclude_fields=["access_groups"])
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def myRepos(self, info: Info) -> List[Repo]:
