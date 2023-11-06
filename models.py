@@ -556,6 +556,16 @@ class RepoComputeAllocation(RepoComputeAllocationInput):
     def perDateUsage(self, info) ->List[PerDateUsage]:
         results = info.context.db.collection("repo_daily_compute_usage").find({"allocationId": self._id})
         return info.context.db.cursor_to_objlist(results, PerDateUsage, exclude_fields={"_id", "allocationId"})
+    @strawberry.field
+    def todaysUsage(self, info) ->List[PerDateUsage]:
+        results = info.context.db.collection("repo_daily_compute_usage").find({"allocationId": self._id, "date": { "$gte": 
+                                                                                                                  datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)}} )
+        return info.context.db.cursor_to_objlist(results, PerDateUsage, exclude_fields={"_id", "allocationId"})
+    @strawberry.field
+    def thisWeeksUsage(self, info) ->List[PerDateUsage]:
+        results = info.context.db.collection("repo_daily_compute_usage").find({"allocationId": self._id, "date": { "$gte": 
+                                                                                                                  (datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=7))}} )
+        return info.context.db.cursor_to_objlist(results, PerDateUsage, exclude_fields={"_id", "allocationId"})
 
     @strawberry.field
     def perUserUsage(self, info) ->List[PerUserUsage]:
