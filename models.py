@@ -502,9 +502,9 @@ class PerDateUsage(Usage):
 class ComputeUsageOverTime:
     start: Optional[datetime] = UNSET
     end: Optional[datetime] = UNSET
-    allocatedResourceHours: Optional[float] = 0
-    useddResourceHours: Optional[float] = 0
-    percentUsed: Optional[float] = 0
+    allocatedResourceHours: float
+    usedResourceHours: float
+    percentUsed: float
 
 @strawberry.type
 class PerUserUsage(Usage):
@@ -564,19 +564,41 @@ class RepoComputeAllocation(RepoComputeAllocationInput):
     def perDateUsage(self, info) ->List[PerDateUsage]:
         results = info.context.db.collection("repo_daily_compute_usage").find({"allocationId": self._id})
         return info.context.db.cursor_to_objlist(results, PerDateUsage, exclude_fields={"_id", "allocationId"})
+
+    def __usageovertime__(self, startdate, enddate, info):
+        clusterNodeCPUCount = info.context.db.collection("clusters").find_one({"name": self.clustername})["nodecpucount"]
+        allocatedResourceHours = self.allocated * clusterNodeCPUCount * 7 * 24
+        usages = info.context.db.collection("repo_daily_compute_usage").find({"allocationId": self._id, "date": { "$gte": startdate }} )
+        usedResourceHours = sum(map(lambda x: x["resourceHours"], usages))
+        percentUsed = (usedResourceHours/allocatedResourceHours)*100
+        return ComputeUsageOverTime(start=startdate, end=enddate, allocatedResourceHours=allocatedResourceHours, usedResourceHours=usedResourceHours, percentUsed=percentUsed)
+
     @strawberry.field
-    def recentUsage(self, info) ->List[PerDateUsage]:
+    def recentUsage(self, info) -> ComputeUsageOverTime:
         """
         Includes today and yesterday's data
         """
-        results = info.context.db.collection("repo_daily_compute_usage").find({"allocationId": self._id, "date": { "$gte": 
-                                                                                                                  (datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1))}} )
-        return info.context.db.cursor_to_objlist(results, PerDateUsage, exclude_fields={"_id", "allocationId"})
+        enddate = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        startdate = enddate - timedelta(days=2)
+        return self.__usageovertime__(startdate, enddate, info)
+
     @strawberry.field
-    def thisWeeksUsage(self, info) ->List[PerDateUsage]:
-        results = info.context.db.collection("repo_daily_compute_usage").find({"allocationId": self._id, "date": { "$gte": 
-                                                                                                                  (datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=7))}} )
-        return info.context.db.cursor_to_objlist(results, PerDateUsage, exclude_fields={"_id", "allocationId"})
+    def lastWeeksUsage(self, info) -> ComputeUsageOverTime:
+        """
+        Includes last weeks data
+        """
+        enddate = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        startdate = enddate - timedelta(days=7)
+        return self.__usageovertime__(startdate, enddate, info)
+
+    @strawberry.field
+    def last30daysUsage(self, info) -> ComputeUsageOverTime:
+        """
+        Includes last months data ( 30 days )
+        """
+        enddate = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        startdate = enddate - timedelta(days=30)
+        return self.__usageovertime__(startdate, enddate, info)
 
     @strawberry.field
     def perUserUsage(self, info) ->List[PerUserUsage]:
