@@ -565,9 +565,9 @@ class RepoComputeAllocation(RepoComputeAllocationInput):
         results = info.context.db.collection("repo_daily_compute_usage").find({"allocationId": self._id})
         return info.context.db.cursor_to_objlist(results, PerDateUsage, exclude_fields={"_id", "allocationId"})
 
-    def __usageovertime__(self, startdate, enddate, info):
+    def __usageovertime__(self, startdate, enddate, numdays, info):
         clusterNodeCPUCount = info.context.db.collection("clusters").find_one({"name": self.clustername})["nodecpucount"]
-        allocatedResourceHours = self.allocated * clusterNodeCPUCount * 7 * 24
+        allocatedResourceHours = self.allocated * clusterNodeCPUCount * numdays * 24
         usages = info.context.db.collection("repo_daily_compute_usage").find({"allocationId": self._id, "date": { "$gte": startdate }} )
         usedResourceHours = sum(map(lambda x: x["resourceHours"], usages))
         percentUsed = (usedResourceHours/allocatedResourceHours)*100 if allocatedResourceHours else 0
@@ -579,8 +579,9 @@ class RepoComputeAllocation(RepoComputeAllocationInput):
         Includes today and yesterday's data
         """
         enddate = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        startdate = enddate - timedelta(days=2)
-        return self.__usageovertime__(startdate, enddate, info)
+        days = 2
+        startdate = enddate - timedelta(days=days)
+        return self.__usageovertime__(startdate, enddate, days, info)
 
     @strawberry.field
     def lastWeeksUsage(self, info) -> ComputeUsageOverTime:
@@ -588,8 +589,9 @@ class RepoComputeAllocation(RepoComputeAllocationInput):
         Includes last weeks data
         """
         enddate = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        startdate = enddate - timedelta(days=7)
-        return self.__usageovertime__(startdate, enddate, info)
+        days = 7
+        startdate = enddate - timedelta(days=days)
+        return self.__usageovertime__(startdate, enddate, days, info)
 
     @strawberry.field
     def last30daysUsage(self, info) -> ComputeUsageOverTime:
@@ -597,8 +599,9 @@ class RepoComputeAllocation(RepoComputeAllocationInput):
         Includes last months data ( 30 days )
         """
         enddate = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        startdate = enddate - timedelta(days=30)
-        return self.__usageovertime__(startdate, enddate, info)
+        days = 30
+        startdate = enddate - timedelta(days=days)
+        return self.__usageovertime__(startdate, enddate, days, info)
 
     @strawberry.field
     def perUserUsage(self, info) ->List[PerUserUsage]:
