@@ -38,7 +38,7 @@ from models import \
         ReportRangeInput, PerDateUsage, PerUserUsage, \
         RepoComputeAllocationInput, RepoStorageAllocationInput, \
         AuditTrailObjectType, AuditTrail, AuditTrailInput, \
-        NotificationInput, Notification, ComputeRequirement, BulkOpsResult
+        NotificationInput, Notification, ComputeRequirement, BulkOpsResult, StatusResult
 
 import logging
 LOG = logging.getLogger(__name__)
@@ -1086,7 +1086,7 @@ class Mutation:
         return BulkOpsResult(insertedCount=bulkopsresult.inserted_count, upsertedCount=bulkopsresult.upserted_count, deletedCount=bulkopsresult.deleted_count, modifiedCount=bulkopsresult.modified_count)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def jobsAggregateAll( self, info: Info ) -> bool:
+    def jobsAggregateAll( self, info: Info ) -> StatusResult:
         info.context.db.collection("jobs").aggregate([
           { "$project": { "allocationId": 1, "username": 1, "resourceHours": 1 }},
           { "$group": { "_id": {"allocationId": "$allocationId", "username": "$username" }, "resourceHours": { "$sum": "$resourceHours" }}},
@@ -1105,7 +1105,7 @@ class Mutation:
           { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "resourceHours": 1 }},
           { "$merge": { "into": "repo_overall_compute_usage", "on": ["allocationId"], "whenMatched": "replace" }}
         ])
-        return True
+        return StatusResult( status=True )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def importJobs(self, jobs: List[Job], info: Info) -> BulkOpsResult:

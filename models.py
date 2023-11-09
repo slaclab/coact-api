@@ -758,6 +758,10 @@ class BulkOpsResult:
     modifiedCount: int
     deletedCount: int
 
+@strawberry.type
+class StatusResult:
+    status: bool
+
 @strawberry.input
 class Job:
     jobId: Int64
