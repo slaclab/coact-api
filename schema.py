@@ -1078,31 +1078,28 @@ class Mutation:
 
         return info.context.db.find_facility(facility)
 
-    @strawberry.mutation
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def jobsImport( self, jobs: List[Job], info: Info ) -> BulkOpsResult:
         jbs = [ ReplaceOne({"jobId": j.jobId, "startTs": j.startTs }, info.context.db.to_dict(j), upsert=True) for j in jobs ]
         bulkopsresult = info.context.db.collection("jobs").bulk_write(jbs)
         LOG.info("Imported jobs Inserted=%s, Upserted=%s, Modified=%s, Deleted=%s,", bulkopsresult.inserted_count, bulkopsresult.upserted_count, bulkopsresult.modified_count, bulkopsresult.deleted_count)
         return BulkOpsResult(insertedCount=bulkopsresult.inserted_count, upsertedCount=bulkopsresult.upserted_count, deletedCount=bulkopsresult.deleted_count, modifiedCount=bulkopsresult.modified_count)
 
-    @strawberry.mutation
-    def jobsAggregate( self, allocation_ids: List[str] ) -> bool:
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    def jobsAggregateAll( self, info: Info ) -> bool:
         info.context.db.collection("jobs").aggregate([
-          { "$match": { "allocationId": {"$in":  allocation_ids } }},
           { "$project": { "allocationId": 1, "username": 1, "resourceHours": 1 }},
           { "$group": { "_id": {"allocationId": "$allocationId", "username": "$username" }, "resourceHours": { "$sum": "$resourceHours" }}},
           { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "username": "$_id.username", "resourceHours": 1 }},
           { "$merge": { "into": "repo_peruser_compute_usage", "on": ["allocationId", "username"],  "whenMatched": "replace" }}
         ])
         info.context.db.collection("jobs").aggregate([
-          { "$match": { "allocationId": {"$in":  allocation_ids } }},
           { "$project": { "allocationId": 1, "startTs": 1, "resourceHours": 1 }},
           { "$group": { "_id": {"allocationId": "$allocationId", "date" : { "$dateTrunc": {"date": "$startTs", "unit": "day", "timezone": "America/Los_Angeles"}} }, "resourceHours": { "$sum": "$resourceHours" }}},
           { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "date": "$_id.date", "resourceHours": 1 }},
           { "$merge": { "into": "repo_daily_compute_usage", "on": ["allocationId", "date"], "whenMatched": "replace" }}
         ])
         info.context.db.collection("jobs").aggregate([
-          { "$match": { "allocationId": {"$in":  allocation_ids } }},
           { "$project": { "allocationId": 1, "resourceHours": 1 }},
           { "$group": { "_id": {"allocationId": "$allocationId" }, "resourceHours": { "$sum": "$resourceHours" }}},
           { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "resourceHours": 1 }},
@@ -1110,7 +1107,7 @@ class Mutation:
         ])
         return True
 
-    @strawberry.mutation
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def importJobs(self, jobs: List[Job], info: Info) -> BulkOpsResult:
         jbs = [ ReplaceOne({"jobId": j.jobId, "startTs": j.startTs }, info.context.db.to_dict(j), upsert=True) for j in jobs ]
         bulkopsresult = info.context.db.collection("jobs").bulk_write(jbs)
@@ -1140,7 +1137,7 @@ class Mutation:
 
         return BulkOpsResult(insertedCount=bulkopsresult.inserted_count, upsertedCount=bulkopsresult.upserted_count, deletedCount=bulkopsresult.deleted_count, modifiedCount=bulkopsresult.modified_count)
 
-    @strawberry.mutation
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def importRepoStorageUsage(self, usages: List[StorageDailyUsageInput], info: Info) -> str:
         usgs = [dict(j.__dict__.items()) for j in usages]
         info.context.db.collection("repo_daily_storage_usage").insert_many(usgs)
