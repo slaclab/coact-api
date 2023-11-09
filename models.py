@@ -570,7 +570,7 @@ class RepoComputeAllocation(RepoComputeAllocationInput):
         allocatedResourceHours = self.allocated * clusterNodeCPUCount * 7 * 24
         usages = info.context.db.collection("repo_daily_compute_usage").find({"allocationId": self._id, "date": { "$gte": startdate }} )
         usedResourceHours = sum(map(lambda x: x["resourceHours"], usages))
-        percentUsed = (usedResourceHours/allocatedResourceHours)*100
+        percentUsed = (usedResourceHours/allocatedResourceHours)*100 if allocatedResourceHours else 0
         return ComputeUsageOverTime(start=startdate, end=enddate, allocatedResourceHours=allocatedResourceHours, usedResourceHours=usedResourceHours, percentUsed=percentUsed)
 
     @strawberry.field
