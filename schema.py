@@ -317,8 +317,8 @@ class Query:
         else:
             search["users"] = username
         LOG.debug(f"searching for repos using {filter} -> {search}")
-        cursor = info.context.db.collection("repos").find_one(search)
-        return info.context.db.cursor_to_objlist(cursor, Repo, exclude_fields=["access_groups"])
+        theRepo = info.context.db.collection("repos").find_one(search)
+        return info.context.db.cursor_to_objlist([theRepo], Repo, exclude_fields=["access_groups"])[0]
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def myRepos(self, info: Info) -> List[Repo]:
@@ -532,6 +532,7 @@ class Mutation:
         current_purchases = [x.purchased for x in facility.computepurchases(info) if x.clustername == request.clustername]
         current_purchase = current_purchases[0] if current_purchases else 0
         request.allocated = (current_purchase/100.0)*request.percent_of_facility
+        request.burst_allocated = (current_purchase/100.0)*request.burst_percent_of_facility
         LOG.info("Current purchase for %s is %s. Allocating %s", request.facilityname, current_purchase, request.allocated)
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
 
@@ -703,6 +704,10 @@ class Mutation:
                 raise Exception("RepoComputeAllocation without a percent of facility - cannot approve.")
             if thereq.allocated < 0:
                 raise Exception("RepoComputeAllocation without an absolute allocation - cannot approve.")
+            if thereq.burst_percent_of_facility < 0:
+                raise Exception("RepoComputeAllocation without a burst percent of facility - cannot approve.")
+            if thereq.burst_allocated < 0:
+                raise Exception("RepoComputeAllocation without an absolute burst allocation - cannot approve.")
             if not thereq.start:
                 thereq.start = datetime.datetime.utcnow()
             if not thereq.end:
@@ -991,6 +996,8 @@ class Mutation:
         rc["end"] = repocompute.end.astimezone(pytz.utc)
         rc["percent_of_facility"] = repocompute.percent_of_facility
         rc["allocated"] = repocompute.allocated
+        rc["burst_percent_of_facility"] = repocompute.burst_percent_of_facility
+        rc["burst_allocated"] = repocompute.burst_allocated
         LOG.info(rc)
         info.context.db.collection("repo_compute_allocations").replace_one({"repoid": rc["repoid"], "clustername": rc["clustername"], "start": rc["start"]}, rc, upsert=True)
         info.context.audit(AuditTrailObjectType.Repo, repo._id, "repoComputeAllocationUpsert", details=clustername+"="+json.dumps(rc["allocated"])+"("+json.dumps(rc["percent_of_facility"])+"%)")

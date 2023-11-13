@@ -95,7 +95,9 @@ class CoactRequestInput:
     rootfolder: Optional[str] = UNSET
     allocationid: Optional[MongoId] = UNSET
     percent_of_facility: Optional[float] = 0
+    burst_percent_of_facility: Optional[float] = 0
     allocated: Optional[float] = 0 # Absolute compute allocation; similar to facility
+    burst_allocated: Optional[float] = 0 # Absolute compute allocation; similar to facility
     gigabytes: Optional[float] = 0
     inodes: Optional[float] = 0
     shell: Optional[str] = UNSET
@@ -537,7 +539,10 @@ class RepoComputeAllocationInput:
     start: Optional[datetime] = UNSET
     end: Optional[datetime] = UNSET
     percent_of_facility: Optional[float] = UNSET
-    allocated: Optional[float] = 0 # Absolute compute allocation; similar to facility
+    burst_percent_of_facility: Optional[float] = 0
+    allocated: Optional[float] = 0 # Absolute compute allocation; based on facility purchases and cached here for performance reasons
+    burst_allocated: Optional[float] = 0 # Absolute burst allocation; based on facility purchases and cached here for performance reasons
+    
 
 @strawberry.type
 class RepoComputeAllocation(RepoComputeAllocationInput):
@@ -713,7 +718,7 @@ class Repo( RepoInput ):
             { "$group": { "_id": {"repoid": "$repoid", "clustername": "$clustername"}, "origid": {"$first": "$_id"}}},
         ])
         current_alloc_ids = list(map(lambda x: x["origid"], current_allocs))
-        return [ RepoComputeAllocation(**{k:x.get(k, 0) for k in ["_id", "repoid", "clustername", "start", "end", "percent_of_facility", "allocated" ] }) for x in  info.context.db.collection("repo_compute_allocations").find({"_id" : {"$in": current_alloc_ids}})]
+        return [ RepoComputeAllocation(**{k:x.get(k, 0) for k in ["_id", "repoid", "clustername", "start", "end", "percent_of_facility", "burst_percent_of_facility", "allocated", "burst_allocated" ] }) for x in  info.context.db.collection("repo_compute_allocations").find({"_id" : {"$in": current_alloc_ids}})]
 
     @strawberry.field
     def computeAllocation(self, info, allocationid: MongoId) -> Optional[RepoComputeAllocation]:
