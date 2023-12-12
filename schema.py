@@ -102,6 +102,10 @@ class Query:
         return [ User(**user) for user in userlist.values() ] if userlist else []
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def usersLookupFromService(self, info: Info, filter: UserInput ) -> List[User]:
+        return info.context.lookupUsersFromService( filter )
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def clusters(self, info: Info, filter: Optional[ClusterInput]={} ) -> List[Cluster]:
         return info.context.db.find_clusters( filter )
 

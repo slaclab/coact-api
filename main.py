@@ -17,6 +17,10 @@ from strawberry.arguments import UNSET
 from pymongo import MongoClient
 from bson import ObjectId
 
+from gql import gql, Client
+from gql.transport.requests import RequestsHTTPTransport
+
+
 from models import User, AccessGroup, Repo, Facility, Cluster, CoactRequest, CoactRequestStatus, AuditTrail, AuditTrailObjectType, CoactDatetime
 from schema import Query, Mutation, Subscription, start_change_stream_queues
 
@@ -51,6 +55,24 @@ ADMINS = re.sub( "\s", "", environ.get("ADMIN_USERNAMES",'')).split(',')
 # Assume that we introduce bot users once in a while; so we load these up on startup
 BOT_USERS = [ x["username"] for x in mongo[DB_NAME]["users"].find( { 'isbot': True } ) ]
 
+USER_LOOKUP_URL = os.getenv( 'USER_LOOKUP_URL', 'https://coact-dev-userlookup.slac.stanford.edu/graphql' )
+
+
+lookupUser = gql(
+    """
+    query users($filter: UserInput!) {
+        users(filter: $filter) {
+              username
+              fullname
+              uidnumber
+              eppns
+              preferredemail
+              shell
+        }
+    }
+    """
+)
+
 class CustomContext(BaseContext):
 
     LOG = logging.getLogger(__name__)
@@ -66,6 +88,7 @@ class CustomContext(BaseContext):
     def __init__(self, *args, **kwargs):
         self.db = DB(mongo,DB_NAME)
         self.email = Email(EMAIL_SERVER_HOST, EMAIL_SERVER_PORT)
+        self.userlookup = Client(transport=RequestsHTTPTransport(url=USER_LOOKUP_URL, verify=True, retries=3), fetch_schema_from_transport=True)
 
     def __str__(self):
         return f"CustomContext User: {self.username} is_admin {self.is_admin}"
@@ -160,20 +183,29 @@ class CustomContext(BaseContext):
         request_type = f"{request.reqtype}"
         request_status = f"{CoactRequestStatus(request.approvalstatus).name}"
         template_prefix = f"{request_type}_{request_status}"
+        
         user = None
         user_email = None
         czars = []
         czar_emails = []
         skip_czar_emails = True
         try:
-            user_email = [ request.eppn, ]
+            resp = self.userlookup.execute(lookupUser, variable_values={"filter": { "username": request.preferredUserName }})
+            if resp["users"]:
+                preferredemail = resp["users"][0]["preferredemail"]
+                LOG.info(f"Userlookup service returned {preferredemail} for {request.preferredUserName}")
+                user_email = [ preferredemail, ]
+            else:
+                LOG.error(f"Userlookup service does not have an entry for {request.preferredUserName}. Sending email to the EPPN instead {request.eppn}")
+                user_email = [ request.eppn, ]
+
             user = [ request.preferredUserName, ]
             facility = request.facilityname
             czars = self.db.czars( facility )
             czar_emails = self.db.email_for( czars )
             skip_czar_emails = request.dontsendemail
         except Exception as e:
-            LOG.warning(f"could not parse certain notification fields: {e}")
+            LOG.exception(f"could not parse certain notification fields: {e}")
         LOG.info(f">>> TEMPLATE: {template_prefix}, FACILITY: {facility}, CZARS: {czars}, CZAR EMAIL: {czar_emails}, USER: {user}, EMAIL: {user_email}, DATA: {self.db.to_dict(request)}")
         return self.email.notify( request_type=request_type, request_status=request_status, data=self.db.to_dict(request), template_prefix=template_prefix, user=user_email, czars=czar_emails, skip_czar_emails=skip_czar_emails )
 
@@ -203,6 +235,10 @@ class CustomContext(BaseContext):
         all_changes.extend([ str(k) + ": N/A -> " + str(fwd_changes[k]) for k in added ])
         all_changes.extend([ str(k) + ": " + str(bwd_changes[k]) + " -> N/A" for k in removed ])
         return "\n".join(all_changes)
+    
+    def lookupUsersFromService(self, filter):
+        users = self.userlookup.execute(lookupUser, variable_values={"filter": self.db.to_dict(filter) })["users"]
+        return [ User(**user) for user in users ] if users else []
 
 
 class DB:
