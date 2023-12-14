@@ -186,6 +186,7 @@ class CustomContext(BaseContext):
         
         user = None
         user_email = None
+        facility = None
         czars = []
         czar_emails = []
         skip_czar_emails = True
