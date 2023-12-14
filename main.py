@@ -191,11 +191,12 @@ class CustomContext(BaseContext):
         czar_emails = []
         skip_czar_emails = True
         try:
-            resp = self.userlookup.execute(lookupUser, variable_values={"filter": { "username": request.preferredUserName }})
-            if resp["users"]:
-                preferredemail = resp["users"][0]["preferredemail"]
-                LOG.info(f"Userlookup service returned {preferredemail} for {request.preferredUserName}")
-                user_email = [ preferredemail, ]
+            if request.preferredUserName:
+                resp = self.userlookup.execute(lookupUser, variable_values={"filter": { "username": request.preferredUserName }})
+                if resp["users"]:
+                    preferredemail = resp["users"][0]["preferredemail"]
+                    LOG.info(f"Userlookup service returned {preferredemail} for {request.preferredUserName}")
+                    user_email = [ preferredemail, ]
             else:
                 LOG.error(f"Userlookup service does not have an entry for {request.preferredUserName}. Sending email to the EPPN instead {request.eppn}")
                 user_email = [ request.eppn, ]
