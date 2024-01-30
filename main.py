@@ -57,6 +57,7 @@ BOT_USERS = [ x["username"] for x in mongo[DB_NAME]["users"].find( { 'isbot': Tr
 
 USER_LOOKUP_URL = os.getenv( 'USER_LOOKUP_URL', 'https://coact-dev-userlookup.slac.stanford.edu/graphql' )
 
+REQUEST_STREAM = os.getenv( 'REQUEST_STREAM', False )
 
 lookupUser = gql(
     """
@@ -485,7 +486,8 @@ async def get_context(custom_context: CustomContext = Depends(custom_context_dep
     return custom_context
 
 # intiate change logs from database
-start_change_stream_queues(mongo[DB_NAME])
+if REQUEST_STREAM:
+  start_change_stream_queues(mongo[DB_NAME])
 
 # normal graphql api
 schema = Schema(query=Query, mutation=Mutation, scalar_overrides={ datetime: CoactDatetime }, config=StrawberryConfig(auto_camel_case=True))
@@ -494,12 +496,14 @@ graphql_app = GraphQLRouter(
   context_getter=get_context
 )
 
-# duplicate api at different endpoint for service accounts
-service_schema = Schema(query=Query, mutation=Mutation, subscription=Subscription, scalar_overrides={ datetime: CoactDatetime }, config=StrawberryConfig(auto_camel_case=True))
-graphql_service_app = GraphQLRouter(
-  service_schema,
-  context_getter=get_context
-)
+graphql_service_app = None
+if REQUEST_STREAM:
+  # duplicate api at different endpoint for service accounts
+  service_schema = Schema(query=Query, mutation=Mutation, subscription=Subscription, scalar_overrides={ datetime: CoactDatetime }, config=StrawberryConfig(auto_camel_case=True))
+  graphql_service_app = GraphQLRouter(
+    service_schema,
+    context_getter=get_context
+  )
 
 # initiate fastapi app
 app = FastAPI()
@@ -517,6 +521,8 @@ app.add_middleware(
 
 GRAPHQL_PREFIX = environ.get('COACT_GRAPHQL_PREFIX','/graphql')
 app.include_router(graphql_app, prefix=GRAPHQL_PREFIX)
-GRAPHQL_SERVICE_PREFIX = environ.get('COACT_GRAPHQL_SERVICE_PREFIX','/graphql-service')
-app.include_router(graphql_service_app, prefix=GRAPHQL_SERVICE_PREFIX)
+
+if REQUEST_STREAM:
+  GRAPHQL_SERVICE_PREFIX = environ.get('COACT_GRAPHQL_SERVICE_PREFIX','/graphql-service')
+  app.include_router(graphql_service_app, prefix=GRAPHQL_SERVICE_PREFIX)
 
