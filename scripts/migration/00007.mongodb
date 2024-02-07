@@ -1,0 +1,6 @@
+if(db.getSiblingDB("iris").versions.findOne({dbschema: "0.0.7"})) {
+    db.getSiblingDB("iris").repo_daily_peruser_compute_usage.createIndex({"allocationId": 1, "date": 1, "username": 1}, {unique: true})
+    db.getSiblingDB("iris").repo_daily_peruser_compute_usage.createIndex({"date": 1})
+    db.getSiblingDB("iris").versions.updateOne({}, {"$set": {"dbschema": "0.0.8"}})
+}
+

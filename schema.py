@@ -38,7 +38,8 @@ from models import \
         ReportRangeInput, PerDateUsage, PerUserUsage, \
         RepoComputeAllocationInput, RepoStorageAllocationInput, \
         AuditTrailObjectType, AuditTrail, AuditTrailInput, \
-        NotificationInput, Notification, ComputeRequirement, BulkOpsResult, StatusResult
+        NotificationInput, Notification, ComputeRequirement, BulkOpsResult, StatusResult, \
+        CoactDatetime
 
 import logging
 LOG = logging.getLogger(__name__)
@@ -1111,6 +1112,42 @@ class Mutation:
           { "$merge": { "into": "repo_daily_compute_usage", "on": ["allocationId", "date"], "whenMatched": "replace" }}
         ])
         info.context.db.collection("jobs").aggregate([
+          { "$project": { "allocationId": 1, "resourceHours": 1 }},
+          { "$group": { "_id": {"allocationId": "$allocationId" }, "resourceHours": { "$sum": "$resourceHours" }}},
+          { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "resourceHours": 1 }},
+          { "$merge": { "into": "repo_overall_compute_usage", "on": ["allocationId"], "whenMatched": "replace" }}
+        ])
+        return StatusResult( status=True )
+
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    def jobsAggregateForDate( self, thedate: CoactDatetime, info: Info ) -> StatusResult:
+        pacificdaylight = pytz.timezone('America/Los_Angeles')
+        starttime = thedate.astimezone(pacificdaylight).replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
+        endtime = starttime + datetime.timedelta(days=1)
+        LOG.info("Aggregating jobs whose startTs is between %s and %s", starttime, endtime)
+        datebucket = thedate.astimezone(pacificdaylight).replace(hour=0, minute=0, second=0, microsecond=0)
+        info.context.db.collection("jobs").aggregate([
+          { "$match": { "startTs": { "$gte": starttime,  "$lt": endtime  }}},
+          { "$project": { "allocationId": 1, "startTs": 1, "username": 1, "resourceHours": 1 }},
+          { "$group": { "_id": {"allocationId": "$allocationId", "date" : datebucket, "username": "$username" }, "resourceHours": { "$sum": "$resourceHours" }}},
+          { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "date": "$_id.date", "username": "$_id.username", "resourceHours": 1 }},
+          { "$merge": { "into": "repo_daily_peruser_compute_usage", "on": ["allocationId", "date", "username"],  "whenMatched": "replace" }}
+        ])
+
+        info.context.db.collection("repo_daily_peruser_compute_usage").aggregate([
+          { "$project": { "allocationId": 1, "username": 1, "resourceHours": 1 }},
+          { "$group": { "_id": {"allocationId": "$allocationId", "username": "$username" }, "resourceHours": { "$sum": "$resourceHours" }}},
+          { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "username": "$_id.username", "resourceHours": 1 }},
+          { "$merge": { "into": "repo_peruser_compute_usage", "on": ["allocationId", "username"],  "whenMatched": "replace" }}
+        ])
+
+        info.context.db.collection("repo_daily_peruser_compute_usage").aggregate([
+          { "$project": { "allocationId": 1, "date": 1, "resourceHours": 1 }},
+          { "$group": { "_id": {"allocationId": "$allocationId", "date" : "$date" }, "resourceHours": { "$sum": "$resourceHours" }}},
+          { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "date": "$_id.date", "resourceHours": 1 }},
+          { "$merge": { "into": "repo_daily_compute_usage", "on": ["allocationId", "date"], "whenMatched": "replace" }}
+        ])
+        info.context.db.collection("repo_daily_peruser_compute_usage").aggregate([
           { "$project": { "allocationId": 1, "resourceHours": 1 }},
           { "$group": { "_id": {"allocationId": "$allocationId" }, "resourceHours": { "$sum": "$resourceHours" }}},
           { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "resourceHours": 1 }},
