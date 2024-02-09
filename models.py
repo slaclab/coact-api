@@ -392,9 +392,11 @@ class Facility( FacilityInput ):
             { "$lookup": { "from": "repo_compute_allocations", "localField": "_id", "foreignField": "repoid", "as": "allocation"}},
             { "$unwind": "$allocation" },
             { "$replaceRoot": { "newRoot": "$allocation" } },
-            { "$match": { "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }}
+            { "$match": { "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }},
+            { "$group": { "_id": {"clustername": "$clustername"}, "percent_of_facility": {"$sum": "$percent_of_facility"}}},
+            { "$project": { "clustername": "$_id.clustername", "percent_of_facility": "$percent_of_facility" }}
         ])
-        allocs = { x["clustername"]: sum([x["percent_of_facility"]]) for x in aaggs }
+        allocs = { x["clustername"]: x["percent_of_facility"] for x in aaggs }
         duaggs = info.context.db.collection("repos").aggregate([
             { "$match": { "facility": self.name}},
             { "$lookup": { "from": "repo_compute_allocations", "localField": "_id", "foreignField": "repoid", "as": "allocation"}},
