@@ -268,8 +268,9 @@ class Query:
         search = info.context.db.to_dict(filter)
         if isadmin:
             pass
-        elif isczar and "facility" not in search:
-            search["facility"]= { "$in": myfacs }
+        elif isczar:
+            if "facility" not in search:
+                search["facility"]= { "$in": myfacs }
         else:
             search["users"] = username
         LOG.debug(f"searching for repos using {filter} -> {search}")
