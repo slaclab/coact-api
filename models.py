@@ -405,7 +405,7 @@ class Facility( FacilityInput ):
             { "$match": { "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }}, # This gives us current allocations
             { "$lookup": { "from": "repo_daily_compute_usage", "localField": "_id", "foreignField": "allocationId", "as": "usage"}},
             { "$unwind": "$usage" },
-            { "$match": { "usage.date": {"$eq": todaysdate} }}, # This gives us today's usage
+            { "$match": { "usage.date": { "$gte": todaysdate - timedelta(days=1) } }}, # This gives us today's usage
             { "$group": { "_id": {"clustername": "$clustername"}, "resourceHours": {"$sum": "$usage.resourceHours"}}},
         ])
         wuaggs = info.context.db.collection("repos").aggregate([
@@ -416,7 +416,7 @@ class Facility( FacilityInput ):
             { "$match": { "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }}, # This gives us current allocations
             { "$lookup": { "from": "repo_daily_compute_usage", "localField": "_id", "foreignField": "allocationId", "as": "usage"}},
             { "$unwind": "$usage" },
-            { "$match": { "$and": [ {"usage.date": {"$gte": todaysdate - timedelta(days=7) }}, {"usage.date": {"$lt": todaysdate }} ] }}, # This gives us today's usage
+            { "$match": { "$and": [ {"usage.date": {"$gte": todaysdate - timedelta(days=7) }}, {"usage.date": {"$lt": todaysdate }} ] }},
             { "$group": { "_id": {"clustername": "$clustername"}, "resourceHours": {"$sum": "$usage.resourceHours"}}},
         ])
         dused = { x["_id"]["clustername"]: x["resourceHours"] for x in duaggs }
