@@ -383,12 +383,16 @@ class Query:
         else:
             raise Exception(f"Unsupported group by {group}")
         usgs = info.context.db.collection("repo_daily_compute_usage").aggregate([
-          { "$lookup": { "from": "repo_compute_allocations", "localField": "allocationid", "foreignField": "_id", "as": "allocation"}},
-          { "$unwind": "$allocation" },
-          { "$match": { "allocation.clustername": clustername, "date": {"$gte": range.start, "$lte": range.end} } },
-          { "$group": { "_id": {"repoid": "$allocation.repoid", "date" : timegrp }, "slachours": {"$sum":  "$slachours"}} },
-          { "$project": { "_id": 0, "repo": "$_id.repo", "date": "$_id.date", "slachours": 1 }},
-          { "$sort": { "date": -1 }}
+            { "$match": { "date": {"$gte": range.start, "$lte": range.end} } },
+            { "$lookup": { "from": "repo_compute_allocations", "localField": "allocationId", "foreignField": "_id", "as": "allocation"}},
+            { "$unwind": "$allocation" },
+            { "$match": { "allocation.clustername": clustername } },
+            { "$group": { "_id": {"repoid": "$allocation.repoid", "date" : timegrp }, "resourceHours": {"$sum":  "$resourceHours"}} },
+            { "$project": { "_id": 0, "repoid": "$_id.repoid", "date": "$_id.date", "resourceHours": 1 }},
+            { "$lookup": { "from": "repos", "localField": "repoid", "foreignField": "_id", "as": "repo"}},
+            { "$unwind": "$repo" },
+            { "$project": { "_id": 0, "repo": "$repo.name", "facility": "$repo.facility", "date": "$date", "resourceHours": 1 }},
+            { "$sort": { "date": -1 }}
         ])
         return info.context.db.cursor_to_objlist(usgs, PerDateUsage, {})
 
@@ -400,9 +404,9 @@ class Query:
           { "$lookup": { "from": "repo_compute_allocations", "localField": "allocationid", "foreignField": "_id", "as": "allocation"}},
           { "$unwind": "$allocation" },
           { "$match": { "allocation.clustername": clustername } },
-          { "$group": { "_id": {"repoid": "$allocation.repoid", "username" : "$username" }, "slachours": {"$sum":  "$slachours"}} },
-          { "$project": { "_id": 0, "repo": "$_id.repo", "username": "$_id.username", "slachours": 1 }},
-          { "$sort": { "slachours": -1 }}
+          { "$group": { "_id": {"repoid": "$allocation.repoid", "username" : "$username" }, "resourceHours": {"$sum":  "$resourceHours"}} },
+          { "$project": { "_id": 0, "repo": "$_id.repo", "username": "$_id.username", "resourceHours": 1 }},
+          { "$sort": { "resourceHours": -1 }}
         ])
         return info.context.db.cursor_to_objlist(usgs, PerUserUsage, {})
 
