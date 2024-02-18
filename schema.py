@@ -399,14 +399,17 @@ class Query:
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def reportFacilityComputeByUser( self, info: Info, clustername: str, range: ReportRangeInput ) -> List[PerUserUsage]:
         LOG.debug("Getting compute user data for cluster %s from %s to %s ", clustername, range.start, range.end)
-        usgs = info.context.db.collection("jobs").aggregate([
-          { "$match": { "startTs": {"$gte": range.start, "$lte": range.end} } },
-          { "$lookup": { "from": "repo_compute_allocations", "localField": "allocationid", "foreignField": "_id", "as": "allocation"}},
-          { "$unwind": "$allocation" },
-          { "$match": { "allocation.clustername": clustername } },
-          { "$group": { "_id": {"repoid": "$allocation.repoid", "username" : "$username" }, "resourceHours": {"$sum":  "$resourceHours"}} },
-          { "$project": { "_id": 0, "repo": "$_id.repo", "username": "$_id.username", "resourceHours": 1 }},
-          { "$sort": { "resourceHours": -1 }}
+        usgs = info.context.db.collection("repo_daily_peruser_compute_usage").aggregate([
+            { "$match": { "date": {"$gte": range.start, "$lte": range.end} } },
+            { "$lookup": { "from": "repo_compute_allocations", "localField": "allocationId", "foreignField": "_id", "as": "allocation"}},
+            { "$unwind": "$allocation" },
+            { "$match": { "allocation.clustername": clustername } },
+            { "$group": { "_id": {"repoid": "$allocation.repoid", "username" : "$username" }, "resourceHours": {"$sum":  "$resourceHours"}} },
+            { "$project": { "_id": 0, "repoid": "$_id.repoid", "username": "$_id.username", "resourceHours": 1 }},
+            { "$lookup": { "from": "repos", "localField": "repoid", "foreignField": "_id", "as": "repo"}},
+            { "$unwind": "$repo" },
+            { "$project": { "_id": 0, "repo": "$repo.name", "facility": "$repo.facility", "username": "$username", "resourceHours": 1 }},
+            { "$sort": { "resourceHours": -1 }}
         ])
         return info.context.db.cursor_to_objlist(usgs, PerUserUsage, {})
 
