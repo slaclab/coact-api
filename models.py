@@ -247,9 +247,9 @@ class User(UserInput):
             return []
         for x in self.eppns:
             if '@' not in x:
-                ret.append(Eppn(**{ "eppn": x, "fullname": x, "email": x+"@slac.stanford.edu", "organization": "slac.stanford.edu" }))
+                ret.append(Eppn(**{ "eppn": x+"@slac.stanford.edu", "fullname": x, "email": x+"@slac.stanford.edu", "organization": "slac.stanford.edu" }))
             else:
-                ret.append(Eppn(**{ "eppn": x.split("@")[0], "fullname": x, "email": x, "organization": x.split("@")[1] }))
+                ret.append(Eppn(**{ "eppn": x, "fullname": x.split("@")[0], "email": x, "organization": x.split("@")[1] }))
         return ret
     @strawberry.field
     def facilities(self, info) -> List[str]:
