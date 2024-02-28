@@ -62,12 +62,19 @@ class Query:
     def amIRegistered(self, info: Info) -> UserRegistration:
         request_id = None
         isRegis, eppn = info.context.isUserRegistered()
+        userid = info.context.username
         regis_pending = False
         if not isRegis:
             regis_pending = len(info.context.db.find("requests", {"reqtype" : "UserAccount", "eppn" : eppn})) >= 1
             if regis_pending:
                 request_id = list(info.context.db.collection("requests").find({"reqtype" : "UserAccount", "eppn" : eppn}).sort([("approvalstatus", -1), ("timeofrequest", -1)]))[0]["_id"]
-        return UserRegistration(**{ "isRegistered": isRegis, "eppn": eppn, "isRegistrationPending": regis_pending, "fullname": info.context.fullname, "requestId": request_id })
+            else:
+                filter = UserInput(**{"eppns": info.context.eppn})
+                lookupObjs = info.context.lookupUsersFromService(filter)
+                if lookupObjs:
+                    LOG.info("Found EPPN in lookup service %s", lookupObjs[0].username)
+                    userid = lookupObjs[0].username
+        return UserRegistration(**{ "isRegistered": isRegis, "eppn": eppn, "isRegistrationPending": regis_pending, "fullname": info.context.fullname, "username": userid, "requestId": request_id })
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def whoami(self, info: Info) -> User:

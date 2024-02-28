@@ -218,6 +218,7 @@ class UserRegistration(EppnInput):
     isRegistrationPending: Optional[bool] = UNSET
     fullname: Optional[str] = UNSET
     requestId: Optional[MongoId] = UNSET
+    username: Optional[str] = UNSET
     @strawberry.field
     def requestObj(self, info) -> Optional[CoactRequest]:
         if not self.requestId:
