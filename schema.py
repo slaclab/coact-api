@@ -731,7 +731,7 @@ class Mutation:
             if not thereq.start:
                 thereq.start = datetime.datetime.utcnow()
             if not thereq.end:
-                thereq.end = datetime.datetime.utcnow().replace(year=2100)
+                thereq.end = datetime.datetime.utcnow().replace(year=2100, month=1, day=1)
             if not thereq.chargefactor:
                 thereq.chargefactor = 1.0
             thereq.approve(info)
@@ -757,7 +757,7 @@ class Mutation:
             if not thereq.start:
                 thereq.start = datetime.datetime.utcnow()
             if not thereq.end:
-                thereq.end = datetime.datetime.utcnow().replace(year=2100)
+                thereq.end = datetime.datetime.utcnow().replace(year=2100, month=1, day=1)
 
             thereq.approve(info)
             return True

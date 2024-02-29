@@ -464,7 +464,7 @@ class ProcessRequests:
         if not theReq["start"]:
             theReq["start"] = datetime.datetime.utcnow().astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
         if not theReq["end"]:
-            theReq["end"] = datetime.datetime.utcnow().replace(year=2100).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+            theReq["end"] = datetime.datetime.utcnow().replace(year=2100, month=1, day=1).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
         if not theReq["chargefactor"]:
             theReq["chargefactor"] = 1.0
 
@@ -502,7 +502,7 @@ class ProcessRequests:
         if not theReq["start"]:
             theReq["start"] = datetime.datetime.utcnow()
         if not theReq["end"]:
-            theReq["end"] = datetime.datetime.utcnow().replace(year=2100)
+            theReq["end"] = datetime.datetime.utcnow().replace(year=2100, month=1, day=1)
 
         try:
             result = self.mutateclient.execute(repoStorageAllocationUpsert, variable_values={
