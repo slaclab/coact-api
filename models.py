@@ -573,13 +573,20 @@ class RepoComputeAllocation(RepoComputeAllocationInput):
         results = info.context.db.collection("repo_daily_compute_usage").find({"allocationId": self._id})
         return info.context.db.cursor_to_objlist(results, PerDateUsage, exclude_fields={"_id", "allocationId"})
 
+    @strawberry.field
+    def clusterNodeCPUCount(self, info) -> int:
+        return info.context.db.collection("clusters").find_one({"name": self.clustername})["nodecpucount"]
+    
+    def __convert_resourcehours_to_percent__(self, usedResourceHours: float, numhours: float, info):
+        clusterNodeCPUCount = self.clusterNodeCPUCount(info)
+        allocatedResourceHours = self.allocated * clusterNodeCPUCount * numhours
+        percentUsed = (usedResourceHours/allocatedResourceHours)*100 if allocatedResourceHours else 9999999999
+        return ComputeUsageOverTime(allocatedResourceHours=allocatedResourceHours, usedResourceHours=usedResourceHours, percentUsed=percentUsed)
+    
     def __usageovertime__(self, startdate, enddate, numdays, info):
-        clusterNodeCPUCount = info.context.db.collection("clusters").find_one({"name": self.clustername})["nodecpucount"]
-        allocatedResourceHours = self.allocated * clusterNodeCPUCount * numdays * 24
         usages = info.context.db.collection("repo_daily_compute_usage").find({"allocationId": self._id, "date": { "$gte": startdate }} )
         usedResourceHours = sum(map(lambda x: x["resourceHours"], usages))
-        percentUsed = (usedResourceHours/allocatedResourceHours)*100 if allocatedResourceHours else 0
-        return ComputeUsageOverTime(start=startdate, end=enddate, allocatedResourceHours=allocatedResourceHours, usedResourceHours=usedResourceHours, percentUsed=percentUsed)
+        return self.__convert_resourcehours_to_percent__(usedResourceHours, numdays * 24, info)
 
     @strawberry.field
     def recentUsage(self, info) -> ComputeUsageOverTime:
@@ -610,6 +617,29 @@ class RepoComputeAllocation(RepoComputeAllocationInput):
         days = 30
         startdate = enddate - timedelta(days=days)
         return self.__usageovertime__(startdate, enddate, days, info)
+    
+    def __pastXUsage__(self, info, collectionname, numhours):
+        pastx = info.context.db.collection(collectionname).find_one({"allocationId": self._id } )
+        usedResourceHours = 0
+        if pastx:
+            usedResourceHours = pastx["resourceHours"]
+        return self.__convert_resourcehours_to_percent__(usedResourceHours, numhours, info)
+
+    @strawberry.field
+    def last5minsUsage(self, info) -> ComputeUsageOverTime:
+        return self.__pastXUsage__(info, "repo_past5_compute_usage", 0.083333333333)
+
+    @strawberry.field
+    def last15minsUsage(self, info) -> ComputeUsageOverTime:
+        return self.__pastXUsage__(info, "repo_past15_compute_usage", 0.25)
+
+    @strawberry.field
+    def last60minsUsage(self, info) -> ComputeUsageOverTime:
+        return self.__pastXUsage__(info, "repo_past60_compute_usage", 1.0)
+
+    @strawberry.field
+    def last180minsUsage(self, info) -> ComputeUsageOverTime:
+        return self.__pastXUsage__(info, "repo_past180_compute_usage", 3.0)
 
     @strawberry.field
     def perUserUsage(self, info) ->List[PerUserUsage]:

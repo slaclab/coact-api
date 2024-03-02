@@ -1,0 +1,12 @@
+if(db.getSiblingDB("iris").versions.findOne({dbschema: "0.0.8"})) {
+    db.getSiblingDB("iris").repo_past5_compute_usage.createIndex({"allocationId": 1}, {unique: true})
+    db.getSiblingDB("iris").repo_past5_compute_usage.createIndex({"lastModifiedTs": 1})
+    db.getSiblingDB("iris").repo_past15_compute_usage.createIndex({"allocationId": 1}, {unique: true})
+    db.getSiblingDB("iris").repo_past15_compute_usage.createIndex({"lastModifiedTs": 1})
+    db.getSiblingDB("iris").repo_past60_compute_usage.createIndex({"allocationId": 1}, {unique: true})
+    db.getSiblingDB("iris").repo_past60_compute_usage.createIndex({"lastModifiedTs": 1})
+    db.getSiblingDB("iris").repo_past180_compute_usage.createIndex({"allocationId": 1}, {unique: true})
+    db.getSiblingDB("iris").repo_past180_compute_usage.createIndex({"lastModifiedTs": 1})
+    db.getSiblingDB("iris").versions.updateOne({}, {"$set": {"dbschema": "0.0.9"}})
+}
+

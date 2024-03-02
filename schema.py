@@ -1168,6 +1168,23 @@ class Mutation:
           { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "resourceHours": 1 }},
           { "$merge": { "into": "repo_overall_compute_usage", "on": ["allocationId"], "whenMatched": "replace" }}
         ])
+
+        def __compute_past_x_aggregates__(past_x_start, dest_collection, last_modified_ts):
+            LOG.info("Computing the past_x aggregate for %s", dest_collection)
+            info.context.db.collection("jobs").aggregate([
+                { "$match": { "endTs": { "$gte": past_x_start }}},
+                { "$project": { "allocationId": 1, "resourceHours": {"$multiply": ["$resourceHours", {"$divide": [{"$subtract": [ "$endTs", {"$literal": past_x_start}]}, {"$subtract": [ "$endTs", "$startTs"]}]}]}}},
+                { "$group": { "_id": {"allocationId": "$allocationId" }, "resourceHours": { "$sum": "$resourceHours" }}},
+                { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "resourceHours": 1, "lastModifiedTs" : { "$literal": last_modified_ts }  }},
+                { "$merge": { "into": dest_collection, "on": ["allocationId"],  "whenMatched": "replace" }}
+            ])
+            info.context.db.collection(dest_collection).delete_many({"lastModifiedTs": {"$lt": past_x_start }})
+            
+        __compute_past_x_aggregates__(datetime.datetime.utcnow() - datetime.timedelta(minutes=5), "repo_past5_compute_usage", datetime.datetime.utcnow())
+        __compute_past_x_aggregates__(datetime.datetime.utcnow() - datetime.timedelta(minutes=15), "repo_past15_compute_usage", datetime.datetime.utcnow())
+        __compute_past_x_aggregates__(datetime.datetime.utcnow() - datetime.timedelta(hours=1), "repo_past60_compute_usage", datetime.datetime.utcnow())
+        __compute_past_x_aggregates__(datetime.datetime.utcnow() - datetime.timedelta(hours=3), "repo_past180_compute_usage", datetime.datetime.utcnow())
+
         return StatusResult( status=True )
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
