@@ -780,6 +780,7 @@ class Job:
     allocationId: MongoId
     qos: str
     startTs: datetime
+    endTs: datetime
     resourceHours: float
 
 @strawberry.input
