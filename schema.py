@@ -1178,6 +1178,7 @@ class Mutation:
                 { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "resourceHours": 1, "lastModifiedTs" : { "$literal": last_modified_ts }  }},
                 { "$merge": { "into": dest_collection, "on": ["allocationId"],  "whenMatched": "replace" }}
             ])
+            # The following line should delete entries for repo_compute_allocations that do not have any jobs in the past x mins.
             info.context.db.collection(dest_collection).delete_many({"lastModifiedTs": {"$lt": past_x_start }})
             
         __compute_past_x_aggregates__(datetime.datetime.utcnow() - datetime.timedelta(minutes=5), "repo_past5_compute_usage", datetime.datetime.utcnow())
