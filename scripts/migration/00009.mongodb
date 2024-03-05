@@ -1,4 +1,5 @@
 if(db.getSiblingDB("iris").versions.findOne({dbschema: "0.0.9"})) {
+    db.getSiblingDB("iris").jobs.createIndex({startTs: -1})
     db.getSiblingDB("iris").jobs.createIndex({endTs: -1})
     db.getSiblingDB("iris").versions.updateOne({}, {"$set": {"dbschema": "0.0.10"}})
 }
