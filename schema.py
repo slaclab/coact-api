@@ -1180,10 +1180,10 @@ class Mutation:
             ])
             info.context.db.collection(dest_collection).delete_many({"lastModifiedTs": {"$lt": past_x_start }})
             
-        # __compute_past_x_aggregates__(datetime.datetime.utcnow() - datetime.timedelta(minutes=5), "repo_past5_compute_usage", datetime.datetime.utcnow())
-        # __compute_past_x_aggregates__(datetime.datetime.utcnow() - datetime.timedelta(minutes=15), "repo_past15_compute_usage", datetime.datetime.utcnow())
-        # __compute_past_x_aggregates__(datetime.datetime.utcnow() - datetime.timedelta(hours=1), "repo_past60_compute_usage", datetime.datetime.utcnow())
-        # __compute_past_x_aggregates__(datetime.datetime.utcnow() - datetime.timedelta(hours=3), "repo_past180_compute_usage", datetime.datetime.utcnow())
+        __compute_past_x_aggregates__(datetime.datetime.utcnow() - datetime.timedelta(minutes=5), "repo_past5_compute_usage", datetime.datetime.utcnow())
+        __compute_past_x_aggregates__(datetime.datetime.utcnow() - datetime.timedelta(minutes=15), "repo_past15_compute_usage", datetime.datetime.utcnow())
+        __compute_past_x_aggregates__(datetime.datetime.utcnow() - datetime.timedelta(hours=1), "repo_past60_compute_usage", datetime.datetime.utcnow())
+        __compute_past_x_aggregates__(datetime.datetime.utcnow() - datetime.timedelta(hours=3), "repo_past180_compute_usage", datetime.datetime.utcnow())
 
         return StatusResult( status=True )
 
