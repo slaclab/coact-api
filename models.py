@@ -580,7 +580,9 @@ class RepoComputeAllocation(RepoComputeAllocationInput):
     def __convert_resourcehours_to_percent__(self, usedResourceHours: float, numhours: float, info):
         clusterNodeCPUCount = self.clusterNodeCPUCount(info)
         allocatedResourceHours = self.allocated * clusterNodeCPUCount * numhours
-        percentUsed = (usedResourceHours/allocatedResourceHours)*100 if allocatedResourceHours else 9999999999
+        percentUsed = 0
+        if usedResourceHours > 0:
+            percentUsed = (usedResourceHours/allocatedResourceHours)*100 if allocatedResourceHours else 9999999999
         return ComputeUsageOverTime(allocatedResourceHours=allocatedResourceHours, usedResourceHours=usedResourceHours, percentUsed=percentUsed)
     
     def __usageovertime__(self, startdate, enddate, numdays, info):
