@@ -33,7 +33,7 @@ import inspect
 
 import logging
 
-logging.basicConfig( logging.getLevelName(os.environ.get("LOG_LEVEL", "INFO")))
+logging.basicConfig(level=logging.getLevelName(os.environ.get("LOG_LEVEL", "INFO")))
 
 LOG = logging.getLogger(__name__)
 
