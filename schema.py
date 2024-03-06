@@ -477,7 +477,8 @@ class Query:
                     }            
                 },
                 "durationMillis": {"$subtract": [ "$endTs", "$startTs"]}
-            }}
+            }},
+            {"$sort": { "jobId": -1 }}
         ])
         return info.context.db.cursor_to_objlist(jobs, NormalizedJob)
     
