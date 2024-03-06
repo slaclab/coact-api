@@ -815,6 +815,11 @@ class Job:
     endTs: datetime
     resourceHours: float
 
+@strawberry.type
+class NormalizedJob(Job):
+    durationMillis: Int64
+    normalizedResourceHours: float
+
 @strawberry.input
 class StorageDailyUsageInput:
     allocationid: Optional[MongoId] = UNSET

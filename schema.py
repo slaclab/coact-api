@@ -39,7 +39,7 @@ from models import \
         RepoComputeAllocationInput, RepoStorageAllocationInput, \
         AuditTrailObjectType, AuditTrail, AuditTrailInput, \
         NotificationInput, Notification, ComputeRequirement, BulkOpsResult, StatusResult, \
-        CoactDatetime
+        CoactDatetime, NormalizedJob
 
 import logging
 LOG = logging.getLogger(__name__)
@@ -447,6 +447,40 @@ class Query:
     def repoAuditTrails( self, repo: RepoInput, info: Info ) -> List[AuditTrail]:
         repoObj = info.context.db.find_repo(repo)
         return info.context.db.cursor_to_objlist(info.context.db.collection("audit_trail").find({ "type": AuditTrailObjectType.Repo.name, "actedon": repoObj._id }).sort([("actedat", -1)]), AuditTrail)
+    
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def repoComputeJobs( self, rca: RepoComputeAllocationInput, past_x_mins: int, info: Info ) -> List[NormalizedJob]:
+        past_x_start = datetime.datetime.utcnow() - datetime.timedelta(minutes=past_x_mins)
+        jobs = info.context.db.collection("jobs").aggregate([
+            { "$match": {"endTs": { "$gte": past_x_start }, "allocationId": rca._id }},
+            { "$project": { 
+                "_id": 0,
+                "allocationId": 1,
+                "jobId": 1,
+                "username": 1,
+                "qos": 1,
+                "startTs": 1,
+                "endTs": 1,
+                "resourceHours": 1,
+                "normalizedResourceHours": {
+                    "$cond": {
+                        "if": { "$gte": [ "$startTs", {"$literal": past_x_start}]},
+                        "then": "$resourceHours",
+                        "else": {
+                            "$multiply": [
+                                "$resourceHours", 
+                                { "$divide": [
+                                    {"$subtract": [ "$endTs", {"$literal": past_x_start}]}, 
+                                    {"$subtract": [ "$endTs", "$startTs"]}
+                                ]}
+                        ]}
+                    }            
+                },
+                "durationMillis": {"$subtract": [ "$endTs", "$startTs"]}
+            }}
+        ])
+        return info.context.db.cursor_to_objlist(jobs, NormalizedJob)
+    
 
 @strawberry.type
 class Mutation:
