@@ -1173,7 +1173,23 @@ class Mutation:
             LOG.info("Computing the past_x aggregate for %s", dest_collection)
             info.context.db.collection("jobs").aggregate([
                 { "$match": { "endTs": { "$gte": past_x_start }}},
-                { "$project": { "allocationId": 1, "resourceHours": {"$multiply": ["$resourceHours", {"$divide": [{"$subtract": [ "$endTs", {"$literal": past_x_start}]}, {"$subtract": [ "$endTs", "$startTs"]}]}]}}},
+                { "$project": { 
+                    "allocationId": 1, 
+                    "resourceHours": {
+                        "$cond": {
+                            "if": { "$gte": [ "$startTs", {"$literal": past_x_start}]},
+                            "then": "$resourceHours",
+                            "else": {
+                                "$multiply": [
+                                    "$resourceHours", 
+                                    { "$divide": [
+                                        {"$subtract": [ "$endTs", {"$literal": past_x_start}]}, 
+                                        {"$subtract": [ "$endTs", "$startTs"]}
+                                    ]}
+                            ]}
+                        }            
+                    }
+                }},
                 { "$group": { "_id": {"allocationId": "$allocationId" }, "resourceHours": { "$sum": "$resourceHours" }}},
                 { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "resourceHours": 1, "lastModifiedTs" : { "$literal": last_modified_ts }  }},
                 { "$merge": { "into": dest_collection, "on": ["allocationId"],  "whenMatched": "replace" }}
