@@ -3,6 +3,7 @@
 import argparse
 import logging
 import datetime
+import time
 import pytz
 
 from gql import gql, Client
@@ -253,6 +254,8 @@ class ProcessRequests:
         """
         Process UserAccount approvals
         """
+        # Add a 1 minute delay for testing UI 
+        time.sleep(60)
         # TODO Put in the uidnumber number here
         resp = self.mutateclient.execute(userUpsert, variable_values={"user": {
             "username": theReq["preferredUserName"],
