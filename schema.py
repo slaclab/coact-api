@@ -1126,7 +1126,7 @@ class Mutation:
         facility = info.context.db.find_facility(filter=facility)
         if not facility:
             raise Exception("Cannot find requested facility " + str(facility))
-        if not purchase or purchase < 0.0:
+        if purchase < 0.0:
             raise Exception("Invalid purchase amount")
         if not purpose or len(purpose) < 2:
             raise Exception("For storage purposes, one needs to have a purpose")
