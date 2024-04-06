@@ -149,6 +149,15 @@ class CoactRequest(CoactRequestInput):
           "previous": self.approvalstatus
         }
         return info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Approved.value }, "$push": {"audit": v}})
+    def changeFacility(self, info, newfacilty) -> bool:
+        curreq = info.context.db.collection("requests").find_one({"_id": self._id})
+        v = {
+          'actedby': info.context.username,
+          'actedat': datetime.utcnow(),
+          "previous": self.approvalstatus,
+          "notes": "Changed facility from " + curreq["facilityname"] + " to " + newfacilty
+        }
+        return info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "facilityname": newfacilty }, "$push": {"audit": v}})
 
 
 @strawberry.type

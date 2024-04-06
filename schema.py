@@ -879,6 +879,16 @@ class Mutation:
                 oreq.approve(info)
         return True
 
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
+    def requestUpdateFacility(self, id: str, newfacility: str, info: Info) -> bool:
+        thereq = info.context.db.find_request({ "_id": ObjectId(id) })
+        if not thereq:
+            raise Exception("Cannot find request with id")
+        if thereq.approvalstatus not in [ CoactRequestStatus.NotActedOn, CoactRequestStatus.Rejected, CoactRequestStatus.PreApproved ]:
+            raise Exception("Requests in this state cannot be modified")
+        thereq.changeFacility(info, newfacility)
+        return True
+
     @strawberry.field( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
     def accessGroupCreate(self, repo: RepoInput, accessgroup: AccessGroupInput, info: Info) -> AccessGroup:
         # We do not set the GID so that the automatic scripts can detect this fact and set the appropriate GID based on introspection of external LDAP servers.
