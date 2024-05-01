@@ -175,7 +175,13 @@ class CustomContext(BaseContext):
 
     def notify_raw(self, to: List[str], subject: str, body: str) -> bool:
         email = self.email.create( to=to, subject=subject, body=body )
-        return self.email.send( email ) 
+        return self.email.send( email )
+
+    def lookupUserInService(self, preferredUserName):
+        resp = self.userlookup.execute(lookupUser, variable_values={"filter": { "username": preferredUserName }})
+        if resp["users"]:
+            return resp["users"][0]
+        return None
 
     def notify(self,request: CoactRequest) -> bool:
         # lets try to be clever and reduce the amount of code we have to write by determing who called us
@@ -193,9 +199,9 @@ class CustomContext(BaseContext):
         skip_czar_emails = True
         try:
             if request.preferredUserName:
-                resp = self.userlookup.execute(lookupUser, variable_values={"filter": { "username": request.preferredUserName }})
-                if resp["users"]:
-                    preferredemail = resp["users"][0]["preferredemail"]
+                luobj = self.lookupUserInService(request.preferredUserName)
+                if luobj:
+                    preferredemail = luobj["preferredemail"]
                     LOG.info(f"Userlookup service returned {preferredemail} for {request.preferredUserName}")
                     user_email = [ preferredemail, ]
             else:
