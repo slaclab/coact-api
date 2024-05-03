@@ -490,6 +490,12 @@ class Facility( FacilityInput ):
             v["used"] = used.get(k, 0)
         return [ FacilityStoragePurchases(**{k:x.get(k, 0) for k in ["storagename", "purpose", "purchased", "allocated", "used" ] }) for x in purchases.values()]
 
+@strawberry.type
+class FacillityPastXUsage:
+    facility: Optional[str] = UNSET
+    clustername: Optional[str] = UNSET
+    resourceHours: Optional[float] = 0
+    percentUsed: float
 
 @strawberry.input
 class UsageInput:

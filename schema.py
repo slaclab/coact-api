@@ -39,7 +39,7 @@ from models import \
         RepoComputeAllocationInput, RepoStorageAllocationInput, \
         AuditTrailObjectType, AuditTrail, AuditTrailInput, \
         NotificationInput, Notification, ComputeRequirement, BulkOpsResult, StatusResult, \
-        CoactDatetime, NormalizedJob
+        CoactDatetime, NormalizedJob, FacillityPastXUsage
 
 import logging
 LOG = logging.getLogger(__name__)
@@ -254,7 +254,58 @@ class Query:
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def facility(self, info: Info, filter: Optional[FacilityInput]) -> Facility:
         return info.context.db.find_facilities( filter )[0]
+    
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def facilityRecentComputeUsage(self, info: Info, past_minutes: int) -> Optional[List[FacillityPastXUsage]]:
+        """
+        Compute the past_x report ( compute usage used in the past 5 minutes ) straight from the jobs collection.
+        Used mainly to enforce burst allocation usage
+        """
+        past_x_start = datetime.datetime.utcnow() - datetime.timedelta(minutes=past_minutes)
+        pacificdaylight = pytz.timezone('America/Los_Angeles')
+        LOG.info("Computing the past_x aggregate for %s minutes using jobs whose start time is > %s (%s)", past_minutes, past_x_start.astimezone(pacificdaylight), past_x_start.isoformat())
+        aggs = list(info.context.db.collection("jobs").aggregate([
+            { "$match": { "endTs": { "$gte": past_x_start }}},
+            { "$project": { 
+                "allocationId": 1, 
+                "resourceHours": {
+                    "$cond": {
+                        "if": { "$gte": [ "$startTs", {"$literal": past_x_start}]},
+                        "then": "$resourceHours",
+                        "else": {
+                            "$multiply": [
+                                "$resourceHours", 
+                                { "$divide": [
+                                    {"$subtract": [ "$endTs", {"$literal": past_x_start}]}, 
+                                    {"$subtract": [ "$endTs", "$startTs"]}
+                                ]}
+                        ]}
+                    }            
+                }
+            }},
+            { "$group": { "_id": {"allocationId": "$allocationId" }, "resourceHours": { "$sum": "$resourceHours" }}},
+            { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "resourceHours": 1 }},
+            { "$lookup": { "from": "repo_compute_allocations", "localField": "allocationId", "foreignField": "_id", "as": "allocation"}},
+            { "$unwind": "$allocation" },
+            { "$group": { "_id": {"repoid": "$allocation.repoid", "clustername": "$allocation.clustername" }, "resourceHours": {"$sum":  "$resourceHours"}} },
+            { "$project": { "_id": 0, "repoid": "$_id.repoid", "clustername": "$_id.clustername", "resourceHours": 1 }},
+            { "$lookup": { "from": "repos", "localField": "repoid", "foreignField": "_id", "as": "repo"}},
+            { "$unwind": "$repo" },
+            { "$group": { "_id": {"facility": "$repo.facility", "clustername": "$clustername" }, "resourceHours": {"$sum":  "$resourceHours"}} },
+            { "$project": { "_id": 0, "facility": "$_id.facility", "clustername": "$_id.clustername", "resourceHours": 1, "percentUsed": { "$literal": 0.0 } }}
+        ]))
+        purs = list(info.context.db.collection("facility_compute_purchases").aggregate([
+            { "$lookup": { "from": "clusters", "localField": "clustername", "foreignField": "name", "as": "cluster"}},
+            { "$unwind": "$cluster" },
+            { "$project": { "_id": 0, "facility": "$facility", "clustername": "$clustername", "purchasedNodes": { "$multiply": [ "$slachours", "$cluster.nodecpucount"  ] } }},
+        ]))
+        fac2prs = { (x["facility"], x["clustername"]) : x["purchasedNodes"]*(past_minutes/60.0) for x in purs}
+        for usg in aggs:
+            adj = fac2prs.get((usg["facility"], usg["clustername"]), 0)
+            if adj:
+                usg["percentUsed"] = (usg["resourceHours"]/adj)*100.0
 
+        return [ FacillityPastXUsage(**{k:x.get(k, 0) for k in ["facility", "clustername", "resourceHours", "percentUsed" ] }) for x in aggs ]
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def access_groups(self, info: Info, filter: Optional[AccessGroupInput]={} ) -> List[AccessGroup]:
