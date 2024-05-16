@@ -183,6 +183,12 @@ class CustomContext(BaseContext):
             return resp["users"][0]
         return None
 
+    def lookupUserInServiceUsingEPPN(self, eppn):
+        resp = self.userlookup.execute(lookupUser, variable_values={"filter": { "eppns": eppn }})
+        if resp["users"]:
+            return resp["users"][0]
+        return None
+
     def notify(self,request: CoactRequest) -> bool:
         # lets try to be clever and reduce the amount of code we have to write by determing who called us
         this_frame = inspect.currentframe()

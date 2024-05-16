@@ -752,9 +752,9 @@ class Mutation:
             thefacility = thereq.facilityname
             if not thefacility:
                 raise Exception("Account request without a facility - cannot approve.")
-            luuserobj = info.context.lookupUserInService(preferredUserName)
-            if luuserobj and not luuserobj.get("uidnumber", None):
-                raise Exception("The UID number is null or not present; this probably means that the UNIX account does not exist. Cannot approve")
+            luuserobj = info.context.lookupUserInServiceUsingEPPN(theeppn)
+            if not luuserobj or not luuserobj.get("uidnumber", None):
+                raise Exception("The UID number is null or not present; this probably means that the S3DF LDAP has not yet synced. Cannot approve")
             
             thereq.approve(info)
             return True
