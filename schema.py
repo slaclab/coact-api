@@ -1121,7 +1121,11 @@ class Mutation:
         rc["burst_percent_of_facility"] = repocompute.burst_percent_of_facility
         rc["burst_allocated"] = repocompute.burst_allocated
         LOG.info(rc)
-        info.context.db.collection("repo_compute_allocations").replace_one({"repoid": rc["repoid"], "clustername": rc["clustername"], "start": rc["start"]}, rc, upsert=True)
+        if repocompute._id:
+            rc["_id"] = repocompute._id
+            info.context.db.collection("repo_compute_allocations").replace_one({"_id": rc["_id"]}, rc, upsert=False)
+        else:
+            info.context.db.collection("repo_compute_allocations").replace_one({"repoid": rc["repoid"], "clustername": rc["clustername"], "start": rc["start"]}, rc, upsert=True)
         info.context.audit(AuditTrailObjectType.Repo, repo._id, "repoComputeAllocationUpsert", details=clustername+"="+json.dumps(rc["allocated"])+"("+json.dumps(rc["percent_of_facility"])+"%)")
         return info.context.db.find_repo( repo )
     
