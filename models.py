@@ -497,6 +497,14 @@ class FacillityPastXUsage:
     resourceHours: Optional[float] = 0
     percentUsed: float
 
+@strawberry.type
+class RepoPastXUsage:
+    name: Optional[str] = UNSET
+    facility: Optional[str] = UNSET
+    clustername: Optional[str] = UNSET
+    resourceHours: Optional[float] = 0
+    percentUsed: float
+
 @strawberry.input
 class UsageInput:
     facility: Optional[str] = UNSET

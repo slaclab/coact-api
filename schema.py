@@ -39,7 +39,7 @@ from models import \
         RepoComputeAllocationInput, RepoStorageAllocationInput, \
         AuditTrailObjectType, AuditTrail, AuditTrailInput, \
         NotificationInput, Notification, ComputeRequirement, BulkOpsResult, StatusResult, \
-        CoactDatetime, NormalizedJob, FacillityPastXUsage
+        CoactDatetime, NormalizedJob, FacillityPastXUsage, RepoPastXUsage
 
 import logging
 LOG = logging.getLogger(__name__)
@@ -488,6 +488,58 @@ class Query:
           { "$sort": { "gigabytes": -1 }}
         ])
         return info.context.db.cursor_to_objlist(usgs, Usage, {})
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def repoRecentComputeUsage(self, info: Info, past_minutes: int) -> Optional[List[RepoPastXUsage]]:
+        """
+        Compute the past_x report for all my repos ( compute usage used in the past x minutes ) straight from the jobs collection.
+        This query may not perform well if the range is for more than a couple of days.
+        In that case, use the reportFacilityComputeByDay to get a daily breakdown.
+        """
+        past_x_start = datetime.datetime.utcnow() - datetime.timedelta(minutes=past_minutes)
+        pacificdaylight = pytz.timezone('America/Los_Angeles')
+        LOG.info("Computing the past_x aggregate for %s minutes using jobs whose start time is > %s (%s)", past_minutes, past_x_start.astimezone(pacificdaylight), past_x_start.isoformat())
+        aggs = list(info.context.db.collection("jobs").aggregate([
+            { "$match": { "endTs": { "$gte": past_x_start }}},
+            { "$project": { 
+                "allocationId": 1, 
+                "resourceHours": {
+                    "$cond": {
+                        "if": { "$gte": [ "$startTs", {"$literal": past_x_start}]},
+                        "then": "$resourceHours",
+                        "else": {
+                            "$multiply": [
+                                "$resourceHours", 
+                                { "$divide": [
+                                    {"$subtract": [ "$endTs", {"$literal": past_x_start}]}, 
+                                    {"$subtract": [ "$endTs", "$startTs"]}
+                                ]}
+                        ]}
+                    }            
+                }
+            }},
+            { "$group": { "_id": {"allocationId": "$allocationId" }, "resourceHours": { "$sum": "$resourceHours" }}},
+            { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "resourceHours": 1 }},
+            { "$lookup": { "from": "repo_compute_allocations", "localField": "allocationId", "foreignField": "_id", "as": "allocation"}},
+            { "$unwind": "$allocation" },
+            { "$group": { "_id": {"repoid": "$allocation.repoid", "clustername": "$allocation.clustername" }, "resourceHours": {"$sum":  "$resourceHours"}} },
+            { "$project": { "_id": 0, "repoid": "$_id.repoid", "clustername": "$_id.clustername", "resourceHours": 1 }},
+            { "$lookup": { "from": "repos", "localField": "repoid", "foreignField": "_id", "as": "repo"}},
+            { "$unwind": "$repo" },
+            { "$project": { "_id": 0, "name": "$repo.name", "facility": "$repo.facility", "clustername": "$clustername", "resourceHours": 1, "percentUsed": { "$literal": 0.0 } }}
+        ]))
+        purs = list(info.context.db.collection("facility_compute_purchases").aggregate([
+            { "$lookup": { "from": "clusters", "localField": "clustername", "foreignField": "name", "as": "cluster"}},
+            { "$unwind": "$cluster" },
+            { "$project": { "_id": 0, "facility": "$facility", "clustername": "$clustername", "purchasedNodes": { "$multiply": [ "$slachours", "$cluster.nodecpucount"  ] } }},
+        ]))
+        fac2prs = { (x["facility"], x["clustername"]) : x["purchasedNodes"]*(past_minutes/60.0) for x in purs}
+        for usg in aggs:
+            adj = fac2prs.get((usg["facility"], usg["clustername"]), 0)
+            if adj:
+                usg["percentUsed"] = (usg["resourceHours"]/adj)*100.0
+        my_repos = [ (x.name, x.facility) for x in Query().repos(info) ]
+        return [ RepoPastXUsage(**{k:x.get(k, 0) for k in ["name", "facility", "clustername", "resourceHours", "percentUsed" ] }) for x in aggs if (x["name"], x["facility"]) in my_repos ]
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def userAuditTrails( self, info: Info ) -> List[AuditTrail]:
@@ -1219,28 +1271,6 @@ class Mutation:
         return BulkOpsResult(insertedCount=bulkopsresult.inserted_count, upsertedCount=bulkopsresult.upserted_count, deletedCount=bulkopsresult.deleted_count, modifiedCount=bulkopsresult.modified_count)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def jobsAggregateAll( self, info: Info ) -> StatusResult:
-        info.context.db.collection("jobs").aggregate([
-          { "$project": { "allocationId": 1, "username": 1, "resourceHours": 1 }},
-          { "$group": { "_id": {"allocationId": "$allocationId", "username": "$username" }, "resourceHours": { "$sum": "$resourceHours" }}},
-          { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "username": "$_id.username", "resourceHours": 1 }},
-          { "$merge": { "into": "repo_peruser_compute_usage", "on": ["allocationId", "username"],  "whenMatched": "replace" }}
-        ])
-        info.context.db.collection("jobs").aggregate([
-          { "$project": { "allocationId": 1, "startTs": 1, "resourceHours": 1 }},
-          { "$group": { "_id": {"allocationId": "$allocationId", "date" : { "$dateTrunc": {"date": "$startTs", "unit": "day", "timezone": "America/Los_Angeles"}} }, "resourceHours": { "$sum": "$resourceHours" }}},
-          { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "date": "$_id.date", "resourceHours": 1 }},
-          { "$merge": { "into": "repo_daily_compute_usage", "on": ["allocationId", "date"], "whenMatched": "replace" }}
-        ])
-        info.context.db.collection("jobs").aggregate([
-          { "$project": { "allocationId": 1, "resourceHours": 1 }},
-          { "$group": { "_id": {"allocationId": "$allocationId" }, "resourceHours": { "$sum": "$resourceHours" }}},
-          { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "resourceHours": 1 }},
-          { "$merge": { "into": "repo_overall_compute_usage", "on": ["allocationId"], "whenMatched": "replace" }}
-        ])
-        return StatusResult( status=True )
-
-    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def jobsAggregateForDate( self, thedate: CoactDatetime, info: Info ) -> StatusResult:
         pacificdaylight = pytz.timezone('America/Los_Angeles')
         starttime = thedate.astimezone(pacificdaylight).replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
@@ -1309,36 +1339,6 @@ class Mutation:
         __compute_past_x_aggregates__(datetime.datetime.utcnow() - datetime.timedelta(hours=3), "repo_past180_compute_usage", datetime.datetime.utcnow())
 
         return StatusResult( status=True )
-
-    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def importJobs(self, jobs: List[Job], info: Info) -> BulkOpsResult:
-        jbs = [ ReplaceOne({"jobId": j.jobId, "startTs": j.startTs }, info.context.db.to_dict(j), upsert=True) for j in jobs ]
-        bulkopsresult = info.context.db.collection("jobs").bulk_write(jbs)
-        LOG.info("Imported jobs Inserted=%s, Upserted=%s, Modified=%s, Deleted=%s,", bulkopsresult.inserted_count, bulkopsresult.upserted_count, bulkopsresult.modified_count, bulkopsresult.deleted_count)
-        allocation_ids = list(set(map(lambda x: x.allocationId, jobs)))
-        info.context.db.collection("jobs").aggregate([
-          { "$match": { "allocationId": {"$in":  allocation_ids } }},
-          { "$project": { "allocationId": 1, "username": 1, "resourceHours": 1 }},
-          { "$group": { "_id": {"allocationId": "$allocationId", "username": "$username" }, "resourceHours": { "$sum": "$resourceHours" }}},
-          { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "username": "$_id.username", "resourceHours": 1 }},
-          { "$merge": { "into": "repo_peruser_compute_usage", "on": ["allocationId", "username"],  "whenMatched": "replace" }}
-        ])
-        info.context.db.collection("jobs").aggregate([
-          { "$match": { "allocationId": {"$in":  allocation_ids } }},
-          { "$project": { "allocationId": 1, "startTs": 1, "resourceHours": 1 }},
-          { "$group": { "_id": {"allocationId": "$allocationId", "date" : { "$dateTrunc": {"date": "$startTs", "unit": "day", "timezone": "America/Los_Angeles"}} }, "resourceHours": { "$sum": "$resourceHours" }}},
-          { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "date": "$_id.date", "resourceHours": 1 }},
-          { "$merge": { "into": "repo_daily_compute_usage", "on": ["allocationId", "date"], "whenMatched": "replace" }}
-        ])
-        info.context.db.collection("jobs").aggregate([
-          { "$match": { "allocationId": {"$in":  allocation_ids } }},
-          { "$project": { "allocationId": 1, "resourceHours": 1 }},
-          { "$group": { "_id": {"allocationId": "$allocationId" }, "resourceHours": { "$sum": "$resourceHours" }}},
-          { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "resourceHours": 1 }},
-          { "$merge": { "into": "repo_overall_compute_usage", "on": ["allocationId"], "whenMatched": "replace" }}
-        ])
-
-        return BulkOpsResult(insertedCount=bulkopsresult.inserted_count, upsertedCount=bulkopsresult.upserted_count, deletedCount=bulkopsresult.deleted_count, modifiedCount=bulkopsresult.modified_count)
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def importRepoStorageUsage(self, usages: List[StorageDailyUsageInput], info: Info) -> str:
