@@ -265,7 +265,7 @@ class Query:
         pacificdaylight = pytz.timezone('America/Los_Angeles')
         LOG.info("Computing the past_x aggregate for %s minutes using jobs whose start time is > %s (%s)", past_minutes, past_x_start.astimezone(pacificdaylight), past_x_start.isoformat())
         aggs = list(info.context.db.collection("jobs").aggregate([
-            { "$match": { "endTs": { "$gte": past_x_start }}},
+            { "$match": { "endTs": { "$gte": past_x_start }, "qos": { "$ne": "preemptable" }}},
             { "$project": { 
                 "allocationId": 1, 
                 "resourceHours": {
@@ -500,7 +500,7 @@ class Query:
         pacificdaylight = pytz.timezone('America/Los_Angeles')
         LOG.info("Computing the past_x aggregate for %s minutes using jobs whose start time is > %s (%s)", past_minutes, past_x_start.astimezone(pacificdaylight), past_x_start.isoformat())
         aggs = list(info.context.db.collection("jobs").aggregate([
-            { "$match": { "endTs": { "$gte": past_x_start }}},
+            { "$match": { "endTs": { "$gte": past_x_start }, "qos": { "$ne": "preemptable" }}},
             { "$project": { 
                 "allocationId": 1, 
                 "resourceHours": {
@@ -1278,7 +1278,7 @@ class Mutation:
         LOG.info("Aggregating jobs whose startTs is between %s and %s", starttime, endtime)
         datebucket = thedate.astimezone(pacificdaylight).replace(hour=0, minute=0, second=0, microsecond=0)
         info.context.db.collection("jobs").aggregate([
-          { "$match": { "startTs": { "$gte": starttime,  "$lt": endtime  }}},
+          { "$match": { "startTs": { "$gte": starttime,  "$lt": endtime, "qos": { "$ne": "preemptable" }  }}},
           { "$project": { "allocationId": 1, "startTs": 1, "username": 1, "resourceHours": 1 }},
           { "$group": { "_id": {"allocationId": "$allocationId", "date" : datebucket, "username": "$username" }, "resourceHours": { "$sum": "$resourceHours" }}},
           { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "date": "$_id.date", "username": "$_id.username", "resourceHours": 1 }},
