@@ -256,7 +256,7 @@ class Query:
         return info.context.db.find_facilities( filter )[0]
     
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def facilityRecentComputeUsage(self, info: Info, past_minutes: int) -> Optional[List[FacillityPastXUsage]]:
+    def facilityRecentComputeUsage(self, info: Info, past_minutes: int, skipQoses: List[str] = [ "preemptable" ]) -> Optional[List[FacillityPastXUsage]]:
         """
         Compute the past_x report ( compute usage used in the past 5 minutes ) straight from the jobs collection.
         Used mainly to enforce burst allocation usage
@@ -265,7 +265,7 @@ class Query:
         pacificdaylight = pytz.timezone('America/Los_Angeles')
         LOG.info("Computing the past_x aggregate for %s minutes using jobs whose start time is > %s (%s)", past_minutes, past_x_start.astimezone(pacificdaylight), past_x_start.isoformat())
         aggs = list(info.context.db.collection("jobs").aggregate([
-            { "$match": { "endTs": { "$gte": past_x_start }, "qos": { "$ne": "preemptable" }}},
+            { "$match": { "endTs": { "$gte": past_x_start }, "qos": { "$nin": skipQoses }}},
             { "$project": { 
                 "allocationId": 1, 
                 "resourceHours": {
@@ -490,7 +490,7 @@ class Query:
         return info.context.db.cursor_to_objlist(usgs, Usage, {})
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def repoRecentComputeUsage(self, info: Info, past_minutes: int) -> Optional[List[RepoPastXUsage]]:
+    def repoRecentComputeUsage(self, info: Info, past_minutes: int, skipQoses: List[str] = [ "preemptable" ]) -> Optional[List[RepoPastXUsage]]:
         """
         Compute the past_x report for all my repos ( compute usage used in the past x minutes ) straight from the jobs collection.
         This query may not perform well if the range is for more than a couple of days.
@@ -500,7 +500,7 @@ class Query:
         pacificdaylight = pytz.timezone('America/Los_Angeles')
         LOG.info("Computing the past_x aggregate for %s minutes using jobs whose start time is > %s (%s)", past_minutes, past_x_start.astimezone(pacificdaylight), past_x_start.isoformat())
         aggs = list(info.context.db.collection("jobs").aggregate([
-            { "$match": { "endTs": { "$gte": past_x_start }, "qos": { "$ne": "preemptable" }}},
+            { "$match": { "endTs": { "$gte": past_x_start }, "qos": { "$nin": skipQoses }}},
             { "$project": { 
                 "allocationId": 1, 
                 "resourceHours": {
