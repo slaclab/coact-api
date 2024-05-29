@@ -264,6 +264,7 @@ class Query:
         past_x_start = datetime.datetime.utcnow() - datetime.timedelta(minutes=past_minutes)
         pacificdaylight = pytz.timezone('America/Los_Angeles')
         LOG.info("Computing the past_x aggregate for %s minutes using jobs whose start time is > %s (%s)", past_minutes, past_x_start.astimezone(pacificdaylight), past_x_start.isoformat())
+        myfacs = [ x.name for x in Query().facilitiesIManage(info) ]
         aggs = list(info.context.db.collection("jobs").aggregate([
             { "$match": { "endTs": { "$gte": past_x_start }, "qos": { "$nin": skipQoses }}},
             { "$project": { 
@@ -291,6 +292,7 @@ class Query:
             { "$project": { "_id": 0, "repoid": "$_id.repoid", "clustername": "$_id.clustername", "resourceHours": 1 }},
             { "$lookup": { "from": "repos", "localField": "repoid", "foreignField": "_id", "as": "repo"}},
             { "$unwind": "$repo" },
+            { "$match": {"repo.facility": {"$in": myfacs}}},
             { "$group": { "_id": {"facility": "$repo.facility", "clustername": "$clustername" }, "resourceHours": {"$sum":  "$resourceHours"}} },
             { "$project": { "_id": 0, "facility": "$_id.facility", "clustername": "$_id.clustername", "resourceHours": 1, "percentUsed": { "$literal": 0.0 } }}
         ]))
@@ -299,7 +301,7 @@ class Query:
             { "$unwind": "$cluster" },
             { "$project": { "_id": 0, "facility": "$facility", "clustername": "$clustername", "purchasedNodes": { "$multiply": [ "$slachours", "$cluster.nodecpucount"  ] } }},
         ]))
-        fac2prs = { (x["facility"], x["clustername"]) : x["purchasedNodes"]*(past_minutes/60.0) for x in purs}
+        fac2prs = { (x["facility"], x["clustername"]) : x["purchasedNodes"]*(past_minutes/60.0) for x in purs }
         for usg in aggs:
             adj = fac2prs.get((usg["facility"], usg["clustername"]), 0)
             if adj:
