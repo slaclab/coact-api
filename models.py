@@ -540,7 +540,6 @@ class RepoComputeAllocationInput:
     burst_percent_of_facility: Optional[float] = 0
     allocated: Optional[float] = 0 # Absolute compute allocation; based on facility purchases and cached here for performance reasons
     burst_allocated: Optional[float] = 0 # Absolute burst allocation; based on facility purchases and cached here for performance reasons
-    
 
 @strawberry.type
 class RepoComputeAllocation(RepoComputeAllocationInput):
@@ -564,84 +563,23 @@ class RepoComputeAllocation(RepoComputeAllocationInput):
             })
         return [ Usage(**x) for x in  usages ]
     @strawberry.field
-    def perDateUsage(self, info) ->List[PerDateUsage]:
-        results = info.context.db.collection("repo_daily_compute_usage").find({"allocationId": self._id})
+    def perDateUsage(self, info, pastDays: Optional[int] = 0) ->List[PerDateUsage]:
+        query = {"allocationId": self._id}
+        if pastDays > 0:
+            after = datetime.utcnow() - timedelta(days = pastDays)
+            query["date"] = { "$gte": after }
+        results = info.context.db.collection("repo_daily_compute_usage").find(query)
         return info.context.db.cursor_to_objlist(results, PerDateUsage, exclude_fields={"_id", "allocationId"})
-
-    @strawberry.field
-    def clusterNodeCPUCount(self, info) -> int:
-        return info.context.db.collection("clusters").find_one({"name": self.clustername})["nodecpucount"]
-    
-    def __convert_resourcehours_to_percent__(self, usedResourceHours: float, numhours: float, info):
-        clusterNodeCPUCount = self.clusterNodeCPUCount(info)
-        allocatedResourceHours = self.allocated * clusterNodeCPUCount * numhours
-        percentUsed = 0
-        if usedResourceHours > 0:
-            percentUsed = (usedResourceHours/allocatedResourceHours)*100 if allocatedResourceHours else 9999999999
-        return ComputeUsageOverTime(allocatedResourceHours=allocatedResourceHours, usedResourceHours=usedResourceHours, percentUsed=percentUsed)
-    
-    def __usageovertime__(self, startdate, enddate, numdays, info):
-        usages = info.context.db.collection("repo_daily_compute_usage").find({"allocationId": self._id, "date": { "$gte": startdate }} )
-        usedResourceHours = sum(map(lambda x: x["resourceHours"], usages))
-        return self.__convert_resourcehours_to_percent__(usedResourceHours, numdays * 24, info)
-
-    @strawberry.field
-    def recentUsage(self, info) -> ComputeUsageOverTime:
-        """
-        Includes today and yesterday's data
-        """
-        enddate = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        days = 2
-        startdate = enddate - timedelta(days=days)
-        return self.__usageovertime__(startdate, enddate, days, info)
-
-    @strawberry.field
-    def lastWeeksUsage(self, info) -> ComputeUsageOverTime:
-        """
-        Includes last weeks data
-        """
-        enddate = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        days = 7
-        startdate = enddate - timedelta(days=days)
-        return self.__usageovertime__(startdate, enddate, days, info)
-
-    @strawberry.field
-    def last30daysUsage(self, info) -> ComputeUsageOverTime:
-        """
-        Includes last months data ( 30 days )
-        """
-        enddate = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        days = 30
-        startdate = enddate - timedelta(days=days)
-        return self.__usageovertime__(startdate, enddate, days, info)
-    
-    def __pastXUsage__(self, info, collectionname, numhours):
-        pastx = info.context.db.collection(collectionname).find_one({"allocationId": self._id } )
-        usedResourceHours = 0
-        if pastx:
-            usedResourceHours = pastx["resourceHours"]
-        return self.__convert_resourcehours_to_percent__(usedResourceHours, numhours, info)
-
-    @strawberry.field
-    def last5minsUsage(self, info) -> ComputeUsageOverTime:
-        return self.__pastXUsage__(info, "repo_past5_compute_usage", 0.083333333333)
-
-    @strawberry.field
-    def last15minsUsage(self, info) -> ComputeUsageOverTime:
-        return self.__pastXUsage__(info, "repo_past15_compute_usage", 0.25)
-
-    @strawberry.field
-    def last60minsUsage(self, info) -> ComputeUsageOverTime:
-        return self.__pastXUsage__(info, "repo_past60_compute_usage", 1.0)
-
-    @strawberry.field
-    def last180minsUsage(self, info) -> ComputeUsageOverTime:
-        return self.__pastXUsage__(info, "repo_past180_compute_usage", 3.0)
 
     @strawberry.field
     def perUserUsage(self, info) ->List[PerUserUsage]:
         results = info.context.db.collection("repo_peruser_compute_usage").find({"allocationId": self._id})
         return info.context.db.cursor_to_objlist(results, PerUserUsage, exclude_fields={"_id", "allocationId"})
+
+    @strawberry.field
+    def clusterNodeCPUCount(self, info) -> int:
+        return info.context.db.collection("clusters").find_one({"name": self.clustername})["nodecpucount"]
+    
 
 @strawberry.input
 class RepoStorageAllocationInput:

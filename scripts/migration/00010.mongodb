@@ -1,0 +1,7 @@
+if(db.getSiblingDB("iris").versions.findOne({dbschema: "0.0.10"})) {
+    db.getSiblingDB("iris").repo_past5_compute_usage.drop();
+    db.getSiblingDB("iris").repo_past15_compute_usage.drop();
+    db.getSiblingDB("iris").repo_past60_compute_usage.drop();
+    db.getSiblingDB("iris").repo_past180_compute_usage.drop();
+    db.getSiblingDB("iris").versions.updateOne({}, {"$set": {"dbschema": "0.0.11"}})
+}
