@@ -359,8 +359,6 @@ class FacilityComputePurchases:
     clustername: Optional[str] = UNSET
     purchased: Optional[float] = UNSET
     allocated: Optional[float] = UNSET
-    usedDay: Optional[float] = UNSET
-    usedWeek: Optional[float] = UNSET
 @strawberry.type
 class FacilityStoragePurchases:
     storagename: Optional[str] = UNSET
@@ -407,36 +405,10 @@ class Facility( FacilityInput ):
             { "$project": { "clustername": "$_id.clustername", "percent_of_facility": "$percent_of_facility" }}
         ])
         allocs = { x["clustername"]: x["percent_of_facility"] for x in aaggs }
-        duaggs = info.context.db.collection("repos").aggregate([
-            { "$match": { "facility": self.name}},
-            { "$lookup": { "from": "repo_compute_allocations", "localField": "_id", "foreignField": "repoid", "as": "allocation"}},
-            { "$unwind": "$allocation" },
-            { "$replaceRoot": { "newRoot": "$allocation" } },
-            { "$match": { "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }}, # This gives us current allocations
-            { "$lookup": { "from": "repo_daily_compute_usage", "localField": "_id", "foreignField": "allocationId", "as": "usage"}},
-            { "$unwind": "$usage" },
-            { "$match": { "usage.date": { "$gte": todaysdate - timedelta(days=1) } }}, # This gives us today's usage
-            { "$group": { "_id": {"clustername": "$clustername"}, "resourceHours": {"$sum": "$usage.resourceHours"}}},
-        ])
-        wuaggs = info.context.db.collection("repos").aggregate([
-            { "$match": { "facility": self.name}},
-            { "$lookup": { "from": "repo_compute_allocations", "localField": "_id", "foreignField": "repoid", "as": "allocation"}},
-            { "$unwind": "$allocation" },
-            { "$replaceRoot": { "newRoot": "$allocation" } },
-            { "$match": { "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }}, # This gives us current allocations
-            { "$lookup": { "from": "repo_daily_compute_usage", "localField": "_id", "foreignField": "allocationId", "as": "usage"}},
-            { "$unwind": "$usage" },
-            { "$match": { "$and": [ {"usage.date": {"$gte": todaysdate - timedelta(days=7) }}, {"usage.date": {"$lt": todaysdate }} ] }},
-            { "$group": { "_id": {"clustername": "$clustername"}, "resourceHours": {"$sum": "$usage.resourceHours"}}},
-        ])
-        dused = { x["_id"]["clustername"]: x["resourceHours"] for x in duaggs }
-        wused = { x["_id"]["clustername"]: x["resourceHours"] for x in wuaggs }
         for k,v in purchases.items():
             v["clustername"] = k
             v["allocated"] = allocs.get(k, 0)
-            v["usedDay"] = dused.get(k, 0)
-            v["usedWeek"] = wused.get(k, 0)
-        return [ FacilityComputePurchases(**{k:x.get(k, 0) for k in ["clustername", "purchased", "allocated", "usedDay", "usedWeek" ] }) for x in purchases.values()]
+        return [ FacilityComputePurchases(**{k:x.get(k, 0) for k in ["clustername", "purchased", "allocated"] }) for x in purchases.values()]
     @strawberry.field
     def computeallocations(self, info) -> Optional[List[FacilityComputeAllocation]]:
         # More complex; we want to return the "current" per resource type.
