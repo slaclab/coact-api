@@ -1280,7 +1280,7 @@ class Mutation:
         LOG.info("Aggregating jobs whose startTs is between %s and %s", starttime, endtime)
         datebucket = thedate.astimezone(pacificdaylight).replace(hour=0, minute=0, second=0, microsecond=0)
         info.context.db.collection("jobs").aggregate([
-          { "$match": { "startTs": { "$gte": starttime,  "$lt": endtime, "qos": { "$ne": "preemptable" }  }}},
+          { "$match": { "startTs": { "$gte": starttime,  "$lt": endtime }, "qos": { "$ne": "preemptable" }}},
           { "$project": { "allocationId": 1, "startTs": 1, "username": 1, "resourceHours": 1 }},
           { "$group": { "_id": {"allocationId": "$allocationId", "date" : datebucket, "username": "$username" }, "resourceHours": { "$sum": "$resourceHours" }}},
           { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "date": "$_id.date", "username": "$_id.username", "resourceHours": 1 }},
