@@ -5,3 +5,43 @@ db.getSiblingDB("iris").facilities.insertOne({
   "servicegroup": "", // set primary gid on all volumes
   "czars": [ "yemi" ]
 })
+
+
+db.getSiblingDB("iris").facility_compute_purchases.insertOne({
+  "facility" : "SLAC", 
+  "clustername" : "roma", 
+  "start" : ISODate("2024-03-21T17:34:33.705Z"), 
+  "end" : ISODate("2100-01-01T00:00:00Z"), 
+  "slachours" : 0 
+});
+
+
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility" : "SLAC", 
+  "storagename" : "sdfdata", 
+  "purpose" : "data", 
+  "start" : ISODate("2021-05-01T07:00:00Z"), 
+  "end" : ISODate("2100-01-01T00:00:00Z"), 
+  "gigabytes" : 0, 
+  "inodes" : 100000000 
+});
+
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility" : "SLAC", 
+  "storagename" : "sdfhome", 
+  "purpose" : "group", 
+  "start" : ISODate("2021-05-01T07:00:00Z"), 
+  "end" : ISODate("2100-01-01T00:00:00Z"), 
+  "gigabytes" : 0, 
+  "inodes" : 100000 
+})
+
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility" : "SLAC", 
+  "storagename" : "sdfhome", 
+  "purpose" : "scratch", 
+  "start" : ISODate("2021-05-01T07:00:00Z"), 
+  "end" : ISODate("2100-01-01T00:00:00Z"), 
+  "gigabytes" : 0, 
+  "inodes" : 100000
+})
