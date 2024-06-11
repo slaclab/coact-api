@@ -1,0 +1,7 @@
+db.getSiblingDB("iris").facilities.insertOne({
+  "name" : "SLAC",
+  "resources": ["compute", "storage"],
+  "serviceaccount": "", // set primary uid on all volumes
+  "servicegroup": "", // set primary gid on all volumes
+  "czars": [ "yemi" ]
+})
