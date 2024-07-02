@@ -424,7 +424,7 @@ class Email:
     LOG = logging.getLogger(__name__)
     assets_path=None
     template_extension = '.jinja2'
-    def __init__(self, server, port, fm='s3df-help@slac.stanford.edu', subject_prefix='[Coact] ', assets_path='./assets/notifications/email/'):
+    def __init__(self, server, port, fm='no-reply-s3df-help@slac.stanford.edu', subject_prefix='[Coact] ', assets_path='./assets/notifications/email/'):
         self._smtp = smtplib.SMTP(host=server,port=port)
         self.fm = fm
         self.subject_prefix = subject_prefix
