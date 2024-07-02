@@ -808,7 +808,8 @@ class Mutation:
                 raise Exception("Account request without a facility - cannot approve.")
             luuserobj = info.context.lookupUserInServiceUsingEPPN(theeppn)
             if not luuserobj or not luuserobj.get("uidnumber", None):
-                raise Exception("The UID number is null or not present; this probably means that the S3DF LDAP has not yet synced. Cannot approve")
+                # UID number is null; either no UNIX account or we have not synced yet.
+                raise Exception("It's likely that the user does not have a UNIX account or that the caches have not synced yet. Cannot approve now; please try again later.")
             
             thereq.approve(info)
             return True
