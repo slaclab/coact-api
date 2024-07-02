@@ -39,6 +39,11 @@ Int64 = strawberry.scalar(
     description="Int64 field",
 )
 
+@strawberry.type
+class NameDesc:
+    name: Optional[str] = UNSET
+    description: Optional[str] = UNSET
+
 # would this be useful? https://github.com/strawberry-graphql/strawberry/discussions/444
 
 # we generally just set everything to be option so that we can create a form like experience with graphql. we impose some of the required fields in some utility functions like create_thing(). not a great use of the graphql spec, but allows to to limit the amount of code we have to write

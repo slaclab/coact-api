@@ -38,7 +38,8 @@ from models import \
         RepoComputeAllocationInput, RepoStorageAllocationInput, \
         AuditTrailObjectType, AuditTrail, AuditTrailInput, \
         NotificationInput, Notification, ComputeRequirement, BulkOpsResult, StatusResult, \
-        CoactDatetime, NormalizedJob, FacillityPastXUsage, RepoPastXUsage
+        CoactDatetime, NormalizedJob, FacillityPastXUsage, RepoPastXUsage, \
+        NameDesc
 
 import logging
 LOG = logging.getLogger(__name__)
@@ -342,6 +343,13 @@ class Query:
         Just the facility names. No authentication needed.
         """
         return [ x["name"] for x in info.context.db.collection("facilities").find({}, {"_id": 0, "name": 1}) ]
+    
+    @strawberry.field
+    def facilityNameDescs(self, info: Info) -> List[NameDesc]:
+        """
+        Just the facility names and descriptions. No authentication needed.
+        """
+        return [ NameDesc(**x) for x in info.context.db.collection("facilities").find({}, {"_id": 0, "name": 1, "description": 1}) ]
 
     @strawberry.field
     def allreposandfacility(self, info: Info) -> List[RepoFacilityName]:
