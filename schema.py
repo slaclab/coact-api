@@ -67,7 +67,9 @@ class Query:
         if not isRegis:
             regis_pending = len(info.context.db.find("requests", {"reqtype" : "UserAccount", "eppn" : eppn})) >= 1
             if regis_pending:
-                request_id = list(info.context.db.collection("requests").find({"reqtype" : "UserAccount", "eppn" : eppn}).sort([("approvalstatus", -1), ("timeofrequest", -1)]))[0]["_id"]
+                thereq = list(info.context.db.collection("requests").find({"reqtype" : "UserAccount", "eppn" : eppn}).sort([("approvalstatus", -1), ("timeofrequest", -1)]))[0]
+                request_id = thereq["_id"]
+                userid = thereq["preferredUserName"]
             else:
                 filter = UserInput(**{"eppns": info.context.eppn})
                 lookupObjs = info.context.lookupUsersFromService(filter)
