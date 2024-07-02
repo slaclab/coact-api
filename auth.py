@@ -10,6 +10,8 @@ import logging
 
 LOG = logging.getLogger(__name__)
 
+import models
+
 
 class IsAuthenticated(BasePermission):
     LOG = logging.getLogger(__name__)
@@ -107,23 +109,6 @@ class IsFacilityCzarOrAdmin(BasePermission):
             return True
         return False
 
-class IsRepoPrincipal(BasePermission):
-    LOG = logging.getLogger(__name__)
-    message = "User is not principal of repo"
-    def has_permission(self, source: Any, info: Info, **kwargs) -> bool:
-        user = info.context.authn()
-        reponame = kwargs['data']['name']
-        faciltyname = kwargs['data']['facility']
-        self.LOG.debug(f"attempting {type(self).__name__} permissions for user {user} at path {info.path.key} for repo {reponame} with {kwargs}")
-        if user and repo:
-            repo = info.context.db.find_repo( { 'name': reponame, "facility": faciltyname })
-            assert repo.name == repo
-            if repo.principal == user:
-                self.LOG.debug(f"  user {user} permitted to modify repo {repo}")
-                return True
-        return False
-
-
 class IsRepoPrincipalOrLeader(BasePermission):
     LOG = logging.getLogger(__name__)
     message = "User is not principal or leader of repo"
@@ -133,8 +118,12 @@ class IsRepoPrincipalOrLeader(BasePermission):
             return True
         reponame = None
         if 'repo' in kwargs:
-            reponame = kwargs['repo']['name']
-            facilityname = kwargs['repo']['facility']
+            if isinstance(kwargs['repo'], models.RepoInput):
+                reponame = kwargs['repo'].name
+                facilityname = kwargs['repo'].facility
+            else:
+                reponame = kwargs['repo']['name']
+                facilityname = kwargs['repo']['facility']
         elif 'request' in kwargs:
             reponame = kwargs['request']['reponame']
             facilityname = kwargs['request']['facilityname']

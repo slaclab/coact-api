@@ -1,5 +1,4 @@
 from auth import IsAuthenticated, \
-        IsRepoPrincipal, \
         IsRepoPrincipalOrLeader, \
         IsAdmin, \
         IsValidEPPN, \
