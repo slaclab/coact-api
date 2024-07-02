@@ -1265,6 +1265,15 @@ class Mutation:
 
         return info.context.db.find_facility(facility)
 
+    @strawberry.field( permission_classes=[ IsFacilityCzarOrAdmin ] )
+    def facilityUpdateDescription(self, facility: FacilityInput, newdescription: str, info: Info) -> Facility:
+        thefacility = info.context.db.find_facility(filter=facility)
+        if not thefacility:
+            raise Exception("Cannot find requested facility " + str(facility))
+        thefacility.description = newdescription
+        info.context.db.collection("facilities").update_one({"_id": thefacility._id}, {"$set": { "description": newdescription }})
+        return info.context.db.find_facility(facility)
+
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def jobsImport( self, jobs: List[Job], info: Info ) -> BulkOpsResult:
         jbs = [ ReplaceOne({"jobId": j.jobId, "startTs": j.startTs }, info.context.db.to_dict(j), upsert=True) for j in jobs ]
