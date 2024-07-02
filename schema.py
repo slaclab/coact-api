@@ -22,7 +22,7 @@ from bson.json_util import dumps
 from pymongo import ReplaceOne
 
 from models import \
-        MongoId, \
+        MongoId, NameDesc, \
         User, UserInput, UserRegistration, \
         UserStorageInput, UserStorage, \
         AccessGroup, AccessGroupInput, \
@@ -337,11 +337,11 @@ class Query:
         return info.context.db.cursor_to_objlist(cursor, Repo, exclude_fields=["access_groups"])
 
     @strawberry.field
-    def facilityNames(self, info: Info) -> List[str]:
+    def facilityNames(self, info: Info) -> List[NameDesc]:
         """
-        Just the facility names. No authentication needed.
+        Just the facility names and descriptions. No authentication needed.
         """
-        return [ x["name"] for x in info.context.db.collection("facilities").find({}, {"_id": 0, "name": 1}) ]
+        return [ NameDesc(**x) for x in info.context.db.collection("facilities").find({}, {"_id": 0, "name": 1, "description": 1}) ]
 
     @strawberry.field
     def allreposandfacility(self, info: Info) -> List[RepoFacilityName]:
