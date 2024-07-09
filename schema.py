@@ -71,11 +71,15 @@ class Query:
                 request_id = thereq["_id"]
                 userid = thereq["preferredUserName"]
             else:
-                filter = UserInput(**{"eppns": info.context.eppn})
-                lookupObjs = info.context.lookupUsersFromService(filter)
-                if lookupObjs and lookupObjs[0].username:
-                    LOG.info("Found EPPN in lookup service %s", lookupObjs[0].username)
-                    userid = lookupObjs[0].username
+                if info.context.eppn:
+                    filter = UserInput(**{"eppns": info.context.eppn})
+                    LOG.debug("Looking up user from service using %s", filter)
+                    lookupObjs = info.context.lookupUsersFromService(filter)
+                    if lookupObjs and lookupObjs[0].username:
+                        LOG.info("Found EPPN in lookup service %s", lookupObjs[0].username)
+                        userid = lookupObjs[0].username
+                else:
+                    LOG.warn("Cannot determine EPPN from HTTP headers")
         return UserRegistration(**{ "isRegistered": isRegis, "eppn": eppn, "isRegistrationPending": regis_pending, "fullname": info.context.fullname, "username": userid, "requestId": request_id })
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
