@@ -488,6 +488,33 @@ class Query:
         ])
         return info.context.db.cursor_to_objlist(usgs, PerUserUsage, {})
 
+
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin  ] )
+    def reportFacilityComputeOverall( self, info: Info, clustername: str, group: str) -> List[PerDateUsage]:
+        LOG.debug("Getting compute overall data by faciliy for cluster %s grouped by %s", clustername, group)
+        if group == "Day":
+            timegrp = "$date"
+        elif group == "Week":
+            timegrp = { "$dateTrunc": {"date": "$date", "unit": "week", "timezone": "America/Los_Angeles"}}
+        elif group == "Month":
+            timegrp = { "$dateTrunc": {"date": "$date", "unit": "month", "timezone": "America/Los_Angeles"}}
+        else:
+            raise Exception(f"Unsupported group by {group}")
+
+        usgs = info.context.db.collection("repo_daily_compute_usage").aggregate([
+            { "$lookup": { "from": "repo_compute_allocations", "localField": "allocationId", "foreignField": "_id", "as": "allocation"}},
+            { "$unwind": "$allocation" },
+            { "$match": { "allocation.clustername": clustername } },
+            { "$group": { "_id": {"repoid": "$allocation.repoid", "date" : timegrp }, "resourceHours": {"$sum":  "$resourceHours"}} },
+            { "$project": { "_id": 0, "repoid": "$_id.repoid", "date": "$_id.date", "resourceHours": 1 }},
+            { "$lookup": { "from": "repos", "localField": "repoid", "foreignField": "_id", "as": "repo"}},
+            { "$unwind": "$repo" },
+            { "$group": { "_id": {"facility": "$repo.facility", "date" : "$date" }, "resourceHours": {"$sum":  "$resourceHours"}} },
+            { "$project": { "_id": 0, "facility": "$_id.facility", "date": "$_id.date", "resourceHours": 1 }},
+            { "$sort": { "date": 1, "facility": 1 }}
+        ])
+        return info.context.db.cursor_to_objlist(usgs, PerDateUsage, {})
+
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def reportFacilityStorage( self, info: Info, storagename: str, purpose: Optional[str] = UNSET ) -> List[Usage]:
         LOG.debug("Storage report for storage %s for purpose %s ", storagename, purpose)
