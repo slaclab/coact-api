@@ -1,0 +1,12 @@
+db.getSiblingDB("iris").clusters.insertOne({
+  "name": "ada",
+  "nodecpucount": 72,
+  "nodecpucountdivisor": 12,
+  "nodememgb": 702,
+	"nodegpucount" : 10,
+	"nodegpumemgb" : 48,  
+  "chargefactor": 0.8,
+  "nodecpusmt": 2,
+  "memberprefixes": [ "sdfada" ],
+  "members": [ ]
+})
