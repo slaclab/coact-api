@@ -734,9 +734,9 @@ class Mutation:
         request.timeofrequest = datetime.datetime.utcnow()
         facility = info.context.db.find_facility({"name": request.facilityname})
         current_purchases = [x.purchased for x in facility.computepurchases(info) if x.clustername == request.clustername]
-        current_purchase = current_purchases[0] if current_purchases else 0
-        if current_purchase <=0:
+        if not current_purchases:
             raise Exception("The facility " + request.facilityname + " does not have access to the cluster "+ request.clustername)
+        current_purchase = current_purchases[0] if current_purchases else 0
         request.allocated = (current_purchase/100.0)*request.percent_of_facility
         request.burst_allocated = (current_purchase/100.0)*request.burst_percent_of_facility
         LOG.info("Current purchase for %s is %s. Allocating %s", request.facilityname, current_purchase, request.allocated)
