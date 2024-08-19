@@ -92,6 +92,14 @@ approverequest = gql(
     """
 )
 
+completerequest = gql(
+    """
+    mutation requestComplete($Id: String!, $notes: String!) {
+        requestComplete(id: $Id, notes: $notes)
+    }
+    """
+)
+
 getuserforeppn = gql(
     """
     query getuserforeppn($eppn: String!){
@@ -247,6 +255,9 @@ class ProcessRequests:
                             self.processRepoMembership(theReq)
                         elif theReq.get("reqtype", None) == "RepoChangeComputeRequirement":
                             self.processRepoChangeComputeRequirement(theReq)
+                        # Mark request as being complete
+                        result = self.mutateclient.execute(completerequest, variable_values={"Id": theReq["Id"], "notes": "From unit tests"})
+                        print(result)
             except Exception as e:
                 LOG.exception(e)
 
