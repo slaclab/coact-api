@@ -1,4 +1,6 @@
 from os import environ
+import os
+import signal
 import re
 import json
 from datetime import datetime
@@ -46,6 +48,12 @@ mongo = MongoClient(
         username=environ.get("MONGODB_USER", None),
         password=environ.get("MONGODB_PASSWORD", None) )
 LOG.info(f"Connected to database at {mongo}")
+try:
+    version = mongo[DB_NAME]["versions"].find_one({})
+    LOG.info("Database is at version \033[1;33m %s \033[0m", version["dbschema"])
+except Exception as e:
+    LOG.exception("Exception connecting to database. Shutting down this server using a kill signal")
+    os.kill(os.getppid(), signal.SIGKILL)
 
 USER_FIELD_IN_HEADER = environ.get('USERNAME_FIELD','REMOTE_USER')
 
