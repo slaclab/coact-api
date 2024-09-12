@@ -1267,8 +1267,9 @@ class Mutation:
         info.context.db.collection("requests").update_many({ "reponame": reponame, "facilityname": facility }, {"$set": { "reponame": newname }})
         request: CoactRequestInput = CoactRequestInput()
         request.reqtype = CoactRequestType.RenameRepo
-        request.reponame = repo.name
+        request.reponame = newname
         request.facilityname = repo.facility
+        request.previousName = repo.name
         request.requestedby = info.context.username
         request.timeofrequest = datetime.datetime.utcnow()
         request.approvalstatus = 1
