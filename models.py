@@ -52,6 +52,7 @@ class NameDesc:
 class CoactRequestType(Enum):
     UserAccount = "UserAccount"
     NewRepo = "NewRepo"
+    RenameRepo = "RenameRepo"
     NewFacility = "NewFacility"
     RepoMembership = "RepoMembership"
     RepoRemoveUser = "RepoRemoveUser"

@@ -1253,6 +1253,30 @@ class Mutation:
         info.context.audit(AuditTrailObjectType.Repo, repo._id, "repoStorageAllocationUpsert", details=repostorage.purpose+"="+str(repostorage.gigabytes))
         return info.context.db.find_repo( repo )
     
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
+    def repoRenameRepo(self, repo: RepoInput, newname: str, info: Info) -> Repo:
+        repo = info.context.db.find_repo( repo )
+        if not repo:
+            raise Exception(f"Cannot find specified repo")
+        facility = repo.facility
+        reponame = repo.name
+        existing_repos = info.context.db.find_repos( { "name": newname, "facility": facility } )
+        if existing_repos:
+            raise Exception(f"The facility {facility} already has another repo with the name {newname}")
+        info.context.db.collection("repos").update_one({"_id": repo._id}, {"$set": { "name": newname }})
+        info.context.db.collection("requests").update_many({ "reponame": reponame, "facilityname": facility }, {"$set": { "reponame": newname }})
+        request: CoactRequestInput = CoactRequestInput()
+        request.reqtype = CoactRequestType.RenameRepo
+        request.reponame = repo.name
+        request.facilityname = repo.facility
+        request.requestedby = info.context.username
+        request.timeofrequest = datetime.datetime.utcnow()
+        request.approvalstatus = 1
+        info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
+        info.context.audit(AuditTrailObjectType.Repo, repo._id, "repoRenameRepo", details=f"Name changed from {repo.name} to {newname}")
+        repo = info.context.db.find_repo( {"_id": repo._id} )
+        return repo
+
     @strawberry.field( permission_classes=[ IsFacilityCzarOrAdmin ] )
     def facilityAddCzar(self, facility: FacilityInput, user: UserInput, info: Info) -> Facility:
         filter = {"name": facility.name}
