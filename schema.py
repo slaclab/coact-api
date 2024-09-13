@@ -39,7 +39,7 @@ from models import \
         AuditTrailObjectType, AuditTrail, AuditTrailInput, \
         NotificationInput, Notification, ComputeRequirement, BulkOpsResult, StatusResult, \
         CoactDatetime, NormalizedJob, FacillityPastXUsage, RepoPastXUsage, \
-        NameDesc
+        NameDesc, RepoFeatureEnum
 
 import logging
 LOG = logging.getLogger(__name__)
@@ -343,7 +343,7 @@ class Query:
             search["users"] = username
         LOG.debug(f"searching for repos using {filter} -> {search}")
         cursor = info.context.db.collection("repos").find(search)
-        return info.context.db.cursor_to_objlist(cursor, Repo, exclude_fields=["access_groups"])
+        return info.context.db.cursor_to_objlist(cursor, Repo, exclude_fields=["access_groups", "features"])
 
     @strawberry.field
     def facilityNames(self, info: Info) -> List[str]:
@@ -399,7 +399,7 @@ class Query:
             search["users"] = username
         LOG.debug(f"searching for repos using {filter} -> {search}")
         theRepo = info.context.db.collection("repos").find_one(search)
-        return info.context.db.cursor_to_objlist([theRepo], Repo, exclude_fields=["access_groups"])[0]
+        return info.context.db.cursor_to_objlist([theRepo], Repo, exclude_fields=["access_groups", "features"])[0]
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def myRepos(self, info: Info) -> List[Repo]:
@@ -1284,6 +1284,43 @@ class Mutation:
         info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
         info.context.audit(AuditTrailObjectType.Repo, repo._id, "repoRenameRepo", details=f"Name changed from {repo.name} to {newname}")
         repo = info.context.db.find_repo( {"_id": repo._id} )
+        return repo
+
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
+    def repoUpdateFeatures(self, repo: RepoInput, features: Optional[List[RepoFeatureEnum]], info: Info) -> Repo:
+        repo = info.context.db.find_repo( repo )
+        if not repo:
+            raise Exception(f"Cannot find specified repo")
+        facility = repo.facility
+        reponame = repo.name
+        prevfeatures = ",".join(x.value for x in repo.features(info))
+
+        if not features:
+            LOG.info("Incoming feature set is empty. Removing all features from repo %s in facility %s", reponame, facility)
+            info.context.db.collection("repos").update_one({"_id": repo._id}, {"$unset": { "features": 1 }})
+            newfeatures = ""
+        else:
+            updtfeatures = []
+            for feature in features:
+                if feature == RepoFeatureEnum.SLURMDISABLED:
+                    updtfeatures.append(RepoFeatureEnum.SLURMDISABLED.value)
+                elif feature == RepoFeatureEnum.K8SVCLUSTER:
+                    updtfeatures.append(RepoFeatureEnum.K8SVCLUSTER.value)
+                elif feature == RepoFeatureEnum.NETGROUP:
+                    updtfeatures.append(RepoFeatureEnum.NETGROUP.value)
+            info.context.db.collection("repos").update_one({"_id": repo._id}, {"$set": { "features": updtfeatures }})
+            newfeatures = ",".join(updtfeatures)
+
+        request: CoactRequestInput = CoactRequestInput()
+        request.reqtype = CoactRequestType.RepoUpdateFeature
+        request.reponame = reponame
+        request.facilityname = repo.facility
+        request.requestedby = info.context.username
+        request.timeofrequest = datetime.datetime.utcnow()
+        request.approvalstatus = 1
+        info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
+        repo = info.context.db.find_repo( {"_id": repo._id} )
+        info.context.audit(AuditTrailObjectType.Repo, repo._id, "repoUpdateFeature", details=f"Features changed from {prevfeatures} to {newfeatures}")
         return repo
 
     @strawberry.field( permission_classes=[ IsFacilityCzarOrAdmin ] )

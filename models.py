@@ -1,6 +1,6 @@
 import os
 import dataclasses
-from typing import List, Optional, Dict, Union
+from typing import List, Optional, Dict, Union, Annotated
 import strawberry
 from strawberry.types import Info
 from strawberry.arguments import UNSET
@@ -56,6 +56,7 @@ class CoactRequestType(Enum):
     NewFacility = "NewFacility"
     RepoMembership = "RepoMembership"
     RepoRemoveUser = "RepoRemoveUser"
+    RepoUpdateFeature = "RepoUpdateFeature"
     UserStorageAllocation = "UserStorageAllocation"
     RepoComputeAllocation = "RepoComputeAllocation"
     RepoStorageAllocation = "RepoStorageAllocation"
@@ -544,6 +545,12 @@ class UserAllocationInput():
 class UserAllocation(UserAllocationInput):
     pass
 
+@strawberry.enum
+class RepoFeatureEnum(Enum):
+    SLURMDISABLED = strawberry.enum_value("SlurmDisabled", description="If enabled, this repo is not rendered as a SLURM account")
+    K8SVCLUSTER = strawberry.enum_value("K8sVCluster", description="If enabled, this repo is used to control the access for a vcluster")
+    NETGROUP = strawberry.enum_value("NetGroup", description="If enabled, this repo is used to control access to a batch of servers using a netgroup")
+
 @strawberry.input
 class RepoComputeAllocationInput:
     _id: Optional[MongoId] = UNSET
@@ -673,6 +680,22 @@ class RepoInput:
 
 @strawberry.type
 class Repo( RepoInput ):
+    @strawberry.field
+    def features(self, info) -> Optional[List[RepoFeatureEnum]]:
+        repoobj = info.context.db.collection("repos").find_one({"_id": self._id})
+        features = repoobj.get("features", [])
+        ret = []
+        for feature in features:
+            if feature == RepoFeatureEnum.SLURMDISABLED.value:
+                ret.append(RepoFeatureEnum.SLURMDISABLED)
+            elif feature == RepoFeatureEnum.K8SVCLUSTER.value:
+                ret.append(RepoFeatureEnum.K8SVCLUSTER)
+            elif feature == RepoFeatureEnum.NETGROUP.value:
+                ret.append(RepoFeatureEnum.NETGROUP)
+            else:
+                raise Exception(f"Cannot map feature type {feature} onto an enum")
+        return ret
+
     @strawberry.field
     def facilityObj(self, info) -> Facility:
         return info.context.db.find_facility({"name": self.facility})

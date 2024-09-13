@@ -325,7 +325,7 @@ class DB:
             raise AssertionError( f"found too many items using filter {filter}, only expecting one" )
         return items[0]
     def find_repos(self, filter):
-        return self.find("repos", filter, exclude_fields=["access_groups"])
+        return self.find("repos", filter, exclude_fields=["access_groups", "features"])
     def find_repo(self, filter):
         return self.assert_one( self.find_repos( filter ), filter )
     def find_users(self, filter):
