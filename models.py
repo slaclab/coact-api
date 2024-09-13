@@ -156,6 +156,14 @@ class CoactRequest(CoactRequestInput):
           "previous": self.approvalstatus
         }
         return info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.Approved.value }, "$push": {"audit": v}})
+    def reopen(self, info) -> bool:
+        curreq = info.context.db.collection("requests").find_one({"_id": self._id})
+        v = {
+          'actedby': info.context.username,
+          'actedat': datetime.utcnow(),
+          "previous": self.approvalstatus
+        }
+        return info.context.db.collection("requests").update_one({"_id": self._id}, {"$set": { "approvalstatus": CoactRequestStatus.NotActedOn }, "$push": {"audit": v}})
     def changeFacility(self, info, newfacilty) -> bool:
         curreq = info.context.db.collection("requests").find_one({"_id": self._id})
         v = {

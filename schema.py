@@ -1000,6 +1000,14 @@ class Mutation:
         thereq.refire(info)
         return True
 
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
+    def requestReopen(self, id: str, info: Info) -> bool:
+        thereq = info.context.db.find_request({ "_id": ObjectId(id) })
+        if thereq.approvalstatus != -1:
+            raise Exception("We can only reopen rejected requests. Did you mean refire?")
+        thereq.reopen(info)
+        return True
+
     @strawberry.field
     def requestApprovePreApproved(self, id: str, info: Info) -> bool:
         """
