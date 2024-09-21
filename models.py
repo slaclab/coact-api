@@ -601,7 +601,23 @@ class RepoComputeAllocation(RepoComputeAllocationInput):
     @strawberry.field
     def clusterNodeCPUCount(self, info) -> int:
         return info.context.db.collection("clusters").find_one({"name": self.clustername})["nodecpucount"]
-    
+
+    @strawberry.field
+    def allocatedCpucount(self, info) -> float:
+        return self.allocated * info.context.db.collection("clusters").find_one({"name": self.clustername})["nodecpucount"]
+
+    @strawberry.field
+    def allocatedGpucount(self, info) -> float:
+        return self.allocated * info.context.db.collection("clusters").find_one({"name": self.clustername})["nodegpucount"]
+
+    @strawberry.field
+    def allocatedMemgb(self, info) -> float:
+        return self.allocated * info.context.db.collection("clusters").find_one({"name": self.clustername})["nodememgb"]
+
+    @strawberry.field
+    def allocatedGpumemgb(self, info) -> float:
+        return self.allocated * info.context.db.collection("clusters").find_one({"name": self.clustername})["nodegpumemgb"]
+
 
 @strawberry.input
 class RepoStorageAllocationInput:
