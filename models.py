@@ -598,24 +598,29 @@ class RepoComputeAllocation(RepoComputeAllocationInput):
         results = info.context.db.collection("repo_peruser_compute_usage").find({"allocationId": self._id})
         return info.context.db.cursor_to_objlist(results, PerUserUsage, exclude_fields={"_id", "allocationId"})
 
+    # deprecate?
     @strawberry.field
     def clusterNodeCPUCount(self, info) -> int:
         return info.context.db.collection("clusters").find_one({"name": self.clustername})["nodecpucount"]
 
     @strawberry.field
-    def allocatedCpucount(self, info) -> float:
+    def allocatedNodesCount(self, info) -> float:
+        return self.allocated
+
+    @strawberry.field
+    def allocatedCpusCount(self, info) -> float:
         return self.allocated * info.context.db.collection("clusters").find_one({"name": self.clustername})["nodecpucount"]
 
     @strawberry.field
-    def allocatedGpucount(self, info) -> float:
+    def allocatedGpusCount(self, info) -> float:
         return self.allocated * info.context.db.collection("clusters").find_one({"name": self.clustername})["nodegpucount"]
 
     @strawberry.field
-    def allocatedMemgb(self, info) -> float:
+    def allocatedMemGb(self, info) -> float:
         return self.allocated * info.context.db.collection("clusters").find_one({"name": self.clustername})["nodememgb"]
 
     @strawberry.field
-    def allocatedGpumemgb(self, info) -> float:
+    def allocatedGpuMemGb(self, info) -> float:
         return self.allocated * info.context.db.collection("clusters").find_one({"name": self.clustername})["nodegpumemgb"]
 
 

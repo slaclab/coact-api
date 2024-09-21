@@ -1,7 +1,8 @@
 CONTAINER_RT ?= podman
 REPO ?= slaclab
 IMAGE ?= coact-api
-TAG ?= latest
+TAG ?= $(shell date +"%Y%m%d-%H%M")
+#latest
 
 MONGOD ?= /usr/local/Cellar/mongodb-community@4.4/4.4.13/bin/mongod
 WORK_DIR ?= new-iris
