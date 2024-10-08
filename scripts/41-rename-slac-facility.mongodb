@@ -1,0 +1,26 @@
+db.getSiblingDB("iris").facilities.updateOne(
+    { "name": "SLAC" },
+    { "$set": { "name":"Projects" }}
+)
+
+
+db.getSiblingDB("iris").facility_compute_purchases.updateMany(
+    { "facility":"SLAC" },
+    { "$set": { "facility":"Projects" }}
+)
+
+db.getSiblingDB("iris").facility_storage_purchases.updateMany(
+    { "facility":"SLAC" },
+    { "$set": { "facility":"Projects" }}
+)
+
+
+db.getSiblingDB("iris").repos.updateMany(
+    { "facility":"SLAC" },
+    { "$set": { "facility":"Projects" }}
+)
+
+db.getSiblingDB("iris").requests.updateMany(
+    { "facilityname":"SLAC" },
+    { "$set": { "facilityname":"Projects" }}
+)
