@@ -545,11 +545,16 @@ class UserAllocationInput():
 class UserAllocation(UserAllocationInput):
     pass
 
-@strawberry.enum
-class RepoFeatureEnum(Enum):
-    SLURMDISABLED = strawberry.enum_value("SlurmDisabled", description="If enabled, this repo is not rendered as a SLURM account")
-    K8SVCLUSTER = strawberry.enum_value("K8sVCluster", description="If enabled, this repo is used to control the access for a vcluster")
-    NETGROUP = strawberry.enum_value("NetGroup", description="If enabled, this repo is used to control access to a batch of servers using a netgroup")
+
+@strawberry.input
+class RepoFeatureInput:
+  name: str
+  state: bool
+  options: Optional[List[str]] = UNSET
+
+@strawberry.type
+class RepoFeature(RepoFeatureInput):
+    pass
 
 @strawberry.input
 class RepoComputeAllocationInput:
@@ -702,19 +707,12 @@ class RepoInput:
 @strawberry.type
 class Repo( RepoInput ):
     @strawberry.field
-    def features(self, info) -> Optional[List[RepoFeatureEnum]]:
+    def features(self, info) -> Optional[List[RepoFeature]]:
         repoobj = info.context.db.collection("repos").find_one({"_id": self._id})
-        features = repoobj.get("features", [])
+        features = repoobj.get("features", {})
         ret = []
-        for feature in features:
-            if feature == RepoFeatureEnum.SLURMDISABLED.value:
-                ret.append(RepoFeatureEnum.SLURMDISABLED)
-            elif feature == RepoFeatureEnum.K8SVCLUSTER.value:
-                ret.append(RepoFeatureEnum.K8SVCLUSTER)
-            elif feature == RepoFeatureEnum.NETGROUP.value:
-                ret.append(RepoFeatureEnum.NETGROUP)
-            else:
-                raise Exception(f"Cannot map feature type {feature} onto an enum")
+        for feature_name, feature in features.items():
+            ret.append(RepoFeature(**{"name": feature_name, "state": feature.get("state", True), "options": feature.get("options", None)}))
         return ret
 
     @strawberry.field

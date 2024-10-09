@@ -39,7 +39,7 @@ from models import \
         AuditTrailObjectType, AuditTrail, AuditTrailInput, \
         NotificationInput, Notification, ComputeRequirement, BulkOpsResult, StatusResult, \
         CoactDatetime, NormalizedJob, FacillityPastXUsage, RepoPastXUsage, \
-        NameDesc, RepoFeatureEnum
+        NameDesc, RepoFeature, RepoFeatureInput
 
 import logging
 LOG = logging.getLogger(__name__)
@@ -1287,41 +1287,70 @@ class Mutation:
         return repo
 
     @strawberry.mutation( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
-    def repoUpdateFeatures(self, repo: RepoInput, features: Optional[List[RepoFeatureEnum]], info: Info) -> Repo:
+    def repoAddNewFeature(self, repo: RepoInput, feature: RepoFeatureInput, info: Info) -> Repo:
         repo = info.context.db.find_repo( repo )
         if not repo:
             raise Exception(f"Cannot find specified repo")
-        facility = repo.facility
-        reponame = repo.name
-        prevfeatures = ",".join(x.value for x in repo.features(info))
-
-        if not features:
-            LOG.info("Incoming feature set is empty. Removing all features from repo %s in facility %s", reponame, facility)
-            info.context.db.collection("repos").update_one({"_id": repo._id}, {"$unset": { "features": 1 }})
-            newfeatures = ""
-        else:
-            updtfeatures = []
-            for feature in features:
-                if feature == RepoFeatureEnum.SLURMDISABLED:
-                    updtfeatures.append(RepoFeatureEnum.SLURMDISABLED.value)
-                elif feature == RepoFeatureEnum.K8SVCLUSTER:
-                    updtfeatures.append(RepoFeatureEnum.K8SVCLUSTER.value)
-                elif feature == RepoFeatureEnum.NETGROUP:
-                    updtfeatures.append(RepoFeatureEnum.NETGROUP.value)
-            info.context.db.collection("repos").update_one({"_id": repo._id}, {"$set": { "features": updtfeatures }})
-            newfeatures = ",".join(updtfeatures)
-
+        if info.context.db.collection("repos").find_one({"_id": repo._id}).get("features", {}).get(feature.name, None):
+            raise Exception(f"A feature with this name already exists")
+        info.context.db.collection("repos").update_one({"_id": repo._id}, {"$set": { "features."+feature.name: {"state": feature.state, "options": feature.options} }})
         request: CoactRequestInput = CoactRequestInput()
         request.reqtype = CoactRequestType.RepoUpdateFeature
-        request.reponame = reponame
+        request.reponame = repo.name
         request.facilityname = repo.facility
         request.requestedby = info.context.username
         request.timeofrequest = datetime.datetime.utcnow()
         request.approvalstatus = 1
         info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
         repo = info.context.db.find_repo( {"_id": repo._id} )
-        info.context.audit(AuditTrailObjectType.Repo, repo._id, "repoUpdateFeature", details=f"Features changed from {prevfeatures} to {newfeatures}")
+        info.context.audit(AuditTrailObjectType.Repo, repo._id, "repoNewFeature", details=info.context.dict_diffs({}, info.context.db.to_dict(feature)))
         return repo
+
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
+    def repoDeleteFeature(self, repo: RepoInput, featurename: str, info: Info) -> Repo:
+        repo = info.context.db.find_repo( repo )
+        if not repo:
+            raise Exception(f"Cannot find specified repo")
+        if not info.context.db.collection("repos").find_one({"_id": repo._id}).get("features", {}).get(featurename, None):
+            raise Exception(f"A feature with this name does not exist")
+        previousfeature = info.context.db.collection("repos").find_one({"_id": repo._id}).get("features", {})[featurename]
+        previousfeature["name"] = featurename
+        info.context.db.collection("repos").update_one({"_id": repo._id}, {"$unset": { "features."+featurename: 1 }})
+        request: CoactRequestInput = CoactRequestInput()
+        request.reqtype = CoactRequestType.RepoUpdateFeature
+        request.reponame = repo.name
+        request.facilityname = repo.facility
+        request.requestedby = info.context.username
+        request.timeofrequest = datetime.datetime.utcnow()
+        request.approvalstatus = 1
+        info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
+        repo = info.context.db.find_repo( {"_id": repo._id} )
+        info.context.audit(AuditTrailObjectType.Repo, repo._id, "repoDeleteFeature", details=info.context.dict_diffs(previousfeature, {}))
+        return repo
+
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
+    def repoUpdateFeature(self, repo: RepoInput, feature: RepoFeatureInput, info: Info) -> Repo:
+        repo = info.context.db.find_repo( repo )
+        if not repo:
+            raise Exception(f"Cannot find specified repo")
+        featurename = feature.name
+        if not info.context.db.collection("repos").find_one({"_id": repo._id}).get("features", {}).get(featurename, None):
+            raise Exception(f"A feature with this name does not exist")
+        previousfeature = info.context.db.collection("repos").find_one({"_id": repo._id}).get("features", {})[featurename]
+        previousfeature["name"] = featurename
+        info.context.db.collection("repos").update_one({"_id": repo._id}, {"$set": { "features."+featurename: {"state": feature.state, "options": feature.options} }})
+        request: CoactRequestInput = CoactRequestInput()
+        request.reqtype = CoactRequestType.RepoUpdateFeature
+        request.reponame = repo.name
+        request.facilityname = repo.facility
+        request.requestedby = info.context.username
+        request.timeofrequest = datetime.datetime.utcnow()
+        request.approvalstatus = 1
+        info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
+        repo = info.context.db.find_repo( {"_id": repo._id} )
+        info.context.audit(AuditTrailObjectType.Repo, repo._id, "repoUpdateFeature", details=info.context.dict_diffs(previousfeature, info.context.db.to_dict(feature)))
+        return repo
+
 
     @strawberry.field( permission_classes=[ IsFacilityCzarOrAdmin ] )
     def facilityAddCzar(self, facility: FacilityInput, user: UserInput, info: Info) -> Facility:
