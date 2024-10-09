@@ -1,0 +1,5 @@
+if(db.getSiblingDB("iris").versions.findOne({dbschema: "0.0.11"})) {
+    db.getSiblingDB("iris").facility_compute_purchases.updateMany( {}, [{"$set": {servers: "$slachours"}}] );
+    db.getSiblingDB("iris").facility_compute_purchases.updateMany( {}, {"$unset": { "slachours": 1}});
+    db.getSiblingDB("iris").versions.updateOne({}, {"$set": {"dbschema": "0.0.12"}})
+}

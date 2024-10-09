@@ -408,7 +408,7 @@ class ProcessRequests:
                     "facilityname": repo["facility"],
                     "clustername": clustername,
                     "qosname": repo["name"],
-                    "slachours": 2000
+                    "servers": 10
                 }
             }
             try:

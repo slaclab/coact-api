@@ -307,7 +307,7 @@ class Query:
         purs = list(info.context.db.collection("facility_compute_purchases").aggregate([
             { "$lookup": { "from": "clusters", "localField": "clustername", "foreignField": "name", "as": "cluster"}},
             { "$unwind": "$cluster" },
-            { "$project": { "_id": 0, "facility": "$facility", "clustername": "$clustername", "purchasedNodes": { "$multiply": [ "$slachours", "$cluster.nodecpucount"  ] } }},
+            { "$project": { "_id": 0, "facility": "$facility", "clustername": "$clustername", "purchasedNodes": { "$multiply": [ "$servers", "$cluster.nodecpucount"  ] } }},
         ]))
         fac2prs = { (x["facility"], x["clustername"]) : x["purchasedNodes"]*(past_minutes/60.0) for x in purs }
         for usg in aggs:
@@ -575,7 +575,7 @@ class Query:
         purs = list(info.context.db.collection("facility_compute_purchases").aggregate([
             { "$lookup": { "from": "clusters", "localField": "clustername", "foreignField": "name", "as": "cluster"}},
             { "$unwind": "$cluster" },
-            { "$project": { "_id": 0, "facility": "$facility", "clustername": "$clustername", "purchasedNodes": { "$multiply": [ "$slachours", "$cluster.nodecpucount"  ] } }},
+            { "$project": { "_id": 0, "facility": "$facility", "clustername": "$clustername", "purchasedNodes": { "$multiply": [ "$servers", "$cluster.nodecpucount"  ] } }},
         ]))
         fac2prs = { (x["facility"], x["clustername"]) : x["purchasedNodes"]*(past_minutes/60.0) for x in purs}
         for usg in aggs:
@@ -1353,9 +1353,9 @@ class Mutation:
         todaysdate = datetime.datetime.utcnow()
         cp = list(info.context.db.collection("facility_compute_purchases").find({"facility": facility.name, "clustername": cluster.name, "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }).sort([("start", -1)]).limit(1))
         if cp:
-            info.context.db.collection("facility_compute_purchases").update_one({"_id": cp[0]["_id"]}, {"$set": {"slachours": purchase}}) 
+            info.context.db.collection("facility_compute_purchases").update_one({"_id": cp[0]["_id"]}, {"$set": {"servers": purchase}}) 
         else:
-            info.context.db.collection("facility_compute_purchases").insert_one({ "facility": facility.name, "clustername": cluster.name, "start": todaysdate, "end": datetime.datetime.fromisoformat("2100-01-01T00:00:00").replace(tzinfo=datetime.timezone.utc), "slachours": purchase })
+            info.context.db.collection("facility_compute_purchases").insert_one({ "facility": facility.name, "clustername": cluster.name, "start": todaysdate, "end": datetime.datetime.fromisoformat("2100-01-01T00:00:00").replace(tzinfo=datetime.timezone.utc), "servers": purchase })
 
         return info.context.db.find_facility(facility)
 

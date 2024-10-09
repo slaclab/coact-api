@@ -350,7 +350,7 @@ class ComputeAllocationInput:
     start: Optional[datetime] = UNSET
     end: Optional[datetime] = UNSET
     clustername: Optional[str] = UNSET
-    slachours: Optional[float] = UNSET
+    servers: Optional[float] = UNSET
 
 @strawberry.input
 class StorageAllocationInput:
@@ -408,9 +408,9 @@ class Facility( FacilityInput ):
         aggs = info.context.db.collection("facility_compute_purchases").aggregate([
             { "$match": { "facility": self.name, "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }},
             { "$sort": { "end": -1 }},
-            { "$group": { "_id": {"clustername": "$clustername"}, "slachours": {"$sum": "$slachours"}}},
+            { "$group": { "_id": {"clustername": "$clustername"}, "servers": {"$sum": "$servers"}}},
         ])
-        purchases = { x["_id"]["clustername"]: { "purchased": x["slachours"] } for x in aggs }
+        purchases = { x["_id"]["clustername"]: { "purchased": x["servers"] } for x in aggs }
         aaggs = info.context.db.collection("repos").aggregate([
             { "$match": { "facility": self.name}},
             { "$lookup": { "from": "repo_compute_allocations", "localField": "_id", "foreignField": "repoid", "as": "allocation"}},
@@ -435,9 +435,9 @@ class Facility( FacilityInput ):
             { "$unwind": "$allocation" },
             { "$replaceRoot": { "newRoot": "$allocation" } },
             { "$match": { "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }},
-            { "$group": { "_id": {"clustername": "$clustername"}, "slachours": {"$sum": "$slachours"}}},
+            { "$group": { "_id": {"clustername": "$clustername"}, "servers": {"$sum": "$servers"}}},
         ])
-        return [ FacilityComputeAllocation(**{k:x.get(k, 0) for k in ["_id", "clustername", "slachours" ] }) for x in current_allocs]
+        return [ FacilityComputeAllocation(**{k:x.get(k, 0) for k in ["_id", "clustername", "servers" ] }) for x in current_allocs]
     @strawberry.field
     def storagepurchases(self, info) -> Optional[List[FacilityStoragePurchases]]:
         # More complex; we want to return the "current" per resource type.
