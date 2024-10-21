@@ -1286,7 +1286,7 @@ class Mutation:
         repo = info.context.db.find_repo( {"_id": repo._id} )
         return repo
 
-    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def repoAddNewFeature(self, repo: RepoInput, feature: RepoFeatureInput, info: Info) -> Repo:
         repo = info.context.db.find_repo( repo )
         if not repo:
@@ -1306,7 +1306,7 @@ class Mutation:
         info.context.audit(AuditTrailObjectType.Repo, repo._id, "repoNewFeature", details=info.context.dict_diffs({}, info.context.db.to_dict(feature)))
         return repo
 
-    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsFacilityCzarOrAdmin ] )
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def repoDeleteFeature(self, repo: RepoInput, featurename: str, info: Info) -> Repo:
         repo = info.context.db.find_repo( repo )
         if not repo:
