@@ -542,7 +542,7 @@ class Query:
         """
         past_x_start = datetime.datetime.utcnow() - datetime.timedelta(minutes=past_minutes)
         pacificdaylight = pytz.timezone('America/Los_Angeles')
-        LOG.info("Computing the past_x aggregate for %s minutes using jobs whose start time is > %s (%s)", past_minutes, past_x_start.astimezone(pacificdaylight), past_x_start.isoformat())
+        LOG.info("Computing the past_x aggregate for %s minutes using jobs whose start time is > %s (%s) skipping qoses %s", past_minutes, past_x_start.astimezone(pacificdaylight), past_x_start.isoformat(), ",".join(skipQoses))
         aggs = list(info.context.db.collection("jobs").aggregate([
             { "$match": { "endTs": { "$gte": past_x_start }, "qos": { "$nin": skipQoses }}},
             { "$project": { 
