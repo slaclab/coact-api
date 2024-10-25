@@ -344,6 +344,11 @@ class ClusterInput:
 class Cluster(ClusterInput):
     pass
 
+@strawberry.type
+class ClusterTotals:
+    clustername: str
+    totalpurchased: int
+
 @strawberry.input
 class ComputeAllocationInput:
     _id: Optional[MongoId] = UNSET

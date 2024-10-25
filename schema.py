@@ -29,7 +29,7 @@ from models import \
         Repo, RepoInput, \
         Facility, FacilityInput, Job, \
         UserAllocationInput, UserAllocation, \
-        ClusterInput, Cluster, \
+        ClusterInput, Cluster, ClusterTotals, \
         CoactRequestInput, CoactRequest, CoactRequestType, \
         CoactRequestEvent, CoactRequestStatus, CoactRequestWithPerms, \
         CoactRequestFilter, RepoFacilityName, \
@@ -124,6 +124,14 @@ class Query:
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def clusters(self, info: Info, filter: Optional[ClusterInput]={} ) -> List[Cluster]:
         return info.context.db.find_clusters( filter )
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def clusterPurchases(self, info: Info) -> List[ClusterTotals]:
+        purchases = info.context.db.collection("facility_compute_purchases").aggregate([
+            {"$group": { "_id": "$clustername", "totalservers": { "$sum": "$servers" } }},
+            {"$project": { "_id": 0, "clustername": "$_id", "totalpurchased": "$totalservers"}}
+        ])
+        return [ ClusterTotals(**x) for x in purchases ]
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def storagenames(self, info: Info ) -> List[str]:
