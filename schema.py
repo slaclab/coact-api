@@ -175,7 +175,7 @@ class Query:
                 else:
                     qterms.append({"approvalstatus": filter.approvalstatus})
             if filter.reponame:
-                qterms.append({"reponame": filter.reponame})
+                qterms.append({ "reponame": {"$regex": filter.reponame}})
             if filter.facilityname:
                 qterms.append({"facilityname": filter.facilityname})
             if filter.foruser:
