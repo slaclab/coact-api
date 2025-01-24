@@ -619,19 +619,19 @@ class RepoComputeAllocation(RepoComputeAllocationInput):
 
     @strawberry.field
     def allocatedCpusCount(self, info) -> float:
-        return int(self.allocated * info.context.db.collection("clusters").find_one({"name": self.clustername})["nodecpucount"])
+        return round(self.allocated * info.context.db.collection("clusters").find_one({"name": self.clustername})["nodecpucount"])
 
     @strawberry.field
     def allocatedGpusCount(self, info) -> float:
-        return int(self.allocated * info.context.db.collection("clusters").find_one({"name": self.clustername})["nodegpucount"])
+        return round(self.allocated * info.context.db.collection("clusters").find_one({"name": self.clustername})["nodegpucount"])
 
     @strawberry.field
     def allocatedMemGb(self, info) -> float:
-        return int(self.allocated * info.context.db.collection("clusters").find_one({"name": self.clustername})["nodememgb"])
+        return round(self.allocated * info.context.db.collection("clusters").find_one({"name": self.clustername})["nodememgb"])
 
     @strawberry.field
     def allocatedGpuMemGb(self, info) -> float:
-        return int(self.allocated * info.context.db.collection("clusters").find_one({"name": self.clustername})["nodegpumemgb"])
+        return round(self.allocated * info.context.db.collection("clusters").find_one({"name": self.clustername})["nodegpumemgb"])
 
 
 @strawberry.input
