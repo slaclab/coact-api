@@ -1057,6 +1057,8 @@ class Mutation:
         if thereq.approvalstatus not in [ CoactRequestStatus.NotActedOn, CoactRequestStatus.Rejected, CoactRequestStatus.PreApproved ]:
             raise Exception("Requests in this state cannot be modified")
         thereq.changeFacility(info, newfacility)
+        thereq = info.context.db.find_request({ "_id": ObjectId(id) })
+        info.context.notify( thereq )
         return True
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsRepoPrincipalOrLeader ] )
