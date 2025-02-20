@@ -706,7 +706,7 @@ class Mutation:
         if exis_req:
             raise Exception(f"There is aready a request for this user in this facility with status {CoactRequestStatus(exis_req[0].approvalstatus).name}")
         if not request.preferredUserName:
-            raise Exception(f"We are not able to unambiguously determine your user id. It's likely that your user account setup has not completed yet.  Could you please try again later? If you continue to experience this error, please contact <b>s3df-help@slac.stanford.edu</b>")
+            raise Exception(f"We are not able to determine your user id with certainty. It's likely that your user account setup has not completed yet or we may be having an outage upstream. Could you please try again later? If you continue to experience this error, please contact <b>s3df-help@slac.stanford.edu</b>")
         this_req = info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing={'reqtype': 'UserAccount', 'eppn': request.eppn, 'facilityname': request.facilityname, 'approvalstatus': { "$exists": False }} )
         if request.approvalstatus == CoactRequestStatus.PreApproved and userAlreadyExists:
             LOG.info("The user account for %s has already been created; approving the preapproved request and skipping sending emails", request.eppn)

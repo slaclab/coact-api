@@ -260,8 +260,12 @@ class CustomContext(BaseContext):
         return "\n".join(all_changes)
     
     def lookupUsersFromService(self, filter):
-        users = self.userlookup.execute(lookupUser, variable_values={"filter": self.db.to_dict(filter) })["users"]
-        return [ User(**user) for user in users ] if users else []
+        try:
+            users = self.userlookup.execute(lookupUser, variable_values={"filter": self.db.to_dict(filter) })["users"]
+            return [ User(**user) for user in users ] if users else []
+        except Exception as e:
+            LOG.error("Exception looking up user from service")
+            return []
 
 
 class DB:
