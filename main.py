@@ -3,7 +3,9 @@ import os
 import signal
 import re
 import json
+import threading
 from datetime import datetime
+import time
 
 from functools import wraps
 from typing import List, Optional
@@ -36,6 +38,7 @@ import inspect
 import logging
 
 logging.basicConfig(level=logging.getLevelName(os.environ.get("LOG_LEVEL", "INFO")))
+logging.getLogger('pymongo').setLevel(logging.INFO)
 
 LOG = logging.getLogger(__name__)
 
@@ -550,3 +553,16 @@ if REQUEST_STREAM:
   GRAPHQL_SERVICE_PREFIX = environ.get('COACT_GRAPHQL_SERVICE_PREFIX','/graphql-service')
   app.include_router(graphql_service_app, prefix=GRAPHQL_SERVICE_PREFIX)
 
+
+def mongo_ping():
+    while True:
+        try:
+            LOG.debug("Checking to see if we can connect to Mongo")
+            mongo[DB_NAME]["versions"].find_one({})
+            time.sleep(5.0)
+        except Exception as ex:
+            LOG.exception("Exception pinging Mongo; exiting!!!!!")
+            os.kill(os.getppid(), signal.SIGKILL)
+
+mongo_ping_thread = threading.Thread(target=mongo_ping)
+mongo_ping_thread.start()
