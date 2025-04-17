@@ -1391,11 +1391,24 @@ class Mutation:
 
         todaysdate = datetime.datetime.utcnow()
         cp = list(info.context.db.collection("facility_compute_purchases").find({"facility": facility.name, "clustername": cluster.name, "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }).sort([("start", -1)]).limit(1))
+        alloc_id = None
         if cp:
-            info.context.db.collection("facility_compute_purchases").update_one({"_id": cp[0]["_id"]}, {"$set": {"servers": purchase}}) 
+            alloc_id = cp[0]["_id"]
+            info.context.db.collection("facility_compute_purchases").update_one({"_id": alloc_id}, {"$set": {"servers": purchase}}) 
         else:
-            info.context.db.collection("facility_compute_purchases").insert_one({ "facility": facility.name, "clustername": cluster.name, "start": todaysdate, "end": datetime.datetime.fromisoformat("2100-01-01T00:00:00").replace(tzinfo=datetime.timezone.utc), "servers": purchase })
+            alloc_id = info.context.db.collection("facility_compute_purchases").insert_one({ "facility": facility.name, "clustername": cluster.name, "start": todaysdate, "end": datetime.datetime.fromisoformat("2100-01-01T00:00:00").replace(tzinfo=datetime.timezone.utc), "servers": purchase }).inserted_id
 
+        request: CoactRequestInput = CoactRequestInput()
+        request.reqtype = CoactRequestType.FacilityComputeAllocation
+        request.facilityname = facility.name
+        request.clustername = cluster.name
+        request.allocated = purchase
+        request.allocationid = alloc_id
+        request.requestedby = info.context.username
+        request.timeofrequest = todaysdate
+        request.approvalstatus = 1
+        info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
+        
         return info.context.db.find_facility(facility)
 
     @strawberry.field( permission_classes=[ IsAdmin ] )
