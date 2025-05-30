@@ -720,6 +720,9 @@ class Mutation:
         if request.reqtype != CoactRequestType.RepoMembership or not request.reponame or not request.facilityname:
             raise Exception()
         request.username = info.context.username
+        exis_req = info.context.db.find_requests({'reqtype': 'RepoMembership', 'username': request.username, 'facilityname': request.facilityname, 'reponame': request.reponame})
+        if exis_req:
+            raise Exception(f"There is aready a repo membership request for this user in this facility with status {CoactRequestStatus(exis_req[0].approvalstatus).name}")
         request.requestedby = info.context.username
         request.timeofrequest = datetime.datetime.utcnow()
         return info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
