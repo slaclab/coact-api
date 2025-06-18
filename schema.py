@@ -34,7 +34,7 @@ from models import \
         CoactRequestEvent, CoactRequestStatus, CoactRequestWithPerms, \
         CoactRequestFilter, RepoFacilityName, \
         Usage, UsageInput, StorageDailyUsageInput, \
-        ReportRangeInput, PerDateUsage, PerUserUsage, \
+        ReportRangeInput, PerDateUsage, PerUserUsage, FacilityClusterUsage, \
         RepoComputeAllocationInput, RepoStorageAllocationInput, \
         AuditTrailObjectType, AuditTrail, AuditTrailInput, \
         NotificationInput, Notification, ComputeRequirement, BulkOpsResult, StatusResult, \
@@ -522,6 +522,47 @@ class Query:
             { "$sort": { "date": 1, "facility": 1 }}
         ])
         return info.context.db.cursor_to_objlist(usgs, PerDateUsage, {})
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def reportFacilityComputeUsageByCluster( self, info: Info, facility: str, range: ReportRangeInput ) -> List[FacilityClusterUsage]:
+        LOG.debug("Getting total compute usage for facility %s from %s to %s", facility, range.start, range.end)
+        usgs = info.context.db.collection("repo_daily_compute_usage").aggregate([
+            { "$match": { "date": {"$gte": range.start, "$lte": range.end} } },
+            { "$lookup": { "from": "repo_compute_allocations", "localField": "allocationId", "foreignField": "_id", "as": "allocation"}},
+            { "$unwind": "$allocation" },
+            { "$group": { "_id": {"repoid": "$allocation.repoid", "cluster": "$allocation.clustername"}, "resourceHours": {"$sum":  "$resourceHours"}}},
+            { "$project": { "_id": 0, "repoid": "$_id.repoid", "cluster": "$_id.cluster", "resourceHours": 1 }},
+            { "$lookup": { "from": "repos", "localField": "repoid", "foreignField": "_id", "as": "repo"}},
+            { "$unwind": "$repo" },
+            { "$project": { "facility": "$repo.facility", "cluster": "$cluster", "resourceHours": 1 }},
+            { "$match": { "facility": facility }},
+            { "$group": { "_id": {"cluster": "$cluster"}, "resourceHours": {"$sum":  "$resourceHours"}}},
+            { "$project": { "_id": 0, "cluster": "$_id.cluster", "resourceHours": 1 }}
+        ])
+        purs = {(x["facility"], x["cluster"]) : x for x in info.context.db.collection("facility_compute_purchases").aggregate([
+            { "$lookup": { "from": "clusters", "localField": "clustername", "foreignField": "name", "as": "cluster"}},
+            { "$unwind": "$cluster" },
+            { "$project": { "_id": 0, 
+                "facility": "$facility", 
+                "cluster": "$clustername", 
+                "purchased": "$servers", 
+                "nodecpucount": "$cluster.nodecpucount",
+                "purchasedCPUs": { "$multiply": [ "$servers", "$cluster.nodecpucount"  ] } 
+            }},
+        ])}
+        hoursInRange = ((range.end - range.start).days)*24.0
+        ret = []
+        for usg in usgs:
+            facpr = purs[facility, usg["cluster"]]
+            ret.append(FacilityClusterUsage(
+                clustername=usg["cluster"],
+                purchased=facpr["purchased"],
+                nodecpucount=facpr["nodecpucount"],
+                availableResourceHours=facpr["purchasedCPUs"]*hoursInRange,
+                usedResourceHours=usg["resourceHours"],
+                percentUsed=((usg["resourceHours"]/(facpr["purchasedCPUs"]*hoursInRange))*100.0 if facpr["purchased"] else 0)
+            ))
+        return ret
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def reportFacilityStorage( self, info: Info, storagename: str, purpose: Optional[str] = UNSET ) -> List[Usage]:

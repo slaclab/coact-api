@@ -528,6 +528,15 @@ class ComputeUsageOverTime:
     percentUsed: float
 
 @strawberry.type
+class FacilityClusterUsage:
+    clustername: Optional[str] = UNSET
+    purchased: Optional[float] = 0
+    nodecpucount: Optional[float] = 0
+    availableResourceHours: Optional[float] = 0
+    usedResourceHours: float
+    percentUsed: float
+
+@strawberry.type
 class PerUserUsage(Usage):
     username: Optional[str] = UNSET
 
