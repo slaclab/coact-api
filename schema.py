@@ -1405,6 +1405,16 @@ class Mutation:
         info.context.audit(AuditTrailObjectType.Repo, repo._id, "repoUpdateFeature", details=info.context.dict_diffs(previousfeature, info.context.db.to_dict(feature)))
         return repo
 
+    @strawberry.mutation( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    def repoUpsertFeature(self, repo: RepoInput, feature: RepoFeatureInput, info: Info) -> Repo:
+        repo = info.context.db.find_repo( repo )
+        if not repo:
+            raise Exception(f"Cannot find specified repo")
+        featurename = feature.name
+        if not info.context.db.collection("repos").find_one({"_id": repo._id}).get("features", {}).get(featurename, None):
+            return Mutation().repoAddNewFeature(repo, feature, info)
+        else:
+            return Mutation().repoUpdateFeature(repo, feature, info)
 
     @strawberry.field( permission_classes=[ IsFacilityCzarOrAdmin ] )
     def facilityAddCzar(self, facility: FacilityInput, user: UserInput, info: Info) -> Facility:
