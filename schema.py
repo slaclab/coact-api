@@ -1639,4 +1639,4 @@ def start_change_stream_queues(db):
                     except:
                         pass
                     os.kill(os.getppid(), signal.SIGKILL)
-    thtask = asyncio.create_task(__watch_requests__())
+    asyncio.create_task(__watch_requests__())
