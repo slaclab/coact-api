@@ -1630,7 +1630,13 @@ def start_change_stream_queues(db):
                 except Exception as e:
                     LOG.exception("Lost connection to the change stream; existing the process")
                     continueProcessing = False
-                    change_stream.close()
-                    asyncio.get_running_loop().stop()
+                    try:
+                        change_stream.close()
+                    except:
+                        pass
+                    try:
+                        asyncio.get_running_loop().stop()
+                    except:
+                        pass
                     os.kill(os.getppid(), signal.SIGKILL)
     thtask = asyncio.create_task(__watch_requests__())
