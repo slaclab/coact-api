@@ -1,0 +1,55 @@
+// To create a new facility; please create the facility object; the default repo and some zero purchaes.
+
+db.getSiblingDB("iris").facilities.insertOne({
+  "name" : "FPD",
+  "resources": ["compute", "storage"],
+  "serviceaccount": "", // set primary uid on all volumes
+  "servicegroup": "", // set primary gid on all volumes
+  "czars": [ "yemi" ]
+})
+
+db.getSiblingDB("iris").facility_compute_purchases.insertOne({
+  "facility" : "FPD", 
+  "clustername" : "roma", 
+  "start" : ISODate("2024-03-21T17:34:33.705Z"), 
+  "end" : ISODate("2100-01-01T00:00:00Z"), 
+  "servers" : 0 
+});
+
+db.getSiblingDB("iris").repos.insertOne({
+  "facility": "FPD",
+  "name" : "default", 
+  "leaders" : [ "ytl" ], 
+  "principal" : "ytl", 
+  "users" : [ "ytl" ]
+})
+
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility" : "FPD", 
+  "storagename" : "sdfdata", 
+  "purpose" : "data", 
+  "start" : ISODate("2021-05-01T07:00:00Z"), 
+  "end" : ISODate("2100-01-01T00:00:00Z"), 
+  "gigabytes" : 0, 
+  "inodes" : 100000000 
+});
+
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility" : "FPD", 
+  "storagename" : "sdfhome", 
+  "purpose" : "group", 
+  "start" : ISODate("2021-05-01T07:00:00Z"), 
+  "end" : ISODate("2100-01-01T00:00:00Z"), 
+  "gigabytes" : 0, 
+  "inodes" : 100000 
+})
+
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility" : "FPD", 
+  "storagename" : "sdfhome", 
+  "purpose" : "scratch", 
+  "start" : ISODate("2021-05-01T07:00:00Z"), 
+  "end" : ISODate("2100-01-01T00:00:00Z"), 
+  "gigabytes" : 0, 
+  "inodes" : 100000
+})
