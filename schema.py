@@ -1628,7 +1628,7 @@ def start_change_stream_queues(db):
                         change = change_stream.try_next()
                     await asyncio.sleep(1)
                 except Exception as e:
-                    LOG.exception("Lost connection to the change stream; existing the process")
+                    LOG.exception("Lost connection to the change stream; exiting the process")
                     continueProcessing = False
                     try:
                         change_stream.close()
