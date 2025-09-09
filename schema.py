@@ -4,6 +4,8 @@ from auth import IsAuthenticated, \
         IsValidEPPN, \
         IsFacilityCzarOrAdmin
 
+import os
+import signal
 import asyncio
 from threading import Thread
 from typing import List, Optional, AsyncGenerator
@@ -1607,20 +1609,28 @@ def start_change_stream_queues(db):
     We create one task per collection for now.
     """
     async def __watch_requests__():
+        continueProcessing = True
         with db["requests"].watch() as change_stream:
-            while change_stream.alive:
-                change = change_stream.try_next()
-                while change is not None:
-                    try:
-                        LOG.info("Publishing a request to %s queues", len(all_request_subscriptions))
-                        LOG.info(dumps(change))
-                        theId = change["documentKey"]["_id"]
-                        theRq = db["requests"].find_one({"_id": theId})
-                        if theRq:
-                            req = CoactRequest(**theRq)
-                            await asyncio.gather(*[subscription.push_request(req, change) for subscription in all_request_subscriptions.values() ])
+            while continueProcessing and change_stream.alive:
+                try:
+                    change = change_stream.try_next()
+                    while change is not None:
+                        try:
+                            LOG.info("Publishing a request to %s queues", len(all_request_subscriptions))
+                            LOG.info(dumps(change))
+                            theId = change["documentKey"]["_id"]
+                            theRq = db["requests"].find_one({"_id": theId})
+                            if theRq:
+                                req = CoactRequest(**theRq)
+                                await asyncio.gather(*[subscription.push_request(req, change) for subscription in all_request_subscriptions.values() ])
+                        except Exception as e:
+                            LOG.exception("Exception processing change")
                         change = change_stream.try_next()
-                    except Exception as e:
-                        LOG.exception("Exception processing change")
-                await asyncio.sleep(1)
-    asyncio.create_task(__watch_requests__())
+                    await asyncio.sleep(1)
+                except Exception as e:
+                    LOG.exception("Lost connection to the change stream; existing the process")
+                    continueProcessing = False
+                    change_stream.close()
+                    asyncio.get_running_loop().stop()
+                    os.kill(os.getppid(), signal.SIGKILL)
+    thtask = asyncio.create_task(__watch_requests__())
