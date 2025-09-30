@@ -1435,7 +1435,7 @@ class Mutation:
         return info.context.db.find_facility(filter)
 
     @strawberry.field( permission_classes=[ IsAdmin ] )
-    def facilityAddUpdateComputePurchase(self, facility: FacilityInput, cluster: ClusterInput, purchase: float, info: Info) -> Facility:
+    def facilityAddUpdateComputePurchase(self, facility: FacilityInput, cluster: ClusterInput, purchase: float, info: Info, burst_percent: float=0.0) -> Facility:
         facility = info.context.db.find_facility(filter=facility)
         if not facility:
             raise Exception("Cannot find requested facility " + str(facility))
@@ -1450,9 +1450,9 @@ class Mutation:
         alloc_id = None
         if cp:
             alloc_id = cp[0]["_id"]
-            info.context.db.collection("facility_compute_purchases").update_one({"_id": alloc_id}, {"$set": {"servers": purchase}}) 
+            info.context.db.collection("facility_compute_purchases").update_one({"_id": alloc_id}, {"$set": {"servers": purchase, "burst_percent": burst_percent}}) 
         else:
-            alloc_id = info.context.db.collection("facility_compute_purchases").insert_one({ "facility": facility.name, "clustername": cluster.name, "start": todaysdate, "end": datetime.datetime.fromisoformat("2100-01-01T00:00:00").replace(tzinfo=datetime.timezone.utc), "servers": purchase }).inserted_id
+            alloc_id = info.context.db.collection("facility_compute_purchases").insert_one({ "facility": facility.name, "clustername": cluster.name, "start": todaysdate, "end": datetime.datetime.fromisoformat("2100-01-01T00:00:00").replace(tzinfo=datetime.timezone.utc), "servers": purchase, "burst_percent": burst_percent }).inserted_id
 
         request: CoactRequestInput = CoactRequestInput()
         request.reqtype = CoactRequestType.FacilityComputeAllocation
