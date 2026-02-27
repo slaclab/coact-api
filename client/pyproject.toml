@@ -1,0 +1,52 @@
+[build-system]
+requires = ["uv_build>=0.6"]
+build-backend = "uv_build"
+
+[project]
+name = "coact-client"
+version = "0.1.0"
+description = "Generated GraphQL client for the SLAC CoAct API"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.24",
+    "pydantic>=2.0",
+    "graphql-core>=3.2",
+]
+
+[dependency-groups]
+dev = [
+    "ariadne-codegen>=0.17.2",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=6.0",
+]
+
+[tool.uv.build-backend]
+module-name = "coact"
+source-dir = "src"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "--cov=coact.client --cov-report=term-missing"
+
+[tool.coverage.run]
+source = ["src/coact/client"]
+omit = [
+    "*/async_base_client.py",  # generated boilerplate, not business logic
+    "*/base_model.py",
+    "*/exceptions.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+
+[tool.ariadne-codegen]
+remote_schema_url = "http://localhost:8000/graphql"
+remote_schema_headers = {REMOTE_USER = "regular_user"}
+queries_path = "queries"
+target_package_name = "client"
+target_package_path = "src/coact"
+client_name = "CoactClient"
+async_client = true
+
