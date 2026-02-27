@@ -6,8 +6,7 @@ services:
       target: dev
     volumes:
       - mongo-data:/data/db
-    environment:
-      MONGO_INITDB_DATABASE: iris
+    env_file: .env
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 5s
@@ -24,14 +23,7 @@ services:
     build: .
     ports:
       - "8000:8000"
-    environment:
-      MONGODB_URL: "mongodb://mongo:27017/"
-      DB_NAME: iris
-      ADMIN_USERNAMES: "admin"
-      USERNAME_FIELD: "REMOTE_USER"
-      LOG_LEVEL: INFO
-      COACT_EMAIL_SERVER_HOST: mailhog
-      COACT_EMAIL_SERVER_PORT: 1025
+    env_file: .env
     depends_on:
       mongo:
         condition: service_healthy
