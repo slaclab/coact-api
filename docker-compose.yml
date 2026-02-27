@@ -1,0 +1,42 @@
+services:
+  mongo:
+    build:
+      context: .
+      dockerfile: Dockerfile.mongo
+      target: dev
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: iris
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+
+  coact-api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      MONGODB_URL: "mongodb://mongo:27017/"
+      DB_NAME: iris
+      ADMIN_USERNAMES: "admin"
+      USERNAME_FIELD: "REMOTE_USER"
+      LOG_LEVEL: INFO
+      COACT_EMAIL_SERVER_HOST: mailhog
+      COACT_EMAIL_SERVER_PORT: 1025
+    depends_on:
+      mongo:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+
+volumes:
+  mongo-data:
