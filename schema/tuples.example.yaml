@@ -1,0 +1,73 @@
+# =============================================================================
+# Example OpenFGA relationship tuples for Coact
+# =============================================================================
+
+# --- Global admin ---
+# (set ADMIN_USERNAMES users as admins on each facility)
+- user: user:admin_user
+  relation: admin
+  object: facility:slac
+
+# --- Facility czars ---
+- user: user:czar_alice
+  relation: czar
+  object: facility:slac
+
+# --- Repo belongs to facility ---
+- user: facility:slac
+  relation: facility
+  object: repo:slac/default
+
+# --- Repo roles ---
+- user: user:pi_bob
+  relation: principal
+  object: repo:slac/default
+
+- user: user:leader_carol
+  relation: leader
+  object: repo:slac/default
+
+- user: user:member_dave
+  relation: user_member
+  object: repo:slac/default
+
+# --- Access group ---
+- user: repo:slac/default
+  relation: repo
+  object: access_group:slac/default/mygroup
+
+- user: user:member_dave
+  relation: member
+  object: access_group:slac/default/mygroup
+
+# --- Compute allocation tied to repo ---
+- user: repo:slac/default
+  relation: repo
+  object: repo_compute_allocation:alloc_001
+
+# --- Storage allocation tied to repo ---
+- user: repo:slac/default
+  relation: repo
+  object: repo_storage_allocation:storage_001
+
+# --- User storage allocation ---
+- user: user:member_dave
+  relation: owner
+  object: user_storage_allocation:dave_home
+
+- user: facility:slac
+  relation: facility
+  object: user_storage_allocation:dave_home
+
+# --- Request ---
+- user: user:member_dave
+  relation: requester
+  object: request:req_001
+
+- user: facility:slac
+  relation: facility
+  object: request:req_001
+
+- user: repo:slac/default
+  relation: repo
+  object: request:req_001

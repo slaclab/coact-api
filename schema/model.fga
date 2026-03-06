@@ -1,0 +1,148 @@
+model
+  schema 1.1
+
+# =============================================================================
+# User type – represents an authenticated identity
+# =============================================================================
+type user
+
+# =============================================================================
+# Facility – an organizational unit that owns repos and resources
+# =============================================================================
+type facility
+  relations
+    # direct roles
+    define czar: [user]
+    define admin: [user]
+    define serviceaccount: [user]
+    define member: [user] or repo_member
+
+    # derived: anyone who is a member of any repo in this facility
+    define repo_member: member from repo
+
+    # permissions
+    define can_view: member or czar or admin
+    define can_edit: czar or admin
+    define can_manage_czars: admin
+    define can_manage_repos: czar or admin
+    define can_manage_compute_purchases: czar or admin
+    define can_manage_storage_purchases: czar or admin
+    define can_approve_requests: czar or admin
+
+# =============================================================================
+# Repo – a project/group that users belong to within a facility
+# =============================================================================
+type repo
+  relations
+    # the facility this repo belongs to
+    define facility: [facility]
+
+    # direct roles
+    define principal: [user]
+    define leader: [user]
+    define user_member: [user]
+
+    # derived membership: anyone with a role in the repo
+    define member: user_member or leader or principal
+
+    # permissions
+    define can_view: member or czar from facility
+    define can_edit: principal or leader or czar from facility
+    define can_manage_users: principal or leader or czar from facility
+    define can_add_user: principal or leader or czar from facility
+    define can_remove_user: principal or leader or czar from facility
+    define can_toggle_role: principal or leader or czar from facility
+    define can_manage_allocations: principal or leader or czar from facility
+    define can_manage_features: principal or leader or czar from facility
+    define can_manage_access_groups: principal or leader or czar from facility
+    define can_change_compute_requirement: czar from facility
+    define can_rename: czar from facility
+
+# =============================================================================
+# AccessGroup – a named sub-group within a repo (e.g. POSIX groups)
+# =============================================================================
+type access_group
+  relations
+    define repo: [repo]
+    define member: [user]
+
+    # permissions
+    define can_view: member or can_view from repo
+    define can_edit: can_manage_access_groups from repo
+
+# =============================================================================
+# Cluster – a compute resource
+# =============================================================================
+type cluster
+  relations
+    define admin: [user]
+
+    define can_view: [user, user:*]
+    define can_edit: admin
+
+# =============================================================================
+# Compute Allocation – ties a repo to a cluster for a time window
+# =============================================================================
+type repo_compute_allocation
+  relations
+    define repo: [repo]
+
+    define can_view: can_view from repo
+    define can_edit: can_manage_allocations from repo
+
+# =============================================================================
+# Storage Allocation – ties a repo to storage for a time window
+# =============================================================================
+type repo_storage_allocation
+  relations
+    define repo: [repo]
+
+    define can_view: can_view from repo
+    define can_edit: can_manage_allocations from repo
+
+# =============================================================================
+# User Storage Allocation – personal storage quota for a user
+# =============================================================================
+type user_storage_allocation
+  relations
+    define owner: [user]
+    define facility: [facility]
+
+    define can_view: owner or czar from facility
+    define can_edit: czar from facility
+
+# =============================================================================
+# CoactRequest – approval workflow item
+# =============================================================================
+type request
+  relations
+    define requester: [user]
+    define facility: [facility]
+    define repo: [repo]
+
+    # permissions
+    define can_view: requester or can_approve or can_view from facility
+    define can_approve: czar from facility
+    define can_reject: can_approve
+    define can_complete: can_approve
+    define can_refire: can_approve
+    define can_reopen: can_approve
+    define can_change_facility: [user]  # admin-level operation
+
+# =============================================================================
+# AuditTrail – tracks actions on objects
+# =============================================================================
+type audit_trail
+  relations
+    define facility: [facility]
+
+    define can_view: czar from facility
+
+# =============================================================================
+# Notification
+# =============================================================================
+type notification
+  relations
+    define recipient: [user]
+
+    define can_view: recipient
