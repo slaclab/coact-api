@@ -121,9 +121,6 @@ type slurm_account
     # derived membership: whoever can_use the linked feature
     define account_member: can_use from feature
 
-    # QOS-level access can be granted directly
-    define qos_user: [user]
-
     # permissions
     # can_submit requires account membership (feature enabled + repo member)
     define can_submit: account_member
@@ -131,26 +128,61 @@ type slurm_account
     define can_manage: czar from facility
 
 # =============================================================================
-# Slurm Submission – the intersection of a slurm account and a partition
+# Slurm QoS – a Slurm Quality of Service level (e.g. normal, preemptable)
 #
-# This type models the ability to submit a job to a specific partition
-# through a specific account. It requires both:
-#   1. The user is an account_member on the slurm_account
-#   2. The partition (cluster) is linked to the slurm_account
+# QoS levels control job scheduling priority and preemptability:
 #
-# Object IDs are formatted as <account>|<partition>,
-# e.g. "slac:default|roma"
+#   - "preemptable"  — jobs can be killed at any time; always available
+#   - "normal"       — standard priority; requires facility compute purchases
+#   - "onshift"      — higher priority during shift hours; requires purchases
+#   - "offshift"     — lower priority outside shift hours; requires purchases
+#
+# Object IDs are the QoS name, e.g. "normal", "preemptable", "onshift"
+# =============================================================================
+type slurm_qos
+  relations
+    define admin: [user]
+
+    define can_view: [user, user:*]
+    define can_manage: admin
+
+# =============================================================================
+# Slurm Submission – the intersection of a slurm account, partition, and QoS
+#
+# Each object represents a specific (account, partition, qos) combination,
+# answering the question: "Can this user submit a job to this partition,
+# through this account, at this QoS level?"
+#
+# The `purchase_satisfied` relation acts as a gate (like the feature
+# `enabled` gate):
+#   - For preemptable QoS objects: always write `user:* | purchase_satisfied`
+#     because no purchase is needed.
+#   - For non-preemptable QoS objects (normal, onshift, offshift): only write
+#     `user:* | purchase_satisfied` when the facility has active compute
+#     purchases for the target cluster. Remove it when purchases expire.
+#
+# Object IDs are formatted as <account>|<partition>|<qos>,
+# e.g. "slac:default|roma|normal" or "slac:default|roma|preemptable"
 # =============================================================================
 type slurm_submission
   relations
     define account: [slurm_account]
     define partition: [cluster]
+    define qos: [slurm_qos]
 
     # the user must be a member of the account
     define account_access: can_submit from account
 
+    # gate: is the purchase requirement satisfied?
+    # - preemptable submissions: always write user:* here (no purchase needed)
+    # - non-preemptable submissions: write user:* only when the facility has
+    #   active compute purchases for this cluster; remove when they don't
+    define purchase_satisfied: [user:*]
+
     # permissions
-    define can_submit: account_access
+    # can_submit requires BOTH account access AND purchase_satisfied
+    # this is the core authorization check for job submission
+    define can_submit: account_access and purchase_satisfied
 
 # =============================================================================
 # POSIX Group – an external POSIX group projected from a feature

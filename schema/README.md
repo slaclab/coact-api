@@ -20,7 +20,8 @@ The following table maps Coact's Strawberry/GraphQL models (in `models.py`) to O
 | `Repo` | `repo` | `principal`, `leaders`, `users` → three distinct relations with a derived `member` union |
 | `RepoFeature` | `feature` | Toggleable capability on a repo; `state` → `enabled` relation gate |
 | _(external)_ | `slurm_account` | Slurm account named `<facility>:<repo>`, membership derived from `feature` |
-| _(external)_ | `slurm_submission` | Intersection of a Slurm account and a partition — models the ability to submit a job |
+| _(external)_ | `slurm_qos` | Slurm QoS level (e.g. `normal`, `preemptable`, `onshift`, `offshift`) |
+| _(external)_ | `slurm_submission` | Intersection of a Slurm account, partition, and QoS — `can_submit` requires account access AND `purchase_satisfied` gate |
 | `Cluster` | `cluster` | Compute resource that maps directly to a Slurm partition |
 | _(external)_ | `posix_group` | POSIX group projected from a `feature` on a repo |
 | _(external)_ | `net_group` | Netgroup projected from a `feature` on a repo |
@@ -103,27 +104,54 @@ slurm_account (named <facility>:<repo>)
   ├── feature          (feature)       — the feature that controls access
   ├── facility         (facility)      — the facility scope
   ├── partition        (cluster)       — the cluster(s) / Slurm partition(s) this account can submit to
-  ├── account_member   (derived)       — whoever can_use the linked feature
-  └── qos_user         (user)          — optional per-user QOS grants
+  └── account_member   (derived)       — whoever can_use the linked feature
 ```
 
 A Slurm account is linked to one or more **partitions** (clusters) via the `partition` relation. Account membership is derived from the linked feature — when the Slurm feature is enabled on a repo, all repo members become `account_member`.
 
-### Slurm Submission (Account + Partition)
+### Slurm QoS
 
 ```text
-slurm_submission (named <account>|<partition>, e.g. "slac:default|roma")
-  ├── account          (slurm_account) — the Slurm account
-  ├── partition        (cluster)       — the Slurm partition (cluster)
-  ├── account_access   (derived)       — whoever has can_submit on the account
-  └── can_submit       (derived)       — resolved from account_access
+slurm_qos (named by QoS level, e.g. "normal", "preemptable", "onshift", "offshift")
+  ├── admin            (user)          — QoS administrators
+  ├── can_view         (user, user:*)  — who can see this QoS level
+  └── can_manage       (admin)         — who can modify the QoS
 ```
 
-The `slurm_submission` type models the intersection of a Slurm account and a specific partition. It answers the question: **"Can this user submit a job to partition X using account Y?"**
+QoS levels control job scheduling priority and preemptability:
+
+| QoS | Description | Requires Facility Purchase? |
+|---|---|---|
+| `preemptable` | Jobs can be killed at any time; lowest priority | No — always available |
+| `normal` | Standard priority | Yes |
+| `onshift` | Higher priority during shift hours | Yes |
+| `offshift` | Lower priority outside shift hours | Yes |
+
+The purchase requirement is enforced at the `slurm_submission` level (see below), not on the `slurm_qos` type itself. The QoS type is a simple reference object.
+
+### Slurm Submission (Account + Partition + QoS)
+
+```text
+slurm_submission (named <account>|<partition>|<qos>, e.g. "slac:default|roma|normal")
+  ├── account              (slurm_account) — the Slurm account
+  ├── partition            (cluster)       — the Slurm partition (cluster)
+  ├── qos                  (slurm_qos)     — the QoS level
+  ├── account_access       (derived)       — whoever has can_submit on the account
+  ├── purchase_satisfied   (user:*)        — gate: open when facility has purchases for the partition
+  └── can_submit           (derived)       — account_access AND purchase_satisfied (intersection)
+```
+
+The `slurm_submission` type models the intersection of a Slurm account, a specific partition, and a QoS level. It answers the question: **"Can this user submit a job to partition X using account Y at QoS level Z?"**
+
+The `purchase_satisfied` relation acts as a gate:
+- **Preemptable QoS:** Always write `user:* | purchase_satisfied` — no purchase is needed, so the gate is always open.
+- **Non-preemptable QoS (normal, onshift, offshift):** Only write `user:* | purchase_satisfied` when the facility has active compute purchases for the target cluster. Remove it when purchases expire or don't exist.
+
+This means a facility without node purchases on a cluster can still use that cluster — but only with preemptable jobs.
 
 #### Full Slurm Permission Resolution
 
-The complete chain from user to job submission looks like this:
+The complete chain from user to job submission (non-preemptable) looks like this:
 
 ```text
 User is member of repo:slac/default
@@ -142,19 +170,46 @@ slurm_account:slac:default → account_member = can_use from feature ✓
           ├─→ slurm_account:slac:default → can_submit = account_member ✓
           │
           ▼
-slurm_submission:slac:default|roma → account_access = can_submit from account ✓
+slurm_submission:slac:default|roma|normal → account_access = can_submit from account ✓
+          │
+          │   purchase_satisfied = user:* tuple exists?
+          │                        ✓ (facility has purchased nodes on roma)
           │
           ▼
-slurm_submission:slac:default|roma → can_submit ✓
+slurm_submission:slac:default|roma|normal → can_submit = account_access AND purchase_satisfied ✓
+```
+
+For a preemptable submission, the chain is the same but `purchase_satisfied` is always present:
+
+```text
+slurm_submission:slac:default|milano|preemptable → account_access ✓
+          │
+          │   purchase_satisfied = user:* (always open for preemptable)
+          │                        ✓
+          ▼
+slurm_submission:slac:default|milano|preemptable → can_submit = account_access AND purchase_satisfied ✓
+```
+
+For a non-preemptable submission on a cluster **without** purchases, the check fails:
+
+```text
+slurm_submission:slac:default|milano|normal → account_access ✓
+          │
+          │   purchase_satisfied = (no tuple exists!)
+          │                        ✗
+          ▼
+slurm_submission:slac:default|milano|normal → can_submit = account_access AND purchase_satisfied ✗
+                                                                               DENIED — no purchases
 ```
 
 In plain English:
 1. **Is the user a member of the repo?** (e.g. `member_dave` is a `user_member` of `repo:slac/default`)
 2. **Is the Slurm feature enabled on the repo?** (the `enabled` tuple exists on `feature:slac/default/slurm`)
 3. **Is the Slurm account linked to the partition?** (the `partition` tuple links `cluster:roma` to `slurm_account:slac:default`)
-4. **Does the submission object tie the account to the partition?** (`slurm_submission:slac:default|roma` links both)
+4. **Does the submission object tie the account, partition, and QoS together?** (`slurm_submission:slac:default|roma|normal` links all three)
+5. **Is the purchase requirement satisfied?** (For preemptable: always. For non-preemptable: only when the facility has active compute purchases for the cluster)
 
-If any link in the chain is missing — the user isn't in the repo, the feature is disabled, or the account doesn't have access to that partition — the check returns denied.
+If any link in the chain is missing — the user isn't in the repo, the feature is disabled, the account doesn't have access to that partition, or the facility hasn't purchased nodes for a non-preemptable QoS — the check returns denied.
 
 #### Disabling Access
 
@@ -163,8 +218,10 @@ There are multiple points where access can be revoked:
 | Action | Effect |
 |---|---|
 | Remove user from repo | User loses `account_member` on all Slurm accounts for that repo |
-| Disable the Slurm feature (`state: false`) | Delete the `enabled` tuple → all repo members lose `can_submit` |
-| Remove a partition from an account | Delete the `partition` tuple on `slurm_account` and the `slurm_submission` object → no jobs can be submitted to that partition through this account |
+| Disable the Slurm feature (`state: false`) | Delete the `enabled` tuple → all repo members lose `can_submit` at every QoS level |
+| Remove a partition from an account | Delete the `partition` tuple on `slurm_account` and the `slurm_submission` objects → no jobs at any QoS |
+| Facility loses compute purchases on a cluster | Delete `purchase_satisfied` on non-preemptable `slurm_submission` objects for that cluster → users can still submit preemptable jobs but not normal/onshift/offshift |
+| Facility gains compute purchases on a cluster | Write `user:* \| purchase_satisfied` on the non-preemptable `slurm_submission` objects → normal/onshift/offshift jobs become available |
 
 ### POSIX Group
 
@@ -332,11 +389,18 @@ notification
 | `can_view` | `account_member`, facility `czar` |
 | `can_manage` | facility `czar` |
 
+### Slurm QoS Permissions
+
+| Permission | Granted To |
+|---|---|
+| `can_view` | any user (public) |
+| `can_manage` | `admin` |
+
 ### Slurm Submission Permissions
 
 | Permission | Granted To |
 |---|---|
-| `can_submit` | `account_access` (derived from `can_submit` on the linked slurm account) |
+| `can_submit` | `account_access` AND `purchase_satisfied` (intersection — user must have account membership and the purchase gate must be open) |
 
 ### POSIX Group / Net Group Permissions
 
@@ -408,8 +472,14 @@ fga tuple write --file schema/tuples.example.yaml
 # Can member_dave submit to the slurm account slac:default?
 fga query check user:member_dave can_submit slurm_account:slac:default
 
-# Can member_dave submit a job to the roma partition via the slac:default account?
-fga query check user:member_dave can_submit slurm_submission:slac:default|roma
+# Can member_dave submit a normal (non-preemptable) job to roma?
+fga query check user:member_dave can_submit slurm_submission:slac:default|roma|normal
+
+# Can member_dave submit a preemptable job to milano (no purchases)?
+fga query check user:member_dave can_submit slurm_submission:slac:default|milano|preemptable
+
+# Can member_dave submit a normal job to milano? (should be DENIED — no purchases)
+fga query check user:member_dave can_submit slurm_submission:slac:default|milano|normal
 
 # Can member_dave submit jobs on the roma cluster/partition at all?
 fga query check user:member_dave can_submit_jobs cluster:roma
@@ -444,21 +514,29 @@ config = ClientConfiguration(
 )
 
 async with OpenFgaClient(config) as client:
-    # Can member_dave submit a job to partition roma via account slac:default?
+    # Can member_dave submit a normal job to roma? (facility has purchases)
     response = await client.check(ClientCheckRequest(
         user="user:member_dave",
         relation="can_submit",
-        object="slurm_submission:slac:default|roma",
-    ))
-    print(response.allowed)  # True (if slurm feature is enabled and partition is linked)
-
-    # Can member_dave submit jobs to the roma cluster at all?
-    response = await client.check(ClientCheckRequest(
-        user="user:member_dave",
-        relation="can_submit_jobs",
-        object="cluster:roma",
+        object="slurm_submission:slac:default|roma|normal",
     ))
     print(response.allowed)  # True
+
+    # Can member_dave submit a normal job to milano? (no purchases)
+    response = await client.check(ClientCheckRequest(
+        user="user:member_dave",
+        relation="can_submit",
+        object="slurm_submission:slac:default|milano|normal",
+    ))
+    print(response.allowed)  # False — purchase_satisfied not set
+
+    # Can member_dave submit a preemptable job to milano?
+    response = await client.check(ClientCheckRequest(
+        user="user:member_dave",
+        relation="can_submit",
+        object="slurm_submission:slac:default|milano|preemptable",
+    ))
+    print(response.allowed)  # True — preemptable is always allowed
 ```
 
 ### Toggling a Feature
@@ -476,6 +554,28 @@ fga tuple delete user:* enabled feature:slac/default/slurm
 ```
 
 When the `enabled` tuple is removed, the intersection in `assignee` fails for all users, immediately revoking access to the linked slurm_account, posix_group, or net_group — and transitively, any `server` whose login depends on those net_groups.
+
+### Managing Facility Compute Purchases (QoS Gating)
+
+When a facility **purchases** nodes on a cluster, open the gate on non-preemptable submission objects:
+
+```sh
+# Facility slac just purchased nodes on cluster roma — enable normal QoS
+fga tuple write user:* purchase_satisfied slurm_submission:slac:default|roma|normal
+fga tuple write user:* purchase_satisfied slurm_submission:slac:default|roma|onshift
+fga tuple write user:* purchase_satisfied slurm_submission:slac:default|roma|offshift
+```
+
+When a facility's purchases **expire** or are removed:
+
+```sh
+# Facility slac no longer has purchases on cluster roma — revoke non-preemptable QoS
+fga tuple delete user:* purchase_satisfied slurm_submission:slac:default|roma|normal
+fga tuple delete user:* purchase_satisfied slurm_submission:slac:default|roma|onshift
+fga tuple delete user:* purchase_satisfied slurm_submission:slac:default|roma|offshift
+```
+
+Preemptable submissions are unaffected — their `purchase_satisfied` tuple is never removed.
 
 ### Managing Server Access (access.conf)
 
@@ -495,15 +595,25 @@ When a netgroup is removed from a server, all users who derived `can_login` thro
 
 ### Adding a Partition to a Slurm Account
 
-When a `RepoComputeAllocation` is created linking a repo to a cluster, write the corresponding tuples:
+When a `RepoComputeAllocation` is created linking a repo to a cluster, write the corresponding tuples. You need a `slurm_submission` object for each QoS level:
 
 ```sh
 # Link the partition to the slurm account
 fga tuple write cluster:roma partition slurm_account:slac:default
 
-# Create the submission object
-fga tuple write slurm_account:slac:default account slurm_submission:slac:default|roma
-fga tuple write cluster:roma partition slurm_submission:slac:default|roma
+# Create submission objects for each QoS level
+# Preemptable (always open)
+fga tuple write slurm_account:slac:default account slurm_submission:slac:default|roma|preemptable
+fga tuple write cluster:roma partition slurm_submission:slac:default|roma|preemptable
+fga tuple write slurm_qos:preemptable qos slurm_submission:slac:default|roma|preemptable
+fga tuple write user:* purchase_satisfied slurm_submission:slac:default|roma|preemptable
+
+# Normal (gated on purchases)
+fga tuple write slurm_account:slac:default account slurm_submission:slac:default|roma|normal
+fga tuple write cluster:roma partition slurm_submission:slac:default|roma|normal
+fga tuple write slurm_qos:normal qos slurm_submission:slac:default|roma|normal
+# Only write purchase_satisfied if facility has active purchases on this cluster:
+# fga tuple write user:* purchase_satisfied slurm_submission:slac:default|roma|normal
 ```
 
 ### Removing a Partition from a Slurm Account
@@ -511,9 +621,16 @@ fga tuple write cluster:roma partition slurm_submission:slac:default|roma
 When a `RepoComputeAllocation` is removed:
 
 ```sh
-# Remove the submission object
-fga tuple delete slurm_account:slac:default account slurm_submission:slac:default|roma
-fga tuple delete cluster:roma partition slurm_submission:slac:default|roma
+# Remove all submission objects for this account+partition (all QoS levels)
+fga tuple delete slurm_account:slac:default account slurm_submission:slac:default|roma|preemptable
+fga tuple delete cluster:roma partition slurm_submission:slac:default|roma|preemptable
+fga tuple delete slurm_qos:preemptable qos slurm_submission:slac:default|roma|preemptable
+fga tuple delete user:* purchase_satisfied slurm_submission:slac:default|roma|preemptable
+
+fga tuple delete slurm_account:slac:default account slurm_submission:slac:default|roma|normal
+fga tuple delete cluster:roma partition slurm_submission:slac:default|roma|normal
+fga tuple delete slurm_qos:normal qos slurm_submission:slac:default|roma|normal
+fga tuple delete user:* purchase_satisfied slurm_submission:slac:default|roma|normal
 
 # Unlink the partition from the account
 fga tuple delete cluster:roma partition slurm_account:slac:default

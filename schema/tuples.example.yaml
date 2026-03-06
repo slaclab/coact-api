@@ -86,34 +86,109 @@
   relation: partition
   object: slurm_account:slac:default
 
-# Optionally grant specific QOS access
-- user: user:pi_bob
-  relation: qos_user
-  object: slurm_account:slac:default
+# =============================================================================
+# Slurm QoS levels
+# =============================================================================
+
+# Make QoS levels visible to everyone
+- user: user:*
+  relation: can_view
+  object: slurm_qos:normal
+
+- user: user:*
+  relation: can_view
+  object: slurm_qos:preemptable
+
+- user: user:*
+  relation: can_view
+  object: slurm_qos:onshift
+
+- user: user:*
+  relation: can_view
+  object: slurm_qos:offshift
 
 # =============================================================================
-# Slurm Submissions — account + partition intersection
+# Slurm Submissions — account + partition + QoS intersection
 #
-# Object IDs are formatted as <account>|<partition>
+# Object IDs are formatted as <account>|<partition>|<qos>
+#
+# Scenario: facility "slac" HAS purchased nodes on cluster "roma",
+# but has NOT purchased nodes on cluster "milano".
 # =============================================================================
 
-# slac:default account on the roma partition
+# --- roma partition, normal QoS (non-preemptable) ---
+# Facility slac has purchased nodes on roma, so purchase_satisfied is set
 - user: slurm_account:slac:default
   relation: account
-  object: slurm_submission:slac:default|roma
+  object: slurm_submission:slac:default|roma|normal
 
 - user: cluster:roma
   relation: partition
-  object: slurm_submission:slac:default|roma
+  object: slurm_submission:slac:default|roma|normal
 
-# slac:default account on the milano partition
+- user: slurm_qos:normal
+  relation: qos
+  object: slurm_submission:slac:default|roma|normal
+
+# Gate OPEN: facility has active compute purchases for roma
+- user: user:*
+  relation: purchase_satisfied
+  object: slurm_submission:slac:default|roma|normal
+
+# --- roma partition, preemptable QoS ---
+# Preemptable is always allowed — gate is always open
 - user: slurm_account:slac:default
   relation: account
-  object: slurm_submission:slac:default|milano
+  object: slurm_submission:slac:default|roma|preemptable
+
+- user: cluster:roma
+  relation: partition
+  object: slurm_submission:slac:default|roma|preemptable
+
+- user: slurm_qos:preemptable
+  relation: qos
+  object: slurm_submission:slac:default|roma|preemptable
+
+# Gate OPEN: preemptable never requires purchases
+- user: user:*
+  relation: purchase_satisfied
+  object: slurm_submission:slac:default|roma|preemptable
+
+# --- milano partition, preemptable QoS ---
+# Facility slac has NOT purchased nodes on milano, so only preemptable is available
+- user: slurm_account:slac:default
+  relation: account
+  object: slurm_submission:slac:default|milano|preemptable
 
 - user: cluster:milano
   relation: partition
-  object: slurm_submission:slac:default|milano
+  object: slurm_submission:slac:default|milano|preemptable
+
+- user: slurm_qos:preemptable
+  relation: qos
+  object: slurm_submission:slac:default|milano|preemptable
+
+# Gate OPEN: preemptable never requires purchases
+- user: user:*
+  relation: purchase_satisfied
+  object: slurm_submission:slac:default|milano|preemptable
+
+# --- milano partition, normal QoS (non-preemptable) ---
+# NOTE: purchase_satisfied is NOT set because facility has no purchases on milano.
+# This means can_submit will be DENIED for normal QoS on milano.
+- user: slurm_account:slac:default
+  relation: account
+  object: slurm_submission:slac:default|milano|normal
+
+- user: cluster:milano
+  relation: partition
+  object: slurm_submission:slac:default|milano|normal
+
+- user: slurm_qos:normal
+  relation: qos
+  object: slurm_submission:slac:default|milano|normal
+
+# Gate CLOSED: no purchase_satisfied tuple → can_submit will be denied
 
 # =============================================================================
 # Features — POSIX Group
