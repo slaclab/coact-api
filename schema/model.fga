@@ -147,7 +147,7 @@ type slurm_qos
     define can_manage: admin
 
 # =============================================================================
-# Slurm Submission – the intersection of a slurm account, partition, and QoS
+# Slurm Job – the intersection of a slurm account, partition, and QoS
 #
 # Each object represents a specific (account, partition, qos) combination,
 # answering the question: "Can this user submit a job to this partition,
@@ -164,7 +164,7 @@ type slurm_qos
 # Object IDs are formatted as <account>|<partition>|<qos>,
 # e.g. "slac:default|roma|normal" or "slac:default|roma|preemptable"
 # =============================================================================
-type slurm_submission
+type slurm_job
   relations
     define account: [slurm_account]
     define partition: [cluster]
@@ -174,8 +174,8 @@ type slurm_submission
     define account_access: can_submit from account
 
     # gate: is the purchase requirement satisfied?
-    # - preemptable submissions: always write user:* here (no purchase needed)
-    # - non-preemptable submissions: write user:* only when the facility has
+    # - preemptable jobs: always write user:* here (no purchase needed)
+    # - non-preemptable jobs: write user:* only when the facility has
     #   active compute purchases for this cluster; remove when they don't
     define purchase_satisfied: [user:*]
 
