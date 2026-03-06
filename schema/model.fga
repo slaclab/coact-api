@@ -59,6 +59,161 @@ type repo
     define can_rename: czar from facility
 
 # =============================================================================
+# Feature – a toggleable capability on a repo (e.g. slurm, posixGroup, netGroup)
+#
+# A feature is linked to a repo. When the feature is "enabled", the repo's
+# members are considered to have access to whatever external resource the
+# feature represents. The `enabled` relation acts as a gate — if the feature
+# object has no `enabled` tuple, none of the derived permissions resolve.
+# =============================================================================
+type feature
+  relations
+    define repo: [repo]
+    define enabled: [user:*]
+
+    # derived: repo members who can use this feature (only when enabled)
+    define assignee: member from repo and enabled
+
+    # permissions
+    define can_use: assignee
+    define can_view: can_view from repo
+    define can_enable: can_manage_features from repo
+    define can_disable: can_manage_features from repo
+
+# =============================================================================
+# Cluster – a compute resource that maps directly to a Slurm partition
+#
+# A cluster represents both a Coact compute resource and a Slurm partition.
+# Users gain access to a partition through the repo_compute_allocation that
+# ties their repo to this cluster.
+# =============================================================================
+type cluster
+  relations
+    define admin: [user]
+
+    # users who have a compute allocation on this cluster (written when
+    # a repo_compute_allocation is created for this cluster)
+    define allocated_user: can_submit from slurm_account
+
+    define can_view: [user, user:*]
+    define can_edit: admin
+    define can_submit_jobs: allocated_user or admin
+
+# =============================================================================
+# Slurm Account – an external Slurm account (named <facility>:<repo>)
+#
+# Access is derived from the linked feature. When the "slurm" feature is
+# enabled on a repo, all repo members automatically get `account_member`
+# on the corresponding slurm_account.
+#
+# A slurm_account is also linked to one or more partitions (clusters) via
+# the `partition` relation. The `can_submit` permission requires that the
+# user is both an account_member AND has access to at least one partition.
+# =============================================================================
+type slurm_account
+  relations
+    define feature: [feature]
+    define facility: [facility]
+
+    # the cluster(s) / Slurm partition(s) this account can submit to
+    define partition: [cluster]
+
+    # derived membership: whoever can_use the linked feature
+    define account_member: can_use from feature
+
+    # QOS-level access can be granted directly
+    define qos_user: [user]
+
+    # permissions
+    # can_submit requires account membership (feature enabled + repo member)
+    define can_submit: account_member
+    define can_view: account_member or czar from facility
+    define can_manage: czar from facility
+
+# =============================================================================
+# Slurm Submission – the intersection of a slurm account and a partition
+#
+# This type models the ability to submit a job to a specific partition
+# through a specific account. It requires both:
+#   1. The user is an account_member on the slurm_account
+#   2. The partition (cluster) is linked to the slurm_account
+#
+# Object IDs are formatted as <account>|<partition>,
+# e.g. "slac:default|roma"
+# =============================================================================
+type slurm_submission
+  relations
+    define account: [slurm_account]
+    define partition: [cluster]
+
+    # the user must be a member of the account
+    define account_access: can_submit from account
+
+    # permissions
+    define can_submit: account_access
+
+# =============================================================================
+# POSIX Group – an external POSIX group projected from a feature
+# =============================================================================
+type posix_group
+  relations
+    define feature: [feature]
+    define facility: [facility]
+
+    # derived membership from the feature
+    define group_member: can_use from feature
+
+    # direct members can be added independently (e.g. service accounts)
+    define direct_member: [user]
+
+    # union of both
+    define member: group_member or direct_member
+
+    # permissions
+    define can_view: member or czar from facility
+    define can_manage: czar from facility
+
+# =============================================================================
+# Net Group – an external netgroup projected from a feature
+# =============================================================================
+type net_group
+  relations
+    define feature: [feature]
+    define facility: [facility]
+
+    # derived membership from the feature
+    define group_member: can_use from feature
+
+    # direct members can be added independently
+    define direct_member: [user]
+
+    # union of both
+    define member: group_member or direct_member
+
+    # permissions
+    define can_view: member or czar from facility
+    define can_manage: czar from facility
+
+# =============================================================================
+# Server – a machine that uses /etc/security/access.conf to control login
+#
+# A server lists one or more net_groups in its access.conf. A user can log in
+# to the server if they are a member of any net_group that is listed on it.
+# =============================================================================
+type server
+  relations
+    define facility: [facility]
+    define admin: [user]
+
+    # the net_groups listed in this server's /etc/security/access.conf
+    define allowed_netgroup: [net_group]
+
+    # derived: anyone who is a member of an allowed netgroup can log in
+    define can_login: member from allowed_netgroup
+    define can_view: [user, user:*]
+    define can_manage: admin or czar from facility
+
+# =============================================================================
 # AccessGroup – a named sub-group within a repo (e.g. POSIX groups)
 # =============================================================================
 type access_group
@@ -69,16 +224,6 @@ type access_group
     # permissions
     define can_view: member or can_view from repo
     define can_edit: can_manage_access_groups from repo
-
-# =============================================================================
-# Cluster – a compute resource
-# =============================================================================
-type cluster
-  relations
-    define admin: [user]
-
-    define can_view: [user, user:*]
-    define can_edit: admin
 
 # =============================================================================
 # Compute Allocation – ties a repo to a cluster for a time window

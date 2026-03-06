@@ -31,7 +31,181 @@
   relation: user_member
   object: repo:slac/default
 
-# --- Access group ---
+# =============================================================================
+# Clusters (Slurm Partitions)
+# =============================================================================
+
+# Cluster "roma" maps to Slurm partition "roma"
+- user: user:admin_user
+  relation: admin
+  object: cluster:roma
+
+# Cluster "milano" maps to Slurm partition "milano"
+- user: user:admin_user
+  relation: admin
+  object: cluster:milano
+
+# Make clusters visible to everyone
+- user: user:*
+  relation: can_view
+  object: cluster:roma
+
+- user: user:*
+  relation: can_view
+  object: cluster:milano
+
+# =============================================================================
+# Features — Slurm
+# =============================================================================
+
+# Create a feature object for the slurm feature on this repo
+- user: repo:slac/default
+  relation: repo
+  object: feature:slac/default/slurm
+
+# Enable the feature (user:* means the gate is open for all matched users)
+- user: user:*
+  relation: enabled
+  object: feature:slac/default/slurm
+
+# Link the slurm account to its feature and facility
+- user: feature:slac/default/slurm
+  relation: feature
+  object: slurm_account:slac:default
+
+- user: facility:slac
+  relation: facility
+  object: slurm_account:slac:default
+
+# Link the slurm account to its partition(s) / cluster(s)
+- user: cluster:roma
+  relation: partition
+  object: slurm_account:slac:default
+
+- user: cluster:milano
+  relation: partition
+  object: slurm_account:slac:default
+
+# Optionally grant specific QOS access
+- user: user:pi_bob
+  relation: qos_user
+  object: slurm_account:slac:default
+
+# =============================================================================
+# Slurm Submissions — account + partition intersection
+#
+# Object IDs are formatted as <account>|<partition>
+# =============================================================================
+
+# slac:default account on the roma partition
+- user: slurm_account:slac:default
+  relation: account
+  object: slurm_submission:slac:default|roma
+
+- user: cluster:roma
+  relation: partition
+  object: slurm_submission:slac:default|roma
+
+# slac:default account on the milano partition
+- user: slurm_account:slac:default
+  relation: account
+  object: slurm_submission:slac:default|milano
+
+- user: cluster:milano
+  relation: partition
+  object: slurm_submission:slac:default|milano
+
+# =============================================================================
+# Features — POSIX Group
+# =============================================================================
+
+# Create a feature object for the posixGroup feature on this repo
+- user: repo:slac/default
+  relation: repo
+  object: feature:slac/default/posixGroup
+
+# Enable the feature
+- user: user:*
+  relation: enabled
+  object: feature:slac/default/posixGroup
+
+# Link the posix group to its feature and facility
+- user: feature:slac/default/posixGroup
+  relation: feature
+  object: posix_group:slac_default_grp
+
+- user: facility:slac
+  relation: facility
+  object: posix_group:slac_default_grp
+
+# =============================================================================
+# Features — Net Group
+# =============================================================================
+
+# Create a feature object for the netGroup feature on this repo
+- user: repo:slac/default
+  relation: repo
+  object: feature:slac/default/netGroup
+
+# Enable the feature
+- user: user:*
+  relation: enabled
+  object: feature:slac/default/netGroup
+
+# Link the net group to its feature and facility
+- user: feature:slac/default/netGroup
+  relation: feature
+  object: net_group:slac_default_ng
+
+- user: facility:slac
+  relation: facility
+  object: net_group:slac_default_ng
+
+# =============================================================================
+# Servers — machines with /etc/security/access.conf
+# =============================================================================
+
+# Server "sdf-login01" is in facility slac
+- user: facility:slac
+  relation: facility
+  object: server:sdf-login01
+
+# Server "sdf-login02" is in facility slac
+- user: facility:slac
+  relation: facility
+  object: server:sdf-login02
+
+# Admin for the servers
+- user: user:admin_user
+  relation: admin
+  object: server:sdf-login01
+
+- user: user:admin_user
+  relation: admin
+  object: server:sdf-login02
+
+# Make servers visible to everyone
+- user: user:*
+  relation: can_view
+  object: server:sdf-login01
+
+- user: user:*
+  relation: can_view
+  object: server:sdf-login02
+
+# sdf-login01 allows the slac_default_ng netgroup (from access.conf)
+- user: net_group:slac_default_ng
+  relation: allowed_netgroup
+  object: server:sdf-login01
+
+# sdf-login02 allows the slac_default_ng netgroup (from access.conf)
+- user: net_group:slac_default_ng
+  relation: allowed_netgroup
+  object: server:sdf-login02
+
+# =============================================================================
+# Access group
+# =============================================================================
 - user: repo:slac/default
   relation: repo
   object: access_group:slac/default/mygroup
