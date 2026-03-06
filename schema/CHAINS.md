@@ -17,33 +17,35 @@ Use these chains as a guide when:
 ## Table of Contents
 
 1. [Slurm Job Submission (Full Chain)](#1-slurm-job-submission-full-chain)
-2. [Slurm Job Submission to a Specific Partition and QoS](#2-slurm-job-submission-to-a-specific-partition-and-qos)
-3. [Cluster-Level Job Submission](#3-cluster-level-job-submission)
-4. [POSIX Group Membership via Feature](#4-posix-group-membership-via-feature)
-5. [Net Group Membership via Feature](#5-net-group-membership-via-feature)
-6. [Feature Toggle (Enable / Disable)](#6-feature-toggle-enable--disable)
-7. [Repo Compute Allocation Edit](#7-repo-compute-allocation-edit)
-8. [Repo Storage Allocation Edit](#8-repo-storage-allocation-edit)
-9. [User Storage Allocation View](#9-user-storage-allocation-view)
-10. [Request Approval](#10-request-approval)
-11. [Request Visibility](#11-request-visibility)
-12. [Facility Membership (Derived)](#12-facility-membership-derived)
-13. [Access Group Edit](#13-access-group-edit)
-14. [Repo Rename](#14-repo-rename)
-15. [Audit Trail Visibility](#15-audit-trail-visibility)
-16. [Server Login via Net Group](#16-server-login-via-net-group)
-17. [Server Login Denied (Netgroup Not in access.conf)](#17-server-login-denied-netgroup-not-in-accessconf)
-18. [Non-Preemptable Job Submission (Facility Has Purchases)](#18-non-preemptable-job-submission-facility-has-purchases)
-19. [Non-Preemptable Job Denied (No Facility Purchases)](#19-non-preemptable-job-denied-no-facility-purchases)
-20. [Preemptable Job Always Allowed (No Purchases Needed)](#20-preemptable-job-always-allowed-no-purchases-needed)
+2. [Cluster-Level Job Submission](#2-cluster-level-job-submission)
+3. [Non-Preemptable Job Denied (No Facility Purchases)](#3-non-preemptable-job-denied-no-facility-purchases)
+4. [Preemptable Job Always Allowed (No Purchases Needed)](#4-preemptable-job-always-allowed-no-purchases-needed)
+5. [POSIX Group Membership via Feature](#5-posix-group-membership-via-feature)
+6. [Net Group Membership via Feature](#6-net-group-membership-via-feature)
+7. [Feature Toggle (Enable / Disable)](#7-feature-toggle-enable--disable)
+8. [Repo Compute Allocation Edit](#8-repo-compute-allocation-edit)
+9. [Repo Storage Allocation Edit](#9-repo-storage-allocation-edit)
+10. [User Storage Allocation View](#10-user-storage-allocation-view)
+11. [Request Approval](#11-request-approval)
+12. [Request Visibility](#12-request-visibility)
+13. [Facility Membership (Derived)](#13-facility-membership-derived)
+14. [Access Group Edit](#14-access-group-edit)
+15. [Repo Rename](#15-repo-rename)
+16. [Audit Trail Visibility](#16-audit-trail-visibility)
+17. [Server Login via Net Group](#17-server-login-via-net-group)
+18. [Server Login Denied (Netgroup Not in access.conf)](#18-server-login-denied-netgroup-not-in-accessconf)
 
 ---
 
 ## 1. Slurm Job Submission (Full Chain)
 
-**Question:** Can `member_dave` submit a job using Slurm account `slac:default`?
+**Question:** Can `member_dave` submit a `normal` (non-preemptable) job to partition `roma` via account `slac:default`, given that facility `slac` has purchased nodes on cluster `roma`?
 
-**Check:** `user:member_dave` → `can_submit` → `slurm_account:slac:default`
+**Check:** `user:member_dave` → `can_submit` → `slurm_job:slac:default|roma|normal`
+
+This is the longest Slurm chain and traces every hop from user identity through
+repo membership, feature gate, account membership, and finally the QoS purchase
+gate.
 
 ```
 user:member_dave
@@ -51,8 +53,8 @@ user:member_dave
   │  tuple: user:member_dave | user_member | repo:slac/default
   ▼
 repo:slac/default → member = user_member or leader or principal
-  │                          ─────────────
-  │                          member_dave matches user_member ✓
+  │                           ───────────
+  │                           member_dave matches user_member ✓
   │
   │  tuple: repo:slac/default | repo | feature:slac/default/slurm
   ▼
@@ -72,6 +74,19 @@ slurm_account:slac:default → account_member = can_use from feature ✓
   │
   ▼
 slurm_account:slac:default → can_submit = account_member ✓
+  │
+  │  tuple: slurm_account:slac:default | account | slurm_job:slac:default|roma|normal
+  ▼
+slurm_job:slac:default|roma|normal → account_access = can_submit from account ✓
+  │
+  │  tuple: user:* | purchase_satisfied | slurm_job:slac:default|roma|normal
+  │  (written because facility slac has active compute purchases on cluster roma)
+  ▼
+slurm_job:slac:default|roma|normal → can_submit = account_access AND purchase_satisfied
+  │                                                ──────────────     ──────────────────
+  │                                                ✓                  ✓
+  ▼
+ALLOWED ✓
 ```
 
 **Required tuples:**
@@ -79,61 +94,31 @@ slurm_account:slac:default → can_submit = account_member ✓
 - `repo:slac/default | repo | feature:slac/default/slurm`
 - `user:* | enabled | feature:slac/default/slurm`
 - `feature:slac/default/slurm | feature | slurm_account:slac:default`
-
-**Breaks when:**
-- `member_dave` is removed from the repo
-- The `enabled` tuple is deleted (feature disabled)
-- The feature is unlinked from the slurm account
-
----
-
-## 2. Slurm Job Submission to a Specific Partition and QoS
-
-**Question:** Can `member_dave` submit a normal (non-preemptable) job to partition `roma` via account `slac:default`?
-
-**Check:** `user:member_dave` → `can_submit` → `slurm_job:slac:default|roma|normal`
-
-Each `slurm_job` object represents a specific (account, partition, QoS)
-combination. The `can_submit` permission requires **both** account access (the
-user is a repo member with the Slurm feature enabled) **and** `purchase_satisfied`
-(the facility has active compute purchases for the cluster — or the QoS is
-preemptable, in which case the gate is always open).
-
-```
-user:member_dave
-  │
-  │  (same chain as §1 above)
-  ▼
-slurm_account:slac:default → can_submit = account_member ✓
-  │
-  │  tuple: slurm_account:slac:default | account | slurm_job:slac:default|roma|normal
-  ▼
-slurm_job:slac:default|roma|normal → account_access = can_submit from account ✓
-  │
-  │  tuple: user:* | purchase_satisfied | slurm_job:slac:default|roma|normal
-  │  (gate is open — facility has active compute purchases on cluster roma)
-  ▼
-slurm_job:slac:default|roma|normal → can_submit = account_access AND purchase_satisfied
-  │                                                       ──────────────     ──────────────────
-  │                                                       ✓                  ✓
-  ▼
-ALLOWED ✓
-```
-
-**Additional tuples (beyond §1):**
 - `slurm_account:slac:default | account | slurm_job:slac:default|roma|normal`
 - `cluster:roma | partition | slurm_job:slac:default|roma|normal`
 - `slurm_qos:normal | qos | slurm_job:slac:default|roma|normal`
 - `user:* | purchase_satisfied | slurm_job:slac:default|roma|normal`
 
 **Breaks when:**
-- Any link in §1 breaks (user removed, feature disabled, etc.)
+- `member_dave` is removed from the repo
+- The `enabled` tuple is deleted (feature disabled)
+- The feature is unlinked from the slurm account
 - The `slurm_job` object is deleted (partition removed from account)
 - The `purchase_satisfied` tuple is removed (facility purchases expire)
 
+**When to write `purchase_satisfied`:**
+This tuple should be written when a `FacilityComputeAllocation` or
+`facility_compute_purchases` record exists for this facility + cluster
+combination with a current time window (`start ≤ now < end`).
+
+**When to remove `purchase_satisfied`:**
+When the facility's compute purchases for this cluster expire or are deleted.
+This immediately blocks all non-preemptable job submissions for repos in that
+facility on that cluster.
+
 ---
 
-## 3. Cluster-Level Job Submission
+## 2. Cluster-Level Job Submission
 
 **Question:** Can `member_dave` submit jobs to the `roma` cluster/partition through *any* account?
 
@@ -142,7 +127,7 @@ ALLOWED ✓
 ```
 user:member_dave
   │
-  │  (same chain as §1 above)
+  │  (same chain as §1 above, up to slurm_account)
   ▼
 slurm_account:slac:default → can_submit ✓
   │
@@ -159,15 +144,113 @@ cluster:roma → can_submit_jobs = allocated_user or admin
 ALLOWED ✓
 ```
 
-**Key insight:** This check is broader than §2. It resolves to `true` if the
+**Key insight:** This check is broader than §1. It resolves to `true` if the
 user has `can_submit` on *any* `slurm_account` that has `cluster:roma` as a
 `partition`. This is useful for answering "can this user use this cluster at
 all?" without specifying which account. Note that this does not check QoS — use
-a `slurm_job` check (§2, §18, §19, §20) to verify QoS-level access.
+a `slurm_job` check (§1, §3, §4) to verify QoS-level access.
 
 ---
 
-## 4. POSIX Group Membership via Feature
+## 3. Non-Preemptable Job Denied (No Facility Purchases)
+
+**Question:** Can `member_dave` submit a `normal` job to partition `milano` via account `slac:default`, given that facility `slac` has **not** purchased nodes on cluster `milano`?
+
+**Check:** `user:member_dave` → `can_submit` → `slurm_job:slac:default|milano|normal`
+
+```
+user:member_dave
+  │
+  │  (§1 chain: user → repo → feature → slurm_account)
+  ▼
+slurm_account:slac:default → can_submit = account_member ✓
+  │
+  │  tuple: slurm_account:slac:default | account | slurm_job:slac:default|milano|normal
+  ▼
+slurm_job:slac:default|milano|normal → account_access = can_submit from account ✓
+  │
+  │  purchase_satisfied = ??? (NO tuple exists — facility has no purchases on milano)
+  │                        ✗
+  ▼
+slurm_job:slac:default|milano|normal → can_submit = account_access AND purchase_satisfied
+  │                                                  ✓             AND ✗
+  ▼
+DENIED ✗
+```
+
+**Key insight:** The user passes every check in the chain — they are a repo
+member, the Slurm feature is enabled, they have account access — but the final
+`AND purchase_satisfied` intersection fails because no one has purchased nodes
+on `milano` for this facility.
+
+**The user's options:**
+1. Submit as `preemptable` instead (see §4) — always allowed
+2. Ask the facility czar to purchase nodes on `milano`
+
+**What would fix it:**
+```
+fga tuple write user:* purchase_satisfied slurm_job:slac:default|milano|normal
+```
+
+This applies equally to `onshift` and `offshift` QoS levels — they also
+require purchases.
+
+---
+
+## 4. Preemptable Job Always Allowed (No Purchases Needed)
+
+**Question:** Can `member_dave` submit a `preemptable` job to partition `milano` via account `slac:default`, even though the facility has no purchases on `milano`?
+
+**Check:** `user:member_dave` → `can_submit` → `slurm_job:slac:default|milano|preemptable`
+
+```
+user:member_dave
+  │
+  │  (§1 chain: user → repo → feature → slurm_account)
+  ▼
+slurm_account:slac:default → can_submit = account_member ✓
+  │
+  │  tuple: slurm_account:slac:default | account | slurm_job:slac:default|milano|preemptable
+  ▼
+slurm_job:slac:default|milano|preemptable → account_access = can_submit from account ✓
+  │
+  │  tuple: user:* | purchase_satisfied | slurm_job:slac:default|milano|preemptable
+  │  (gate is ALWAYS open for preemptable — this tuple is never removed)
+  ▼
+slurm_job:slac:default|milano|preemptable → can_submit = account_access AND purchase_satisfied
+  │                                                       ✓             AND ✓
+  ▼
+ALLOWED ✓
+```
+
+**Key insight:** Preemptable jobs use the exact same `can_submit`
+definition (`account_access AND purchase_satisfied`) as non-preemptable ones.
+The difference is operational: the `purchase_satisfied` tuple on preemptable
+`slurm_job` objects is **written once and never removed**, regardless of
+whether the facility has purchases. This means:
+
+| QoS | `purchase_satisfied` tuple | Behavior |
+|---|---|---|
+| `preemptable` | Always present (never deleted) | Always allowed if user has account access |
+| `normal` | Present only when facility has purchases | Denied when purchases expire |
+| `onshift` | Present only when facility has purchases | Denied when purchases expire |
+| `offshift` | Present only when facility has purchases | Denied when purchases expire |
+
+**Comparison of `milano` access for `member_dave`:**
+
+```
+slurm_job:slac:default|milano|preemptable → can_submit ✓  (purchase_satisfied always set)
+slurm_job:slac:default|milano|normal      → can_submit ✗  (no purchase_satisfied)
+slurm_job:slac:default|milano|onshift     → can_submit ✗  (no purchase_satisfied)
+slurm_job:slac:default|milano|offshift    → can_submit ✗  (no purchase_satisfied)
+```
+
+The user can still use `milano` — but their jobs may be preempted (killed) at
+any time to make room for jobs from facilities that have purchased nodes.
+
+---
+
+## 5. POSIX Group Membership via Feature
 
 **Question:** Is `member_dave` a member of POSIX group `slac_default_grp`?
 
@@ -216,7 +299,7 @@ ALLOWED ✓
 
 ---
 
-## 5. Net Group Membership via Feature
+## 6. Net Group Membership via Feature
 
 **Question:** Is `member_dave` a member of net group `slac_default_ng`?
 
@@ -225,7 +308,7 @@ ALLOWED ✓
 ```
 user:member_dave
   │
-  │  (same repo membership + feature chain as §4, but for netGroup feature)
+  │  (same repo membership + feature chain as §5, but for netGroup feature)
   ▼
 feature:slac/default/netGroup → can_use ✓
   │
@@ -237,12 +320,12 @@ net_group:slac_default_ng → group_member = can_use from feature ✓
 net_group:slac_default_ng → member = group_member or direct_member ✓
 ```
 
-The chain is structurally identical to §4 — only the feature name and target
+The chain is structurally identical to §5 — only the feature name and target
 type differ.
 
 ---
 
-## 6. Feature Toggle (Enable / Disable)
+## 7. Feature Toggle (Enable / Disable)
 
 **Question:** Can `leader_carol` enable or disable the Slurm feature on `repo:slac/default`?
 
@@ -279,7 +362,7 @@ immediately affected — no other tuples need to change.
 
 ---
 
-## 7. Repo Compute Allocation Edit
+## 8. Repo Compute Allocation Edit
 
 **Question:** Can `leader_carol` modify compute allocation `alloc_001`?
 
@@ -314,7 +397,7 @@ DENIED ✗
 
 ---
 
-## 8. Repo Storage Allocation Edit
+## 9. Repo Storage Allocation Edit
 
 **Question:** Can `czar_alice` modify storage allocation `storage_001`?
 
@@ -344,7 +427,7 @@ The czar never needs a direct tuple on the allocation.
 
 ---
 
-## 9. User Storage Allocation View
+## 10. User Storage Allocation View
 
 **Question:** Can `member_dave` view his own storage allocation?
 
@@ -389,7 +472,7 @@ DENIED ✗
 
 ---
 
-## 10. Request Approval
+## 11. Request Approval
 
 **Question:** Can `czar_alice` approve request `req_001`?
 
@@ -432,7 +515,7 @@ DENIED ✗
 
 ---
 
-## 11. Request Visibility
+## 12. Request Visibility
 
 **Question:** Can `member_dave` view request `req_001` that he submitted?
 
@@ -460,7 +543,7 @@ There are three paths to viewing a request:
 
 ---
 
-## 12. Facility Membership (Derived)
+## 13. Facility Membership (Derived)
 
 **Question:** Is `member_dave` a member of facility `slac`?
 
@@ -494,7 +577,7 @@ become a facility member through the derived `repo_member` relation.
 
 ---
 
-## 13. Access Group Edit
+## 14. Access Group Edit
 
 **Question:** Can `leader_carol` edit access group `slac/default/mygroup`?
 
@@ -516,7 +599,7 @@ access_group:slac/default/mygroup → can_edit = can_manage_access_groups from r
 
 ---
 
-## 14. Repo Rename
+## 15. Repo Rename
 
 **Question:** Can `leader_carol` rename repo `slac/default`?
 
@@ -549,7 +632,7 @@ leaders cannot do it. Only facility czars have this permission.
 
 ---
 
-## 15. Audit Trail Visibility
+## 16. Audit Trail Visibility
 
 **Question:** Can `czar_alice` view audit trails for facility `slac`?
 
@@ -579,149 +662,7 @@ DENIED ✗
 
 ---
 
-## 18. Non-Preemptable Job Submission (Facility Has Purchases)
-
-**Question:** Can `member_dave` submit a `normal` (non-preemptable) job to partition `roma` via account `slac:default`, given that facility `slac` has purchased nodes on cluster `roma`?
-
-**Check:** `user:member_dave` → `can_submit` → `slurm_job:slac:default|roma|normal`
-
-```
-user:member_dave
-  │
-  │  (§1 chain: user → repo → feature → slurm_account)
-  ▼
-slurm_account:slac:default → can_submit = account_member ✓
-  │
-  │  tuple: slurm_account:slac:default | account | slurm_job:slac:default|roma|normal
-  ▼
-slurm_job:slac:default|roma|normal → account_access = can_submit from account ✓
-  │
-  │  tuple: user:* | purchase_satisfied | slurm_job:slac:default|roma|normal
-  │  (written because facility slac has active compute purchases on cluster roma)
-  ▼
-slurm_job:slac:default|roma|normal → can_submit = account_access AND purchase_satisfied
-  │                                                       ✓              AND ✓
-  ▼
-ALLOWED ✓
-```
-
-**Required tuples (in addition to §1):**
-- `slurm_account:slac:default | account | slurm_job:slac:default|roma|normal`
-- `cluster:roma | partition | slurm_job:slac:default|roma|normal`
-- `slurm_qos:normal | qos | slurm_job:slac:default|roma|normal`
-- `user:* | purchase_satisfied | slurm_job:slac:default|roma|normal`
-
-**When to write `purchase_satisfied`:**
-This tuple should be written when a `FacilityComputeAllocation` or
-`facility_compute_purchases` record exists for this facility + cluster
-combination with a current time window (`start ≤ now < end`).
-
-**When to remove `purchase_satisfied`:**
-When the facility's compute purchases for this cluster expire or are deleted.
-This immediately blocks all non-preemptable job submissions for repos in that
-facility on that cluster.
-
----
-
-## 19. Non-Preemptable Job Denied (No Facility Purchases)
-
-**Question:** Can `member_dave` submit a `normal` job to partition `milano` via account `slac:default`, given that facility `slac` has **not** purchased nodes on cluster `milano`?
-
-**Check:** `user:member_dave` → `can_submit` → `slurm_job:slac:default|milano|normal`
-
-```
-user:member_dave
-  │
-  │  (§1 chain: user → repo → feature → slurm_account)
-  ▼
-slurm_account:slac:default → can_submit = account_member ✓
-  │
-  │  tuple: slurm_account:slac:default | account | slurm_job:slac:default|milano|normal
-  ▼
-slurm_job:slac:default|milano|normal → account_access = can_submit from account ✓
-  │
-  │  purchase_satisfied = ??? (NO tuple exists — facility has no purchases on milano)
-  │                        ✗
-  ▼
-slurm_job:slac:default|milano|normal → can_submit = account_access AND purchase_satisfied
-  │                                                         ✓             AND ✗
-  ▼
-DENIED ✗
-```
-
-**Key insight:** The user passes every check in the chain — they are a repo
-member, the Slurm feature is enabled, they have account access — but the final
-`AND purchase_satisfied` intersection fails because no one has purchased nodes
-on `milano` for this facility.
-
-**The user's options:**
-1. Submit as `preemptable` instead (see §20) — always allowed
-2. Ask the facility czar to purchase nodes on `milano`
-
-**What would fix it:**
-```
-fga tuple write user:* purchase_satisfied slurm_job:slac:default|milano|normal
-```
-
-This applies equally to `onshift` and `offshift` QoS levels — they also
-require purchases.
-
----
-
-## 20. Preemptable Job Always Allowed (No Purchases Needed)
-
-**Question:** Can `member_dave` submit a `preemptable` job to partition `milano` via account `slac:default`, even though the facility has no purchases on `milano`?
-
-**Check:** `user:member_dave` → `can_submit` → `slurm_job:slac:default|milano|preemptable`
-
-```
-user:member_dave
-  │
-  │  (§1 chain: user → repo → feature → slurm_account)
-  ▼
-slurm_account:slac:default → can_submit = account_member ✓
-  │
-  │  tuple: slurm_account:slac:default | account | slurm_job:slac:default|milano|preemptable
-  ▼
-slurm_job:slac:default|milano|preemptable → account_access = can_submit from account ✓
-  │
-  │  tuple: user:* | purchase_satisfied | slurm_job:slac:default|milano|preemptable
-  │  (gate is ALWAYS open for preemptable — this tuple is never removed)
-  ▼
-slurm_job:slac:default|milano|preemptable → can_submit = account_access AND purchase_satisfied
-  │                                                              ✓             AND ✓
-  ▼
-ALLOWED ✓
-```
-
-**Key insight:** Preemptable submissions use the exact same `can_submit`
-definition (`account_access AND purchase_satisfied`) as non-preemptable ones.
-The difference is operational: the `purchase_satisfied` tuple on preemptable
-`slurm_job` objects is **written once and never removed**, regardless of
-whether the facility has purchases. This means:
-
-| QoS | `purchase_satisfied` tuple | Behavior |
-|---|---|---|
-| `preemptable` | Always present (never deleted) | Always allowed if user has account access |
-| `normal` | Present only when facility has purchases | Denied when purchases expire |
-| `onshift` | Present only when facility has purchases | Denied when purchases expire |
-| `offshift` | Present only when facility has purchases | Denied when purchases expire |
-
-**Comparison of `milano` access for `member_dave`:**
-
-```
-slurm_job:slac:default|milano|preemptable → can_submit ✓  (purchase_satisfied always set)
-slurm_job:slac:default|milano|normal      → can_submit ✗  (no purchase_satisfied)
-slurm_job:slac:default|milano|onshift     → can_submit ✗  (no purchase_satisfied)
-slurm_job:slac:default|milano|offshift    → can_submit ✗  (no purchase_satisfied)
-```
-
-The user can still use `milano` — but their jobs may be preempted (killed) at
-any time to make room for jobs from facilities that have purchased nodes.
-
----
-
-## 16. Server Login via Net Group
+## 17. Server Login via Net Group
 
 **Question:** Can `member_dave` log in to server `sdf-login01`?
 
@@ -787,7 +728,7 @@ that repo, across every server in the fleet.
 
 ---
 
-## 17. Server Login Denied (Netgroup Not in access.conf)
+## 18. Server Login Denied (Netgroup Not in access.conf)
 
 **Question:** Can `member_dave` log in to server `sdf-gpu01` if its `access.conf` doesn't list his netgroup?
 
@@ -843,6 +784,9 @@ When debugging a denied check, look for these common causes:
 |---|---|
 | User can't submit Slurm jobs | Feature `enabled` tuple missing (feature disabled) |
 | User can't submit to a specific partition | `slurm_job` object missing or `partition` tuple not written |
+| User can submit preemptable but not normal jobs | `purchase_satisfied` tuple missing on the non-preemptable `slurm_job` object — facility has no compute purchases for that cluster |
+| User can submit normal jobs on one cluster but not another | Facility has purchases on one cluster but not the other — `purchase_satisfied` only set on the purchased cluster's `slurm_job` objects |
+| User lost non-preemptable access they previously had | Facility's compute purchases expired — `purchase_satisfied` tuples were removed |
 | User can't edit allocations | User is `user_member`, not `leader` or `principal` |
 | User can't approve requests | User is not a `czar` on the request's facility |
 | User can't rename a repo | User is not a facility `czar` (even principals can't rename) |
@@ -851,9 +795,6 @@ When debugging a denied check, look for these common causes:
 | POSIX/net group membership missing | Feature `enabled` tuple deleted, or user removed from repo |
 | User can't log in to a server | Netgroup not in server's `allowed_netgroup`, or netGroup feature disabled, or user not in repo |
 | User can log in to one server but not another | The netgroup is in one server's `access.conf` but not the other |
-| User can submit preemptable but not normal jobs | `purchase_satisfied` tuple missing on the non-preemptable `slurm_job` object — facility has no compute purchases for that cluster |
-| User can submit normal jobs on one cluster but not another | Facility has purchases on one cluster but not the other — `purchase_satisfied` only set on the purchased cluster's `slurm_job` objects |
-| User lost non-preemptable access they previously had | Facility's compute purchases expired — `purchase_satisfied` tuples were removed |
 
 ---
 
