@@ -1,0 +1,20 @@
+
+//
+// Test/development users used by the test suite and docker-compose.
+// "regular_user" is the unprivileged test user; "admin" is the admin test user.
+// ADMIN_USERNAMES in docker-compose.yml must include "admin" for the admin tests to pass.
+//
+db.getSiblingDB("iris").users.insertOne({
+  "username": "regular_user",
+  "uidnumber": 99001,
+  "eppns": [ "regular_user@example.com" ],
+  "shell": "/bin/bash",
+  "preferredemail": "regular_user@example.com"
+})
+db.getSiblingDB("iris").users.insertOne({
+  "username": "admin",
+  "uidnumber": 99002,
+  "eppns": [ "admin@example.com" ],
+  "shell": "/bin/bash",
+  "preferredemail": "admin@example.com"
+})

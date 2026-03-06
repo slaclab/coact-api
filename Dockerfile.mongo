@@ -1,0 +1,12 @@
+FROM mongo:8 AS prod
+
+COPY scripts/*.mongodb                 /docker-entrypoint-initdb.d/scripts/
+COPY scripts/*.mongo                   /docker-entrypoint-initdb.d/scripts/
+COPY scripts/migration/                /docker-entrypoint-initdb.d/scripts/migration/
+COPY scripts/docker-init-mongo.js      /docker-entrypoint-initdb.d/00-init.js
+
+# Dev stage extends prod and adds test-only seed data (e.g. generic test users).
+# Build with --target prod (or omit in CI/CD) to get the production image.
+FROM prod AS dev
+
+COPY scripts/dev/*.mongodb             /docker-entrypoint-initdb.d/scripts/

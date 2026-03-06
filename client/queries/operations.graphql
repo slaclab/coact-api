@@ -1,0 +1,361 @@
+# Generated these from all the queries found in the frontend
+
+query Whoami {
+  whoami {
+    Id
+    username
+    fullname
+    uidnumber
+    eppns
+    preferredemail
+    shell
+    publichtml
+    isbot
+    facilities
+    isAdmin
+    isCzar
+    subjectFacilities
+    isImpersonating
+    groups
+    earliestCompletedUserAccountRegistration
+  }
+}
+
+query AmIRegistered {
+  amIRegistered {
+    eppn
+    fullname
+    email
+    organization
+    isRegistered
+    isRegistrationPending
+    requestId
+    username
+  }
+}
+
+query Users($filter: UserInput) {
+  users(filter: $filter) {
+    Id
+    username
+    fullname
+    uidnumber
+    eppns
+    preferredemail
+    shell
+    publichtml
+    isbot
+    facilities
+    isAdmin
+    isCzar
+    subjectFacilities
+    isImpersonating
+    groups
+    earliestCompletedUserAccountRegistration
+  }
+}
+
+query GetUserForEppn($eppn: String!) {
+  getuserforeppn(eppn: $eppn) {
+    Id
+    username
+    fullname
+    uidnumber
+    eppns
+    preferredemail
+    shell
+    publichtml
+    isbot
+  }
+}
+
+query UsersMatchingUserName($regex: String!) {
+  usersMatchingUserName(regex: $regex) {
+    Id
+    username
+    fullname
+    uidnumber
+    preferredemail
+  }
+}
+
+query UsersMatchingUserNames($regexes: [String!]!) {
+  usersMatchingUserNames(regexes: $regexes) {
+    Id
+    username
+    fullname
+    uidnumber
+    preferredemail
+  }
+}
+
+query Clusters($filter: ClusterInput) {
+  clusters(filter: $filter) {
+    Id
+    name
+    nodecpucount
+    nodecpucountdivisor
+    nodegpucount
+    nodememgb
+    nodegpumemgb
+    chargefactor
+    nodecpusmt
+    members
+    memberprefixes
+  }
+}
+
+query Facilities($filter: FacilityInput) {
+  facilities(filter: $filter) {
+    Id
+    name
+    description
+    resources
+    serviceaccount
+    servicegroup
+    czars
+  }
+}
+
+query FacilityNameDescs {
+  facilityNameDescs {
+    name
+    description
+  }
+}
+
+query Facility($filter: FacilityInput) {
+  facility(filter: $filter) {
+    Id
+    name
+    description
+    resources
+    serviceaccount
+    servicegroup
+    czars
+  }
+}
+
+query FacilitiesIManage {
+  facilitiesIManage {
+    Id
+    name
+    description
+    resources
+    serviceaccount
+    servicegroup
+    czars
+  }
+}
+
+query RequestTypes {
+  requestTypes
+}
+
+query RequestStatuses {
+  requestStatuses
+}
+
+query Requests($fetchprocessed: Boolean, $showmine: Boolean, $filter: CoactRequestFilter) {
+  requests(fetchprocessed: $fetchprocessed, showmine: $showmine, filter: $filter) {
+    Id
+    reqtype
+    requestedby
+    timeofrequest
+    eppn
+    username
+    preferredUserName
+    reponame
+    facilityname
+    principal
+    start
+    end
+    clustername
+    chargefactor
+    storagename
+    computerequirement
+    purpose
+    rootfolder
+    allocationid
+    percentOfFacility
+    burstPercentOfFacility
+    allocated
+    burstAllocated
+    gigabytes
+    inodes
+    shell
+    previousName
+    publichtml
+    notes
+    dontsendemail
+    approvalstatus
+    canapprove
+    canrefire
+  }
+}
+
+query UsersLookupFromService($filter: UserInput!) {
+  usersLookupFromService(filter: $filter) {
+    Id
+    username
+    fullname
+    uidnumber
+    eppns
+    preferredemail
+    shell
+    publichtml
+    isbot
+  }
+}
+
+query Repos($filter: RepoInput) {
+  repos(filter: $filter) {
+    Id
+    state
+    name
+    facility
+    principal
+    leaders
+    users
+    computerequirement
+    group
+    description
+    currentComputeAllocations {
+      Id
+      clustername
+      allocated
+      burstAllocated
+      percentOfFacility
+      burstPercentOfFacility
+    }
+    currentStorageAllocations {
+      Id
+      storagename
+      purpose
+      rootfolder
+      gigabytes
+      inodes
+    }
+  }
+}
+
+query MyRepos {
+  myRepos {
+    Id
+    state
+    name
+    facility
+    principal
+    leaders
+    users
+    computerequirement
+    group
+    description
+  }
+}
+
+query AllReposAndFacility {
+  allreposandfacility {
+    name
+    facility
+  }
+}
+
+query MyReposAndFacility {
+  myreposandfacility {
+    name
+    facility
+  }
+}
+
+query UserAuditTrails {
+  userAuditTrails {
+    Id
+    type
+    actedon
+    action
+    actedby
+    actedat
+    details
+  }
+}
+
+query RepoAuditTrails($repo: RepoInput!) {
+  repoAuditTrails(repo: $repo) {
+    Id
+    type
+    actedon
+    action
+    actedby
+    actedat
+    details
+  }
+}
+
+query ReportFacilityComputeByDay($clustername: String!, $range: ReportRangeInput!, $group: String!) {
+  reportFacilityComputeByDay(clustername: $clustername, range: $range, group: $group) {
+    facility
+    repo
+    date
+    resourceHours
+  }
+}
+
+query ReportFacilityComputeByUser($clustername: String!, $range: ReportRangeInput!) {
+  reportFacilityComputeByUser(clustername: $clustername, range: $range) {
+    facility
+    repo
+    username
+    resourceHours
+  }
+}
+
+query ReportFacilityComputeOverall($clustername: String!, $group: String!) {
+  reportFacilityComputeOverall(clustername: $clustername, group: $group) {
+    facility
+    date
+    resourceHours
+  }
+}
+
+query ReportFacilityStorage($storagename: String!, $purpose: String) {
+  reportFacilityStorage(storagename: $storagename, purpose: $purpose) {
+    facility
+    repo
+    storagename
+    purpose
+    gigabytes
+    inodes
+  }
+}
+
+query RepoComputeJobs($rca: RepoComputeAllocationInput!, $pastXMins: Int!) {
+  repoComputeJobs(rca: $rca, pastXMins: $pastXMins) {
+    jobId
+    username
+    allocationId
+    qos
+    startTs
+    endTs
+    resourceHours
+    durationMillis
+    normalizedResourceHours
+  }
+}
+
+query RepoFeatures($repo: String!, $facility: String!) {
+  repo(filter: { name: $repo, facility: $facility }) {
+    name
+    facility
+    features {
+      name
+      state
+      options
+    }
+  }
+  whoami {
+    username
+    isAdmin
+    isCzar
+  }
+}
