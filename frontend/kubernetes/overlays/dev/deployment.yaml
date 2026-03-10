@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coact-ui
+  labels:
+    app: coact-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: coact-ui
+  template:
+    metadata:
+      labels:
+        app: coact-ui
+    spec:
+      containers:
+      - name: coact-ui
+        image: slaclab/coact-ui:latest
+        #command: [ "bash", "-c", "sleep infinity" ]
+        command: [ "npm", "start", "--host=0.0.0.0" ]
+        #command: [ "npm", "run", "dev" ]
+        env:
+        - name: REACT_APP_COACT_GRAPHQL_URI
+          value: https://coact-dev.slac.stanford.edu/graphql
+        - name: WDS_SOCKET_PORT
+          value: '443'
+        volumeMounts:
+        - name: code
+          mountPath: /app/src/
+          subPath: src
+        - name: code
+          mountPath: /app/public/
+          subPath: public
+      volumes:
+      - name: code
+        persistentVolumeClaim:
+          claimName: coact-ui-code
