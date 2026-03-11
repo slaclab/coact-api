@@ -45,7 +45,6 @@ model: |
       define principal: [user]
       define leader: [user]
       define member: [user]
-      
       # this encompasses managing:
       # 1. users (adding/removing members, approving RepoMembership requests)
       # 2. roles (assigning/removing leaders)
