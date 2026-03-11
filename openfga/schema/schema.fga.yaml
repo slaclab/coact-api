@@ -1,0 +1,255 @@
+name: coact-authorization-model
+
+model: |
+  model
+    schema 1.1
+
+  type user
+
+  type system
+    relations
+      define admin: [user]
+
+  type facility
+    relations
+      define parent_system: [system]
+      define czar: [user]
+      define member: [user]
+      define serviceaccount: [user]
+
+      # admin-only operations (czars cannot do these):
+      # 1. users (direct upsert, bypasses request flow — userUpsert)
+      # 2. repos (direct create/upsert, bypasses request flow — repoCreate, repoUpsert, repoAppendMember)
+      # 3. requests (raw creation, bypasses request flow — requestCreate)
+      # 4. features (add/remove/update repo features)
+      # 5. facility purchases (compute and storage budgets)
+      # 6. data imports (jobs, storage usage)
+      # 7. notifications (notificationSend)
+      # 8. admin queries (requestsExistingForEPPN/User/Repo, reportFacilityComputeOverall)
+      define admin: admin from parent_system
+
+      # this encompasses managing:
+      # 1. requests (approve, reject, complete, incomplete, refire, reopen, update facility)
+      # 2. repos (update, rename, change principal, change compute requirement, manage allocations)
+      # 3. users (user storage allocation upsert)
+      # 4. czars (assigning/removing czars within this facility)
+      # 5. facility metadata (description updates)
+      # 6. audit trail (auditTrailAdd)
+      define can_manage: czar or admin
+      define can_view: member or can_manage
+      
+  type repo
+    relations
+      # roles
+      define facility: [facility]
+      define principal: [user]
+      define leader: [user]
+      define member: [user]
+      
+      # this encompasses managing:
+      # 1. users (adding/removing members, approving RepoMembership requests)
+      # 2. roles (assigning/removing leaders)
+      # 3. access groups (managing repo access groups)
+      define can_manage: leader or principal or can_manage from facility
+      define can_view: member or can_manage
+
+tuples:
+
+    # System level
+    - user: user:yee
+      relation: admin
+      object: system:coact
+
+    # facility:lcls — czar, member, serviceaccount
+    - user: system:coact
+      relation: parent_system
+      object: facility:lcls
+    - user: user:wilko
+      relation: czar
+      object: facility:lcls
+    - user: user:eve
+      relation: member
+      object: facility:lcls
+    - user: user:dave
+      relation: serviceaccount
+      object: facility:lcls
+
+    # facility:rubin — no czar assigned (used for isolation tests)
+    - user: system:coact
+      relation: parent_system
+      object: facility:rubin
+
+    # repo:lcls-project-1 — principal, leader, member
+    - user: facility:lcls
+      relation: facility
+      object: repo:lcls-project-1
+    - user: user:bob
+      relation: principal
+      object: repo:lcls-project-1
+    - user: user:carol
+      relation: leader
+      object: repo:lcls-project-1
+    - user: user:alice
+      relation: member
+      object: repo:lcls-project-1
+
+    # repo:lcls-project-2 — separate repo in the same facility (isolation tests)
+    - user: facility:lcls
+      relation: facility
+      object: repo:lcls-project-2
+    - user: user:frank
+      relation: principal
+      object: repo:lcls-project-2
+
+
+
+tests:
+
+  - name: System admin (yee) can manage all facilities and repos
+    check:
+      - user: user:yee
+        object: facility:lcls
+        assertions:
+          admin: true         # inherits via system:coact → parent_system
+          can_manage: true
+          can_view: true
+      - user: user:yee
+        object: repo:lcls-project-1
+        assertions:
+          principal: false
+          leader: false
+          member: false
+          can_manage: true    # flows in via can_manage from facility
+          can_view: true
+      - user: user:yee
+        object: facility:rubin
+        assertions:
+          admin: true         # system admin spans all facilities
+          can_manage: true
+
+  - name: Facility czar (wilko) can manage their facility and all repos in it
+    check:
+      - user: user:wilko
+        object: facility:lcls
+        assertions:
+          czar: true
+          admin: false
+          can_manage: true
+          can_view: true
+      - user: user:wilko
+        object: repo:lcls-project-1
+        assertions:
+          principal: false
+          leader: false
+          member: false
+          can_manage: true    # flows in via can_manage from facility
+          can_view: true
+      - user: user:wilko
+        object: repo:lcls-project-2
+        assertions:
+          can_manage: true    # czar manages all repos in their facility
+
+  - name: Repo principal (bob) can manage their repo but not the facility
+    check:
+      - user: user:bob
+        object: repo:lcls-project-1
+        assertions:
+          principal: true
+          leader: false
+          member: false
+          can_manage: true
+          can_view: true
+      - user: user:bob
+        object: facility:lcls
+        assertions:
+          czar: false
+          can_manage: false    # principal does not get facility authority
+          can_view: false
+      - user: user:bob         # isolation: cannot manage a different repo
+        object: repo:lcls-project-2
+        assertions:
+          principal: false
+          can_manage: false
+          can_view: false
+
+  - name: Repo leader (carol) can manage their repo but not the facility
+    check:
+      - user: user:carol
+        object: repo:lcls-project-1
+        assertions:
+          leader: true
+          principal: false
+          member: false
+          can_manage: true
+          can_view: true
+      - user: user:carol
+        object: facility:lcls
+        assertions:
+          czar: false
+          can_manage: false   # leader does not get facility authority
+          can_view: false
+      - user: user:carol       # isolation: cannot manage a different repo
+        object: repo:lcls-project-2
+        assertions:
+          leader: false
+          can_manage: false
+          can_view: false
+
+  - name: Repo member (alice) can only view their repo
+    check:
+      - user: user:alice
+        object: repo:lcls-project-1
+        assertions:
+          member: true
+          principal: false
+          leader: false
+          can_manage: false
+          can_view: true
+      - user: user:alice
+        object: facility:lcls
+        assertions:
+          can_manage: false
+          can_view: false      # repo membership does not grant facility view
+      - user: user:alice       # isolation: no access to another repo
+        object: repo:lcls-project-2
+        assertions:
+          member: false
+          can_view: false
+
+  - name: Facility member (eve) can view the facility but not manage it
+    check:
+      - user: user:eve
+        object: facility:lcls
+        assertions:
+          member: true
+          czar: false
+          can_manage: false
+          can_view: true
+      - user: user:eve         # facility membership does not grant repo access
+        object: repo:lcls-project-1
+        assertions:
+          can_manage: false
+          can_view: false
+
+  - name: Service account (dave) has no implicit permissions
+    check:
+      - user: user:dave
+        object: facility:lcls
+        assertions:
+          serviceaccount: true
+          can_manage: false
+          can_view: false     # serviceaccount is not wired into can_view
+      - user: user:dave
+        object: repo:lcls-project-1
+        assertions:
+          can_manage: false
+          can_view: false
+
+  - name: Facility czar isolation (wilko has no access to facility:rubin)
+    check:
+      - user: user:wilko
+        object: facility:rubin
+        assertions:
+          czar: false
+          can_manage: false
+          can_view: false
