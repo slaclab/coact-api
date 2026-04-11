@@ -236,6 +236,13 @@ query Repos($filter: RepoInput) {
       gigabytes
       inodes
     }
+    accessGroupObjs {
+      Id
+      name
+      members
+      gidnumber
+      state
+    }
   }
 }
 
@@ -359,3 +366,372 @@ query RepoFeatures($repo: String!, $facility: String!) {
     isCzar
   }
 }
+
+# query RepoStorageDetail($reposinput: RepoInput!, $allocationid: MongoId!, $datayear: Int!) {
+#   repo(filter: $reposinput) {
+#     name
+#     facility
+#     storageAllocation(allocationid: $allocationid) {
+#       Id
+#       storagename
+#       purpose
+#       start
+#       end
+#       gigabytes
+#       usage {
+#         gigabytes
+#       }
+#       perDateUsage(year: $datayear) {
+#         date
+#         gigabytes
+#       }
+#     }
+#   }
+# }
+
+# query RepoComputeDetail($reposinput: RepoInput, $allocationid: MongoId!) {
+#   repos(filter: $reposinput) {
+#     name
+#     facility
+#     users
+#     facilityObj {
+#       name
+#       computepurchases {
+#         purchased
+#         clustername
+#       }
+#     }
+#     computeAllocation(allocationid: $allocationid) {
+#       clustername
+#       start
+#       end
+#       percentOfFacility
+#       userAllocations {
+#         username
+#         percent
+#       }
+#       usage {
+#         resourceHours
+#       }
+#       perDateUsage {
+#         date
+#         resourceHours
+#       }
+#       perUserUsage {
+#         username
+#         resourceHours
+#       }
+#     }
+#   }
+#   clusters {
+#     name
+#     nodecpucount
+#     nodecpucountdivisor
+#     chargefactor
+#   }
+#   whoami {
+#     username
+#     isAdmin
+#     isCzar
+#   }
+# }
+
+# query MyReposComputeView($skipQoses: [String!]!) {
+#   myRepos {
+#     Id
+#     name
+#     facility
+#     principal
+#     currentComputeAllocations {
+#       Id
+#       clustername
+#       clusterNodeCPUCount
+#       start
+#       end
+#       percentOfFacility
+#       allocated
+#       burstPercentOfFacility
+#       burstAllocated
+#       usage {
+#         resourceHours
+#       }
+#     }
+#   }
+#   whoami {
+#     username
+#     isAdmin
+#     isCzar
+#   }
+#   facilities {
+#     name
+#     computepurchases {
+#       purchased
+#       clustername
+#     }
+#   }
+#   clusters {
+#     name
+#     nodecpucount
+#   }
+#   clusterPurchases {
+#     clustername
+#     totalpurchased
+#   }
+#   pastHour: repoRecentComputeUsage(pastMinutes: 60, skipQoses: $skipQoses) {
+#     name
+#     clustername
+#     facility
+#     percentUsed
+#     resourceHours
+#   }
+#   pastDay: repoRecentComputeUsage(pastMinutes: 1440, skipQoses: $skipQoses) {
+#     name
+#     clustername
+#     facility
+#     percentUsed
+#     resourceHours
+#   }
+#   pastWeek: repoRecentComputeUsage(pastMinutes: 10080, skipQoses: $skipQoses) {
+#     name
+#     clustername
+#     facility
+#     percentUsed
+#     resourceHours
+#   }
+#   pastMonth: repoRecentComputeUsage(pastMinutes: 44640, skipQoses: $skipQoses) {
+#     name
+#     clustername
+#     facility
+#     percentUsed
+#     resourceHours
+#   }
+# }
+
+# query FacilityDetail($facilityinput: FacilityInput, $facilityname: String!, $ytdrange: ReportRangeInput!, $lastyearrange: ReportRangeInput!, $monthrange: ReportRangeInput!) {
+#   facility(filter: $facilityinput) {
+#     name
+#     description
+#     czars
+#     serviceaccount
+#     servicegroup
+#     computepurchases {
+#       clustername
+#       purchased
+#       burstPercent
+#       allocated
+#     }
+#     storagepurchases {
+#       storagename
+#       purpose
+#       purchased
+#       allocated
+#       used
+#     }
+#   }
+#   pastHour: facilityRecentComputeUsage(pastMinutes: 60, skipQoses: "preemptable") {
+#     clustername
+#     facility
+#     percentUsed
+#     resourceHours
+#   }
+#   pastDay: facilityRecentComputeUsage(pastMinutes: 1440, skipQoses: "preemptable") {
+#     clustername
+#     facility
+#     percentUsed
+#     resourceHours
+#   }
+#   pastWeek: facilityRecentComputeUsage(pastMinutes: 10080, skipQoses: "preemptable") {
+#     clustername
+#     facility
+#     percentUsed
+#     resourceHours
+#   }
+#   pastMonth: reportFacilityComputeUsageByCluster(facility: $facilityname, range: $monthrange) {
+#     clustername
+#     availableResourceHours
+#     nodecpucount
+#     percentUsed
+#     purchased
+#     usedResourceHours
+#   }
+#   ytd: reportFacilityComputeUsageByCluster(facility: $facilityname, range: $ytdrange) {
+#     clustername
+#     availableResourceHours
+#     nodecpucount
+#     percentUsed
+#     purchased
+#     usedResourceHours
+#   }
+#   lastyear: reportFacilityComputeUsageByCluster(facility: $facilityname, range: $lastyearrange) {
+#     clustername
+#     availableResourceHours
+#     nodecpucount
+#     percentUsed
+#     purchased
+#     usedResourceHours
+#   }
+#   whoami {
+#     username
+#     isAdmin
+#   }
+#   clusters {
+#     name
+#     nodecpucount
+#     nodecpucountdivisor
+#     chargefactor
+#   }
+#   storagenames
+#   storagepurposes
+# }
+
+# query RepoAuditDetail($repo: String!, $facility: String!) {
+#   repoAuditTrails(repo: { name: $repo, facility: $facility }) {
+#     Id
+#     type
+#     action
+#     actedby
+#     actedat
+#     details
+#   }
+#   requests(fetchprocessed: true, showmine: false, filter: { reponame: $repo }) {
+#     Id
+#     reqtype
+#     requestedby
+#     timeofrequest
+#     approvalstatus
+#     username
+#     notes
+#     audit {
+#       actedby
+#       actedat
+#       notes
+#       previous
+#     }
+#   }
+#   whoami {
+#     username
+#   }
+# }
+
+# query FacilityNamesWithRegistration {
+#   facilityNameDescs {
+#     name
+#     description
+#   }
+#   amIRegistered {
+#     isRegistered
+#     isRegistrationPending
+#     eppn
+#     username
+#     fullname
+#     requestObj {
+#       Id
+#       approvalstatus
+#       preferredUserName
+#       eppn
+#       facilityname
+#       notes
+#       audit {
+#         notes
+#       }
+#     }
+#   }
+# }
+
+# query RepoGroupsDetail($reposinput: RepoInput) {
+#   repos(filter: $reposinput) {
+#     Id
+#     name
+#     facility
+#     principal
+#     leaders
+#     allUsers {
+#       username
+#     }
+#     accessGroupObjs {
+#       name
+#       gidnumber
+#       memberObjs {
+#         username
+#       }
+#     }
+#   }
+#   whoami {
+#     username
+#   }
+# }
+
+# query RepoUsersDetail($reposinput: RepoInput) {
+#   repos(filter: $reposinput) {
+#     name
+#     facility
+#     facilityObj {
+#       czars
+#     }
+#     principal
+#     leaders
+#     users
+#     allUsers {
+#       Id
+#       username
+#       uidnumber
+#       preferredemail
+#       fullname
+#       eppnObjs {
+#         eppn
+#         fullname
+#         organization
+#       }
+#     }
+#   }
+#   whoami {
+#     username
+#   }
+# }
+
+# query RequestsView($fetchprocessed: Boolean, $showmine: Boolean, $filter: CoactRequestFilter) {
+#   requests(fetchprocessed: $fetchprocessed, showmine: $showmine, filter: $filter) {
+#     Id
+#     reqtype
+#     requestedby
+#     timeofrequest
+#     eppn
+#     username
+#     preferredUserName
+#     reponame
+#     facilityname
+#     principal
+#     allocationid
+#     clustername
+#     storagename
+#     previousName
+#     purpose
+#     percentOfFacility
+#     allocated
+#     gigabytes
+#     start
+#     end
+#     shell
+#     publichtml
+#     computerequirement
+#     approvalstatus
+#     canapprove
+#     canrefire
+#     notes
+#     audit {
+#       actedat
+#       actedby
+#       notes
+#       previous
+#     }
+#   }
+#   myreposandfacility {
+#     name
+#     facility
+#   }
+#   facilities {
+#     name
+#   }
+#   requestTypes
+#   requestStatuses
+# }

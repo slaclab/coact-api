@@ -1,0 +1,258 @@
+{
+  "schema_version": "1.1",
+  "type_definitions": [
+    {
+      "type": "user"
+    },
+    {
+      "metadata": {
+        "relations": {
+          "global_admin": {
+            "directly_related_user_types": [
+              {
+                "type": "user"
+              }
+            ]
+          }
+        }
+      },
+      "relations": {
+        "global_admin": {
+          "this": {}
+        }
+      },
+      "type": "system"
+    },
+    {
+      "metadata": {
+        "relations": {
+          "can_approve_requests": {},
+          "can_view_facility": {},
+          "czar": {
+            "directly_related_user_types": [
+              {
+                "type": "user"
+              }
+            ]
+          },
+          "global_admin": {},
+          "member": {
+            "directly_related_user_types": [
+              {
+                "type": "user"
+              }
+            ]
+          },
+          "parent_system": {
+            "directly_related_user_types": [
+              {
+                "type": "system"
+              }
+            ]
+          }
+        }
+      },
+      "relations": {
+        "can_approve_requests": {
+          "computedUserset": {
+            "relation": "czar"
+          }
+        },
+        "can_view_facility": {
+          "computedUserset": {
+            "relation": "member"
+          }
+        },
+        "czar": {
+          "union": {
+            "child": [
+              {
+                "this": {}
+              },
+              {
+                "computedUserset": {
+                  "relation": "global_admin"
+                }
+              }
+            ]
+          }
+        },
+        "global_admin": {
+          "tupleToUserset": {
+            "computedUserset": {
+              "relation": "global_admin"
+            },
+            "tupleset": {
+              "relation": "parent_system"
+            }
+          }
+        },
+        "member": {
+          "union": {
+            "child": [
+              {
+                "this": {}
+              },
+              {
+                "computedUserset": {
+                  "relation": "czar"
+                }
+              }
+            ]
+          }
+        },
+        "parent_system": {
+          "this": {}
+        }
+      },
+      "type": "facility"
+    },
+    {
+      "metadata": {
+        "relations": {
+          "can_manage": {},
+          "can_manage_allocations": {},
+          "can_submit_jobs": {},
+          "parent_facility": {
+            "directly_related_user_types": [
+              {
+                "type": "facility"
+              }
+            ]
+          },
+          "repo_admin": {
+            "directly_related_user_types": [
+              {
+                "type": "user"
+              }
+            ]
+          },
+          "repo_member": {
+            "directly_related_user_types": [
+              {
+                "type": "user"
+              }
+            ]
+          }
+        }
+      },
+      "relations": {
+        "can_manage": {
+          "computedUserset": {
+            "relation": "repo_admin"
+          }
+        },
+        "can_manage_allocations": {
+          "computedUserset": {
+            "relation": "repo_admin"
+          }
+        },
+        "can_submit_jobs": {
+          "computedUserset": {
+            "relation": "repo_member"
+          }
+        },
+        "parent_facility": {
+          "this": {}
+        },
+        "repo_admin": {
+          "union": {
+            "child": [
+              {
+                "this": {}
+              },
+              {
+                "tupleToUserset": {
+                  "computedUserset": {
+                    "relation": "czar"
+                  },
+                  "tupleset": {
+                    "relation": "parent_facility"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "repo_member": {
+          "union": {
+            "child": [
+              {
+                "this": {}
+              },
+              {
+                "computedUserset": {
+                  "relation": "repo_admin"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "type": "repo"
+    },
+    {
+      "metadata": {
+        "relations": {
+          "can_access_experiment": {},
+          "can_manage_membership": {},
+          "group_admin": {},
+          "member": {
+            "directly_related_user_types": [
+              {
+                "type": "user"
+              }
+            ]
+          },
+          "parent_repo": {
+            "directly_related_user_types": [
+              {
+                "type": "repo"
+              }
+            ]
+          }
+        }
+      },
+      "relations": {
+        "can_access_experiment": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "member"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "group_admin"
+                }
+              }
+            ]
+          }
+        },
+        "can_manage_membership": {
+          "computedUserset": {
+            "relation": "group_admin"
+          }
+        },
+        "group_admin": {
+          "tupleToUserset": {
+            "computedUserset": {
+              "relation": "can_manage"
+            },
+            "tupleset": {
+              "relation": "parent_repo"
+            }
+          }
+        },
+        "member": {
+          "this": {}
+        },
+        "parent_repo": {
+          "this": {}
+        }
+      },
+      "type": "posix_group"
+    }
+  ]
+}

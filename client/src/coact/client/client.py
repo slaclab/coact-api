@@ -11,7 +11,9 @@ from .clusters import Clusters
 from .facilities import Facilities
 from .facilities_i_manage import FacilitiesIManage
 from .facility import Facility
+from .facility_detail import FacilityDetail
 from .facility_name_descs import FacilityNameDescs
+from .facility_names_with_registration import FacilityNamesWithRegistration
 from .get_user_for_eppn import GetUserForEppn
 from .input_types import (
     ClusterInput,
@@ -24,9 +26,15 @@ from .input_types import (
 )
 from .my_repos import MyRepos
 from .my_repos_and_facility import MyReposAndFacility
+from .my_repos_compute_view import MyReposComputeView
+from .repo_audit_detail import RepoAuditDetail
 from .repo_audit_trails import RepoAuditTrails
+from .repo_compute_detail import RepoComputeDetail
 from .repo_compute_jobs import RepoComputeJobs
 from .repo_features import RepoFeatures
+from .repo_groups_detail import RepoGroupsDetail
+from .repo_storage_detail import RepoStorageDetail
+from .repo_users_detail import RepoUsersDetail
 from .report_facility_compute_by_day import ReportFacilityComputeByDay
 from .report_facility_compute_by_user import ReportFacilityComputeByUser
 from .report_facility_compute_overall import ReportFacilityComputeOverall
@@ -35,6 +43,7 @@ from .repos import Repos
 from .request_statuses import RequestStatuses
 from .request_types import RequestTypes
 from .requests import Requests
+from .requests_view import RequestsView
 from .user_audit_trails import UserAuditTrails
 from .users import Users
 from .users_lookup_from_service import UsersLookupFromService
@@ -462,6 +471,13 @@ class CoactClient(AsyncBaseClient):
                   gigabytes
                   inodes
                 }
+                accessGroupObjs {
+                  Id
+                  name
+                  members
+                  gidnumber
+                  state
+                }
               }
             }
             """)
@@ -734,3 +750,528 @@ class CoactClient(AsyncBaseClient):
         )
         data = self.get_data(response)
         return RepoFeatures.model_validate(data)
+
+    async def repo_storage_detail(
+        self, reposinput: RepoInput, allocationid: Any, datayear: int, **kwargs: Any
+    ) -> RepoStorageDetail:
+        query = gql("""
+            query RepoStorageDetail($reposinput: RepoInput!, $allocationid: MongoId!, $datayear: Int!) {
+              repo(filter: $reposinput) {
+                name
+                facility
+                storageAllocation(allocationid: $allocationid) {
+                  Id
+                  storagename
+                  purpose
+                  start
+                  end
+                  gigabytes
+                  usage {
+                    gigabytes
+                  }
+                  perDateUsage(year: $datayear) {
+                    date
+                    gigabytes
+                  }
+                }
+              }
+            }
+            """)
+        variables: dict[str, object] = {
+            "reposinput": reposinput,
+            "allocationid": allocationid,
+            "datayear": datayear,
+        }
+        response = await self.execute(
+            query=query,
+            operation_name="RepoStorageDetail",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return RepoStorageDetail.model_validate(data)
+
+    async def repo_compute_detail(
+        self,
+        allocationid: Any,
+        reposinput: Union[Optional[RepoInput], UnsetType] = UNSET,
+        **kwargs: Any
+    ) -> RepoComputeDetail:
+        query = gql("""
+            query RepoComputeDetail($reposinput: RepoInput, $allocationid: MongoId!) {
+              repos(filter: $reposinput) {
+                name
+                facility
+                users
+                facilityObj {
+                  name
+                  computepurchases {
+                    purchased
+                    clustername
+                  }
+                }
+                computeAllocation(allocationid: $allocationid) {
+                  clustername
+                  start
+                  end
+                  percentOfFacility
+                  userAllocations {
+                    username
+                    percent
+                  }
+                  usage {
+                    resourceHours
+                  }
+                  perDateUsage {
+                    date
+                    resourceHours
+                  }
+                  perUserUsage {
+                    username
+                    resourceHours
+                  }
+                }
+              }
+              clusters {
+                name
+                nodecpucount
+                nodecpucountdivisor
+                chargefactor
+              }
+              whoami {
+                username
+                isAdmin
+                isCzar
+              }
+            }
+            """)
+        variables: dict[str, object] = {
+            "reposinput": reposinput,
+            "allocationid": allocationid,
+        }
+        response = await self.execute(
+            query=query,
+            operation_name="RepoComputeDetail",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return RepoComputeDetail.model_validate(data)
+
+    async def my_repos_compute_view(
+        self, skip_qoses: list[str], **kwargs: Any
+    ) -> MyReposComputeView:
+        query = gql("""
+            query MyReposComputeView($skipQoses: [String!]!) {
+              myRepos {
+                Id
+                name
+                facility
+                principal
+                currentComputeAllocations {
+                  Id
+                  clustername
+                  clusterNodeCPUCount
+                  start
+                  end
+                  percentOfFacility
+                  allocated
+                  burstPercentOfFacility
+                  burstAllocated
+                  usage {
+                    resourceHours
+                  }
+                }
+              }
+              whoami {
+                username
+                isAdmin
+                isCzar
+              }
+              facilities {
+                name
+                computepurchases {
+                  purchased
+                  clustername
+                }
+              }
+              clusters {
+                name
+                nodecpucount
+              }
+              clusterPurchases {
+                clustername
+                totalpurchased
+              }
+              pastHour: repoRecentComputeUsage(pastMinutes: 60, skipQoses: $skipQoses) {
+                name
+                clustername
+                facility
+                percentUsed
+                resourceHours
+              }
+              pastDay: repoRecentComputeUsage(pastMinutes: 1440, skipQoses: $skipQoses) {
+                name
+                clustername
+                facility
+                percentUsed
+                resourceHours
+              }
+              pastWeek: repoRecentComputeUsage(pastMinutes: 10080, skipQoses: $skipQoses) {
+                name
+                clustername
+                facility
+                percentUsed
+                resourceHours
+              }
+              pastMonth: repoRecentComputeUsage(pastMinutes: 44640, skipQoses: $skipQoses) {
+                name
+                clustername
+                facility
+                percentUsed
+                resourceHours
+              }
+            }
+            """)
+        variables: dict[str, object] = {"skipQoses": skip_qoses}
+        response = await self.execute(
+            query=query,
+            operation_name="MyReposComputeView",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return MyReposComputeView.model_validate(data)
+
+    async def facility_detail(
+        self,
+        facilityname: str,
+        ytdrange: ReportRangeInput,
+        lastyearrange: ReportRangeInput,
+        monthrange: ReportRangeInput,
+        facilityinput: Union[Optional[FacilityInput], UnsetType] = UNSET,
+        **kwargs: Any
+    ) -> FacilityDetail:
+        query = gql("""
+            query FacilityDetail($facilityinput: FacilityInput, $facilityname: String!, $ytdrange: ReportRangeInput!, $lastyearrange: ReportRangeInput!, $monthrange: ReportRangeInput!) {
+              facility(filter: $facilityinput) {
+                name
+                description
+                czars
+                serviceaccount
+                servicegroup
+                computepurchases {
+                  clustername
+                  purchased
+                  burstPercent
+                  allocated
+                }
+                storagepurchases {
+                  storagename
+                  purpose
+                  purchased
+                  allocated
+                  used
+                }
+              }
+              pastHour: facilityRecentComputeUsage(pastMinutes: 60, skipQoses: "preemptable") {
+                clustername
+                facility
+                percentUsed
+                resourceHours
+              }
+              pastDay: facilityRecentComputeUsage(pastMinutes: 1440, skipQoses: "preemptable") {
+                clustername
+                facility
+                percentUsed
+                resourceHours
+              }
+              pastWeek: facilityRecentComputeUsage(
+                pastMinutes: 10080
+                skipQoses: "preemptable"
+              ) {
+                clustername
+                facility
+                percentUsed
+                resourceHours
+              }
+              pastMonth: reportFacilityComputeUsageByCluster(
+                facility: $facilityname
+                range: $monthrange
+              ) {
+                clustername
+                availableResourceHours
+                nodecpucount
+                percentUsed
+                purchased
+                usedResourceHours
+              }
+              ytd: reportFacilityComputeUsageByCluster(
+                facility: $facilityname
+                range: $ytdrange
+              ) {
+                clustername
+                availableResourceHours
+                nodecpucount
+                percentUsed
+                purchased
+                usedResourceHours
+              }
+              lastyear: reportFacilityComputeUsageByCluster(
+                facility: $facilityname
+                range: $lastyearrange
+              ) {
+                clustername
+                availableResourceHours
+                nodecpucount
+                percentUsed
+                purchased
+                usedResourceHours
+              }
+              whoami {
+                username
+                isAdmin
+              }
+              clusters {
+                name
+                nodecpucount
+                nodecpucountdivisor
+                chargefactor
+              }
+              storagenames
+              storagepurposes
+            }
+            """)
+        variables: dict[str, object] = {
+            "facilityinput": facilityinput,
+            "facilityname": facilityname,
+            "ytdrange": ytdrange,
+            "lastyearrange": lastyearrange,
+            "monthrange": monthrange,
+        }
+        response = await self.execute(
+            query=query, operation_name="FacilityDetail", variables=variables, **kwargs
+        )
+        data = self.get_data(response)
+        return FacilityDetail.model_validate(data)
+
+    async def repo_audit_detail(
+        self, repo: str, facility: str, **kwargs: Any
+    ) -> RepoAuditDetail:
+        query = gql("""
+            query RepoAuditDetail($repo: String!, $facility: String!) {
+              repoAuditTrails(repo: {name: $repo, facility: $facility}) {
+                Id
+                type
+                action
+                actedby
+                actedat
+                details
+              }
+              requests(fetchprocessed: true, showmine: false, filter: {reponame: $repo}) {
+                Id
+                reqtype
+                requestedby
+                timeofrequest
+                approvalstatus
+                username
+                notes
+                audit {
+                  actedby
+                  actedat
+                  notes
+                  previous
+                }
+              }
+              whoami {
+                username
+              }
+            }
+            """)
+        variables: dict[str, object] = {"repo": repo, "facility": facility}
+        response = await self.execute(
+            query=query, operation_name="RepoAuditDetail", variables=variables, **kwargs
+        )
+        data = self.get_data(response)
+        return RepoAuditDetail.model_validate(data)
+
+    async def facility_names_with_registration(
+        self, **kwargs: Any
+    ) -> FacilityNamesWithRegistration:
+        query = gql("""
+            query FacilityNamesWithRegistration {
+              facilityNameDescs {
+                name
+                description
+              }
+              amIRegistered {
+                isRegistered
+                isRegistrationPending
+                eppn
+                username
+                fullname
+                requestObj {
+                  Id
+                  approvalstatus
+                  preferredUserName
+                  eppn
+                  facilityname
+                  notes
+                  audit {
+                    notes
+                  }
+                }
+              }
+            }
+            """)
+        variables: dict[str, object] = {}
+        response = await self.execute(
+            query=query,
+            operation_name="FacilityNamesWithRegistration",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return FacilityNamesWithRegistration.model_validate(data)
+
+    async def repo_groups_detail(
+        self, reposinput: Union[Optional[RepoInput], UnsetType] = UNSET, **kwargs: Any
+    ) -> RepoGroupsDetail:
+        query = gql("""
+            query RepoGroupsDetail($reposinput: RepoInput) {
+              repos(filter: $reposinput) {
+                Id
+                name
+                facility
+                principal
+                leaders
+                allUsers {
+                  username
+                }
+                accessGroupObjs {
+                  name
+                  gidnumber
+                  memberObjs {
+                    username
+                  }
+                }
+              }
+              whoami {
+                username
+              }
+            }
+            """)
+        variables: dict[str, object] = {"reposinput": reposinput}
+        response = await self.execute(
+            query=query,
+            operation_name="RepoGroupsDetail",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return RepoGroupsDetail.model_validate(data)
+
+    async def repo_users_detail(
+        self, reposinput: Union[Optional[RepoInput], UnsetType] = UNSET, **kwargs: Any
+    ) -> RepoUsersDetail:
+        query = gql("""
+            query RepoUsersDetail($reposinput: RepoInput) {
+              repos(filter: $reposinput) {
+                name
+                facility
+                facilityObj {
+                  czars
+                }
+                principal
+                leaders
+                users
+                allUsers {
+                  Id
+                  username
+                  uidnumber
+                  preferredemail
+                  fullname
+                  eppnObjs {
+                    eppn
+                    fullname
+                    organization
+                  }
+                }
+              }
+              whoami {
+                username
+              }
+            }
+            """)
+        variables: dict[str, object] = {"reposinput": reposinput}
+        response = await self.execute(
+            query=query, operation_name="RepoUsersDetail", variables=variables, **kwargs
+        )
+        data = self.get_data(response)
+        return RepoUsersDetail.model_validate(data)
+
+    async def requests_view(
+        self,
+        fetchprocessed: Union[Optional[bool], UnsetType] = UNSET,
+        showmine: Union[Optional[bool], UnsetType] = UNSET,
+        filter_: Union[Optional[CoactRequestFilter], UnsetType] = UNSET,
+        **kwargs: Any
+    ) -> RequestsView:
+        query = gql("""
+            query RequestsView($fetchprocessed: Boolean, $showmine: Boolean, $filter: CoactRequestFilter) {
+              requests(fetchprocessed: $fetchprocessed, showmine: $showmine, filter: $filter) {
+                Id
+                reqtype
+                requestedby
+                timeofrequest
+                eppn
+                username
+                preferredUserName
+                reponame
+                facilityname
+                principal
+                allocationid
+                clustername
+                storagename
+                previousName
+                purpose
+                percentOfFacility
+                allocated
+                gigabytes
+                start
+                end
+                shell
+                publichtml
+                computerequirement
+                approvalstatus
+                canapprove
+                canrefire
+                notes
+                audit {
+                  actedat
+                  actedby
+                  notes
+                  previous
+                }
+              }
+              myreposandfacility {
+                name
+                facility
+              }
+              facilities {
+                name
+              }
+              requestTypes
+              requestStatuses
+            }
+            """)
+        variables: dict[str, object] = {
+            "fetchprocessed": fetchprocessed,
+            "showmine": showmine,
+            "filter": filter_,
+        }
+        response = await self.execute(
+            query=query, operation_name="RequestsView", variables=variables, **kwargs
+        )
+        data = self.get_data(response)
+        return RequestsView.model_validate(data)

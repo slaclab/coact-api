@@ -1,0 +1,41 @@
+[build-system]
+requires = ["uv_build>=0.10.2,<0.11.0"]
+build-backend = "uv_build"
+
+[project]
+name = "openfga-slac"
+version = "0.1.0"
+description = "Sync service for FGA"
+requires-python = ">=3.12"
+dependencies = [
+    "openfga-sdk>=0.9.9",
+    "pydantic>=2.12",
+    "httpx>=0.24.0",
+    "coact-client",
+    "pydantic-settings>=2.13.1",
+]
+
+
+[tool.uv.sources]
+coact-client = { path = "../client" }
+
+[dependency-groups]
+dev = [
+    "datamodel-code-generator>=0.54.0",
+    "pyyaml>=6.0",
+]
+
+[tool.datamodel-codegen]
+input = "openapi3.json"
+input-file-type = "openapi"
+openapi-scopes = ["schemas"]
+output = "src/openfga_slac/gen/response_models.py"
+target-pydantic-version = "2.11"
+target-python-version = "3.14"
+treat-dot-as-module = false
+use-annotated = true
+output-model-type = "pydantic_v2.BaseModel"
+set-default-enum-member = true
+field-constraints = true
+output-datetime-class = "AwareDatetime"
+use-field-description-example = false

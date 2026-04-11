@@ -137,6 +137,8 @@ pyvenv.cfg
 # mongo
 mongodb/
 mongod.log
+mongo-seed/
+*.mongodump
 
 compiler_compat/
 conda-meta/

@@ -4,14 +4,21 @@ services:
       context: .
       dockerfile: Dockerfile.mongo
       target: dev
+    networks:
+      - default
+      - app_net
     volumes:
       - mongo-data:/data/db
+      - ./mongo-seed:/dump:ro
+      - ./mongo-restore-dump.sh:/docker-entrypoint-initdb.d/99-restore-dump.sh:ro
     env_file: .env
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 5s
       timeout: 5s
       retries: 10
+    ports:
+      - "27017:27017"
 
   mailhog:
     image: mailhog/mailhog:latest
@@ -22,7 +29,7 @@ services:
   coact-api:
     build: .
     ports:
-      - "8000:8000"
+      - "9000:8000"
     env_file: .env
     depends_on:
       mongo:
@@ -30,5 +37,91 @@ services:
       mailhog:
         condition: service_started
 
+# These are the new services or OpenFGA-related services. 
+# Built off of this: https://openfga.dev/docs/getting-started/setup-openfga/docker#using-postgres
+  postgres: # database for OpenFGA
+    image: postgres:17
+    container_name: postgres
+    env_file: .env
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    networks:
+      - openfga
+      - default
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrate: # runs db migrations for OpenFGA on startup, then exits
+    depends_on:
+      postgres:
+        condition: service_healthy
+    image: openfga/openfga:latest
+    container_name: migrate
+    command: migrate
+    environment:
+      - OPENFGA_DATASTORE_ENGINE=postgres
+      - OPENFGA_DATASTORE_URI=postgres://postgres:password@postgres:5432/postgres?sslmode=disable
+    networks:
+      - openfga
+      - default
+
+  openfga: # the OpenFGA service itself
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    image: openfga/openfga:latest
+    container_name: openfga
+    environment:
+      - OPENFGA_DATASTORE_ENGINE=postgres
+      - OPENFGA_DATASTORE_URI=postgres://postgres:password@postgres:5432/postgres?sslmode=disable
+      - OPENFGA_LOG_FORMAT=json
+    command: run
+    env_file: .env
+    ports:
+      - "8090:8080"
+      - "8091:8081"
+      - "3090:3000"
+    networks:
+      - openfga
+      - default
+    healthcheck:
+      test: ["CMD", "grpc_health_probe", "-addr=:8081"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  openfga-sync: # POC for syncing Coact API to OpenFGA using the Python client we wrote
+    build:
+      context: .
+      dockerfile: openfga/Dockerfile
+    volumes:
+      - ./openfga/src/openfga_slac:/app/openfga/src/openfga_slac
+    env_file: .env
+    depends_on:
+      coact-api:
+        condition: service_started
+      openfga:
+        condition: service_healthy
+
+  coactui:
+    build:
+      context: ../coactui
+      args:
+        REACT_APP_COACT_GRAPHQL_URI: http://localhost:9000/graphql
+    ports:
+      - "4001:3000"
+    depends_on:
+      coact-api:
+        condition: service_started
+
 volumes:
   mongo-data:
+
+networks:
+  openfga:
+  app_net:
+    external: true

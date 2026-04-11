@@ -30,6 +30,9 @@ class ReposRepos(BaseModel):
     current_storage_allocations: list["ReposReposCurrentStorageAllocations"] = Field(
         alias="currentStorageAllocations"
     )
+    access_group_objs: list["ReposReposAccessGroupObjs"] = Field(
+        alias="accessGroupObjs"
+    )
 
 
 class ReposReposCurrentComputeAllocations(BaseModel):
@@ -48,6 +51,14 @@ class ReposReposCurrentStorageAllocations(BaseModel):
     rootfolder: Optional[str]
     gigabytes: Optional[float]
     inodes: Optional[float]
+
+
+class ReposReposAccessGroupObjs(BaseModel):
+    id: Optional[Any] = Field(alias="Id")
+    name: Optional[str]
+    members: Optional[list[str]]
+    gidnumber: Optional[int]
+    state: Optional[str]
 
 
 Repos.model_rebuild()

@@ -52,6 +52,16 @@ model: |
       define can_manage: leader or principal or can_manage from facility
       define can_view: member or can_manage
 
+  type instrument
+    relations
+      define facility: [facility]
+      define active_operator: [user]
+      
+      define can_operate: active_operator
+      define can_move_motors: active_operator
+      define can_view_telemetry: member from facility
+
+
 tuples:
 
     # System level
