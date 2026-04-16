@@ -68,7 +68,7 @@ jobs:
 
       - name: Run unit tests
         run: |
-          uv run pytest tests/unit/ -v
+          pytest tests/unit/ -v
         env:
           MONGODB_URL: mongodb://localhost:27017/
           DB_NAME: iris_test_unit
@@ -92,7 +92,7 @@ jobs:
                http://localhost:8001/graphql
 
           # Run integration tests
-          REMOTE_USER=regular_user uv run pytest client/tests/ -v --tb=short
+          REMOTE_USER=regular_user pytest client/tests/ -v --tb=short
         env:
           MONGODB_URL: mongodb://localhost:27017/
           DB_NAME: iris_test
