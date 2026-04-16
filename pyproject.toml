@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "coact-api"
+version = "0.1.0"
+description = "SLAC's Scientific User and Resource Management System API"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.136.0",
+    "strawberry-graphql[fastapi]==0.192.0",
+    "urllib3==1.26.16",
+    "uvicorn==0.22.0",
+    "uvicorn[standard]==0.22.0",
+    "pymongo==4.4.0",
+    "pydantic==2.13.1",
+    "python-dateutil==2.8.2",
+    "pytz==2023.3",
+    "requests==2.31.0",
+    "aiosmtplib",
+    "Jinja2==3.1.2",
+    "websockets==10.4",
+    "gql>=3.4.1",
+    "httpx>=0.24.0",
+    "coact-client @ file://${PROJECT_ROOT}/client",
+]
+
+
+[dependency-groups]
+test = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+]
+
+[tool.setuptools]
+packages = [] # Application-only repo
+
+# Test configuration
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests", "client/tests"]
+addopts = [
+    "--strict-markers",
+    "-v",
+]
+markers = [
+    "unit: Unit tests that don't require external dependencies",
+    "integration: Integration tests that require database/external services",
+]
