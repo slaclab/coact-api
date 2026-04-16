@@ -33,11 +33,12 @@ jobs:
           # Wait for MongoDB to be ready and initialized
           echo "Waiting for MongoDB initialization..."
           timeout 120 bash -c '
-            until docker exec mongodb-test mongosh iris_test --eval "
+            until docker exec mongodb-test mongosh iris --eval "
               try {
+                const initStatus = db.initialization_status.findOne({initializationComplete: true});
                 const user = db.users.findOne({username: \"regular_user\"});
                 const version = db.versions.findOne();
-                if (user && version && version.dbschema) {
+                if (initStatus && user && version && version.dbschema) {
                   print(\"✅ Database ready with version: \" + version.dbschema);
                   quit(0);
                 }
@@ -54,7 +55,7 @@ jobs:
 
           # Verify initialization
           echo "📊 Database verification:"
-          docker exec mongodb-test mongosh iris_test --eval "
+          docker exec mongodb-test mongosh iris --eval "
             print(\"Users: \" + db.users.countDocuments());
             print(\"Facilities: \" + db.facilities.countDocuments());
             print(\"Schema version: \" + db.versions.findOne().dbschema);
