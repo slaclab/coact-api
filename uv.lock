@@ -167,7 +167,7 @@ dependencies = [
     { name = "websockets" },
 ]
 
-[package.dev-dependencies]
+[package.optional-dependencies]
 test = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -183,6 +183,8 @@ requires-dist = [
     { name = "jinja2", specifier = "==3.1.2" },
     { name = "pydantic", specifier = "==2.13.1" },
     { name = "pymongo", specifier = "==4.4.0" },
+    { name = "pytest", marker = "extra == 'test'", specifier = ">=7.0.0" },
+    { name = "pytest-asyncio", marker = "extra == 'test'", specifier = ">=0.21.0" },
     { name = "python-dateutil", specifier = "==2.8.2" },
     { name = "pytz", specifier = "==2023.3" },
     { name = "requests", specifier = "==2.31.0" },
@@ -192,12 +194,7 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "==0.22.0" },
     { name = "websockets", specifier = "==10.4" },
 ]
-
-[package.metadata.requires-dev]
-test = [
-    { name = "pytest", specifier = ">=7.0.0" },
-    { name = "pytest-asyncio", specifier = ">=0.21.0" },
-]
+provides-extras = ["test"]
 
 [[package]]
 name = "coact-client"
