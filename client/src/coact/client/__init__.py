@@ -26,6 +26,10 @@ from .facilities import Facilities, FacilitiesFacilities
 from .facilities_i_manage import FacilitiesIManage, FacilitiesIManageFacilitiesIManage
 from .facility import Facility, FacilityFacility
 from .facility_name_descs import FacilityNameDescs, FacilityNameDescsFacilityNameDescs
+from .facility_recent_compute_usage import (
+    FacilityRecentComputeUsage,
+    FacilityRecentComputeUsageFacilityRecentComputeUsage,
+)
 from .get_user_for_eppn import GetUserForEppn, GetUserForEppnGetuserforeppn
 from .input_types import (
     AccessGroupInput,
@@ -128,6 +132,8 @@ __all__ = [
     "FacilityInput",
     "FacilityNameDescs",
     "FacilityNameDescsFacilityNameDescs",
+    "FacilityRecentComputeUsage",
+    "FacilityRecentComputeUsageFacilityRecentComputeUsage",
     "GetUserForEppn",
     "GetUserForEppnGetuserforeppn",
     "GraphQLClientError",

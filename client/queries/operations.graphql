@@ -359,3 +359,13 @@ query RepoFeatures($repo: String!, $facility: String!) {
     isCzar
   }
 }
+
+query FacilityRecentComputeUsage($pastMinutes: Int!, $skipQoses: [String!]) {
+  facilityRecentComputeUsage(pastMinutes: $pastMinutes, skipQoses: $skipQoses) {
+    facility
+    clustername
+    resourceHours
+    percentUsed
+    purchasedNodes
+  }
+}
