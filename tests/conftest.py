@@ -5,7 +5,7 @@ import pytest_asyncio
 from typing import AsyncGenerator
 from coact.client import CoactClient
 
-GRAPHQL_URL = "http://localhost:8000/graphql"
+GRAPHQL_URL = "http://localhost:8001/graphql"
 GRAPHQL_USER = "regular_user"
 GRAPHQL_ADMIN_USER = "admin"
 
