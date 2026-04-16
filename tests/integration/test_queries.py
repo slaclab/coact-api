@@ -48,7 +48,10 @@ async def test_clusters(client: CoactClient):
     result = await client.clusters()
     assert isinstance(result.clusters, list)
     assert len(result.clusters) > 0
-    assert any(c.name == "ada" for c in result.clusters)
+    
+    # Check for clusters that actually exist in our test data (roma, milano)
+    cluster_names = [c.name for c in result.clusters]
+    assert any(name in ["roma", "milano"] for name in cluster_names)
 
 
 async def test_facilities(client: CoactClient):
@@ -208,13 +211,16 @@ async def test_report_facility_compute_by_user(client: CoactClient):
 
 
 async def test_report_facility_compute_overall_non_admin(client: CoactClient):
+    """Test that non-admin users cannot access admin-only reports."""
     with pytest.raises(GraphQLClientGraphQLMultiError, match="not an admin"):
-        await client.report_facility_compute_overall(clustername="ada", group="Day")
+        # Use 'roma' cluster which exists in our test data
+        await client.report_facility_compute_overall(clustername="roma", group="Day")
 
 
 async def test_report_facility_compute_overall_admin(admin_client: CoactClient):
+    """Test that admin users can access admin-only reports."""
     result = await admin_client.report_facility_compute_overall(
-        clustername="ada",
+        clustername="roma",  # Use 'roma' cluster which exists in our test data
         group="Day",
     )
     assert isinstance(result.report_facility_compute_overall, list)

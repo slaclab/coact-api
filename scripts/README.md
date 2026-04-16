@@ -1,7 +1,7 @@
 
 install with
 
-     pip3 install -r requirements
+     pip3 install .
 
 on a node with slurm installed, where your user has full admin permissiosn in slurm, run with
 

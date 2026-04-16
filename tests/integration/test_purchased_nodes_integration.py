@@ -6,15 +6,17 @@ Requires: docker compose up (API + MongoDB running)
 """
 import pytest
 
+from coact.client import CoactClient
+
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
 
 class TestPurchasedNodesIntegration:
     """Integration tests for purchased nodes GraphQL contract."""
 
-    async def test_purchased_nodes_graphql_contract(self, integration_client):
+    async def test_purchased_nodes_graphql_contract(self, client: CoactClient):
         """Test that purchasedNodes field works in GraphQL query."""
-        result = await integration_client.facility_recent_compute_usage(past_minutes=5)
+        result = await client.facility_recent_compute_usage(past_minutes=5)
 
         # Contract verification: query succeeds and returns expected structure
         assert isinstance(result.facility_recent_compute_usage, list)
