@@ -19,7 +19,16 @@ function runDir(dir) {
         .forEach(f => run(dir + "/" + f));
 }
 
-runDir(SCRIPTS_DIR);
+// Run core scripts (indexes, but skip bootstrap for development)
+run(SCRIPTS_DIR + "/00-indexes.mongodb");
+
+// Run all migrations
 runDir(SCRIPTS_DIR + "/migration");
+
+// Run development test data
+runDir(SCRIPTS_DIR + "/dev");
+
+// Run one facility for integration tests
+run(SCRIPTS_DIR + "/20-facility-lcls.mongodb");
 
 print("Database initialization complete.");
