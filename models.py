@@ -282,7 +282,7 @@ class User(UserInput):
         return sorted(list(set([x["facility"] for x in info.context.db.collection("repos").find({"name": "default", "users": self.username}, {"_id": 0, "facility": 1})])))
     @strawberry.field
     def isAdmin(self, info) -> bool:
-        admins = re.sub( "\s", "", os.environ.get("ADMIN_USERNAMES",'')).split(',')
+        admins = re.sub(r"\s", "", os.environ.get("ADMIN_USERNAMES",'')).split(',')
         return self.username in admins
     @strawberry.field
     def isCzar(self, info) -> bool:

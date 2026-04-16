@@ -27,7 +27,7 @@ jobs:
           docker run -d \
             --name mongodb-test \
             -p 27017:27017 \
-            -e MONGO_INITDB_DATABASE=iris_test \
+            -e MONGO_INITDB_DATABASE=iris \
             coact-mongodb:test
 
           # Wait for MongoDB to be ready and initialized
@@ -92,10 +92,10 @@ jobs:
                http://localhost:8001/graphql
 
           # Run integration tests
-          REMOTE_USER=regular_user uv run pytest client/tests/ -v --tb=short
+          REMOTE_USER=regular_user uv run pytest tests/ -v --tb=short -m integration
         env:
           MONGODB_URL: mongodb://localhost:27017/
-          DB_NAME: iris_test
+          DB_NAME: iris
           ADMIN_USERNAMES: admin
           LOG_LEVEL: INFO
           USERNAME_FIELD: REMOTE_USER
