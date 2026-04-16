@@ -15,8 +15,6 @@ from coact.client.input_types import (
 from coact.client import CoactClient
 from coact.client.exceptions import GraphQLClientGraphQLMultiError
 
-pytestmark = pytest.mark.asyncio
-
 
 async def test_whoami(client: CoactClient):
     result = await client.whoami()

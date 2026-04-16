@@ -4,11 +4,7 @@ Integration tests for purchased nodes functionality - requires full stack.
 Tests the GraphQL contract and database integration.
 Requires: docker compose up (API + MongoDB running)
 """
-import pytest
-
 from coact.client import CoactClient
-
-pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
 
 class TestPurchasedNodesIntegration:

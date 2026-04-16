@@ -153,7 +153,7 @@ dependencies = [
     { name = "aiosmtplib" },
     { name = "coact-client" },
     { name = "fastapi" },
-    { name = "gql" },
+    { name = "gql", extra = ["requests"] },
     { name = "httpx" },
     { name = "jinja2" },
     { name = "pydantic" },
@@ -178,7 +178,7 @@ requires-dist = [
     { name = "aiosmtplib" },
     { name = "coact-client", directory = "client" },
     { name = "fastapi", specifier = "==0.136.0" },
-    { name = "gql", specifier = ">=3.4.1" },
+    { name = "gql", extras = ["requests"], specifier = ">=3.4.1" },
     { name = "httpx", specifier = ">=0.24.0" },
     { name = "jinja2", specifier = "==3.1.2" },
     { name = "pydantic", specifier = "==2.13.1" },
@@ -267,6 +267,13 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/70/bb/b328e1f39eeab4dcbfb5ee31365e96e41a174478f8d10c877c08bfd688ee/gql-3.4.1.tar.gz", hash = "sha256:11dc5d8715a827f2c2899593439a4f36449db4f0eafa5b1ea63948f8a2f8c545", size = 151696, upload-time = "2023-05-06T17:09:47.461Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/64/1c/2facac9c192d4470960537cf8cdf92d41af10e300a8095ebc37740b4df38/gql-3.4.1-py2.py3-none-any.whl", hash = "sha256:315624ca0f4d571ef149d455033ebd35e45c1a13f18a059596aeddcea99135cf", size = 65148, upload-time = "2023-05-06T17:09:45.438Z" },
+]
+
+[package.optional-dependencies]
+requests = [
+    { name = "requests" },
+    { name = "requests-toolbelt" },
+    { name = "urllib3" },
 ]
 
 [[package]]
@@ -873,6 +880,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/9d/be/10918a2eac4ae9f02f6cfe6414b7a155ccd8f7f9d4380d62fd5b955065c3/requests-2.31.0.tar.gz", hash = "sha256:942c5a758f98d790eaed1a29cb6eefc7ffb0d1cf7af05c3d2791656dbd6ad1e1", size = 110794, upload-time = "2023-05-22T15:12:44.175Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/70/8e/0e2d847013cb52cd35b38c009bb167a1a26b2ce6cd6965bf26b47bc0bf44/requests-2.31.0-py3-none-any.whl", hash = "sha256:58cd2187c01e70e6e26505bca751777aa9f2ee0b7f4300988b709f44e013003f", size = 62574, upload-time = "2023-05-22T15:12:42.313Z" },
+]
+
+[[package]]
+name = "requests-toolbelt"
+version = "0.10.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0c/4c/07f01c6ac44f7784fa399137fbc8d0cdc1b5d35304e8c0f278ad82105b58/requests-toolbelt-0.10.1.tar.gz", hash = "sha256:62e09f7ff5ccbda92772a29f394a49c3ad6cb181d568b1337626b2abb628a63d", size = 208956, upload-time = "2022-10-25T03:14:58.576Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/05/d3/bf87a36bff1cb88fd30a509fd366c70ec30676517ee791b2f77e0e29817a/requests_toolbelt-0.10.1-py2.py3-none-any.whl", hash = "sha256:18565aa58116d9951ac39baa288d3adb5b3ff975c4f25eee78555d89e8f247f7", size = 54525, upload-time = "2022-10-25T03:14:55.289Z" },
 ]
 
 [[package]]

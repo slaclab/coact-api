@@ -2,29 +2,24 @@
 Unit tests for Coact API core functionality.
 """
 
-import pytest
-
 from utils.nl import NodeList
 
 
 class TestNodeList:
     """Test the NodeList utility for parsing SLURM node lists."""
 
-    @pytest.mark.unit
     def test_single_node(self):
         """Test parsing a single node name."""
         nodelist = NodeList("psana1309")
         assert len(nodelist.nodes) == 1
         assert "psana1309" in nodelist.nodes
 
-    @pytest.mark.unit
     def test_range_expansion(self):
         """Test parsing a range of nodes."""
         nodelist = NodeList("psana[1514-1517]")
         expected = {"psana1514", "psana1515", "psana1516", "psana1517"}
         assert nodelist.nodes == expected
 
-    @pytest.mark.unit
     def test_complex_range(self):
         """Test parsing complex ranges with multiple segments."""
         nodelist = NodeList("psana[1208-1210,1213-1219,1305-1306,1313,1315,1319,1402,1404-1405,1415]")
@@ -44,7 +39,6 @@ class TestNodeList:
         assert "psana1211" not in nodelist.nodes
         assert "psana1212" not in nodelist.nodes
 
-    @pytest.mark.unit
     def test_sorted_output(self):
         """Test that sorted() returns nodes in numerical order."""
         nodelist = NodeList("psana[1315,1305,1319]")

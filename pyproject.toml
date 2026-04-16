@@ -41,10 +41,5 @@ packages = [] # Application-only repo
 asyncio_mode = "auto"
 testpaths = ["tests"]
 addopts = [
-    "--strict-markers",
     "-v",
-]
-markers = [
-    "unit: Unit tests that don't require external dependencies",
-    "integration: Integration tests that require database/external services",
 ]
