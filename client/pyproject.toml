@@ -42,7 +42,7 @@ show_missing = true
 skip_covered = false
 
 [tool.ariadne-codegen]
-remote_schema_url = "http://localhost:8001/graphql"
+remote_schema_url = "http://localhost:8000/graphql"
 remote_schema_headers = {REMOTE_USER = "regular_user"}
 queries_path = "queries"
 target_package_name = "client"
