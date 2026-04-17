@@ -490,7 +490,6 @@ class FacillityPastXUsage:
     clustername: Optional[str] = UNSET
     resourceHours: Optional[float] = 0
     percentUsed: float
-    purchasedNodes: Optional[int] = UNSET
 
 @strawberry.type
 class RepoPastXUsage:
