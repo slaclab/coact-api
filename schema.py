@@ -320,7 +320,7 @@ class Query:
             { "$project": { "_id": 0, "facility": "$facility", "clustername": "$clustername", "purchasedNodes": { "$toInt": { "$ifNull": [ { "$multiply": [ { "$ifNull": [ "$servers", 0 ] }, { "$ifNull": [ "$cluster.nodecpucount", 0 ] } ] }, 0 ] } } }},
         ]))
         fac2prs = { (x["facility"], x["clustername"]) : (x["purchasedNodes"] or 0)*(past_minutes/60.0) for x in purs }
-        fac2nodes = { (x["facility"], x["clustername"]) : x["purchasedNodes"] or 0 for x in purs }
+        fac2nodes = { (x["facility"], x["clustername"]) : x["purchasedNodes"] for x in purs }
         for usg in aggs:
             adj = fac2prs.get((usg["facility"], usg["clustername"]), 0)
             if adj:
