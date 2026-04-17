@@ -71,7 +71,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          run: uv sync --locked --all-extras --dev
+          uv sync --locked --all-extras --dev
           uv pip install -e ./client
 
       - name: Run unit tests
