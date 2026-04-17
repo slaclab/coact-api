@@ -39,39 +39,12 @@ jobs:
             -e MONGO_INITDB_DATABASE=iris \
             coact-mongodb:test
 
-          # Wait for MongoDB to be ready and initialized
-          echo "Waiting for MongoDB initialization..."
-          timeout 120 bash -c '
-            until docker exec mongodb-test mongosh iris --eval "
-              try {
-                const user = db.users.findOne({username: \"regular_user\"});
-                const version = db.versions.findOne();
-                if (user && version && version.dbschema) {
-                  print(\"✅ Database ready with version: \" + version.dbschema);
-                  quit(0);
-                }
-                quit(1);
-              } catch(e) {
-                print(\"⏳ Still initializing...\");
-                quit(1);
-              }
-            " --quiet 2>/dev/null
-            do
-              sleep 3
-            done
-          '
-
-          # Verify initialization
-          echo "📊 Database verification:"
-          docker exec mongodb-test mongosh iris --eval "
-            print(\"Users: \" + db.users.countDocuments());
-            print(\"Facilities: \" + db.facilities.countDocuments());
-            print(\"Schema version: \" + db.versions.findOne().dbschema);
-          " --quiet
+      - name: Wait for MongoDB to be ready
+        run: bash scripts/healthcheck-mongodb.sh
 
       - name: Install dependencies
         run: |
-          uv sync --locked --all-extras --dev
+          run: uv sync --locked --all-extras --dev
           uv pip install -e ./client
 
       - name: Run unit tests
@@ -92,13 +65,7 @@ jobs:
           # Wait for the server to be ready
           timeout 30 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:8001/docs)" != "200" ]]; do sleep 1; done'
           echo "✅ API server ready"
-
-          # Test GraphQL endpoint
-          curl -H "Content-Type: application/json" \
-               -H "REMOTE_USER: regular_user" \
-               -d '{"query":"query { whoami { username } }"}' \
-               http://localhost:8001/graphql
-
+          
           # Run integration tests
           REMOTE_USER=regular_user uv run pytest tests/integration/ -v --tb=short
         env:
