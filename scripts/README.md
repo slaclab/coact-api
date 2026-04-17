@@ -1,5 +1,9 @@
 
-install with
+install with [`uv`](https://docs.astral.sh/uv/) (recommended)
+
+     uv pip install .
+
+install with `pip3`
 
      pip3 install .
 
