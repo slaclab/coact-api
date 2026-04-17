@@ -92,7 +92,7 @@ jobs:
                http://localhost:8001/graphql
 
           # Run integration tests
-          REMOTE_USER=regular_user uv run pytest tests/ -v --tb=short -m integration
+          REMOTE_USER=regular_user uv run pytest tests/integration/ -v --tb=short
         env:
           MONGODB_URL: mongodb://localhost:27017/
           DB_NAME: iris
