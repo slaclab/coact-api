@@ -44,7 +44,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          run: uv sync --locked --all-extras --dev
+          uv sync --locked --all-extras --dev
           uv pip install -e ./client
 
       - name: Run unit tests
@@ -65,7 +65,7 @@ jobs:
           # Wait for the server to be ready
           timeout 30 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:8001/docs)" != "200" ]]; do sleep 1; done'
           echo "✅ API server ready"
-          
+
           # Run integration tests
           REMOTE_USER=regular_user uv run pytest tests/integration/ -v --tb=short
         env:
