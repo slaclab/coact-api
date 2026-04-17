@@ -332,13 +332,13 @@ class ClusterInput:
     name: Optional[str] = UNSET
     nodecpucount: Optional[int] = UNSET
     nodecpucountdivisor: Optional[int] = UNSET
-    nodegpucount: Optional[int] = UNSET
+    nodegpucount: Optional[int] = None
     nodememgb: Optional[int] = UNSET
-    nodegpumemgb: Optional[int] = UNSET
+    nodegpumemgb: Optional[int] = None
     chargefactor: Optional[float] = UNSET
     nodecpusmt: Optional[int] = UNSET
     members: Optional[List[str]] = UNSET
-    memberprefixes: Optional[List[str]] = UNSET
+    memberprefixes: Optional[List[str]] = None
 
 @strawberry.type
 class Cluster(ClusterInput):
