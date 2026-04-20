@@ -4,12 +4,12 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 RUN mkdir -p /app
 WORKDIR /app
 
-COPY pyproject.toml /app
+COPY pyproject.toml uv.lock ./client /app/
 
-RUN uv pip install --system --no-deps .
+RUN uv sync --frozen --no-install-project --no-dev
 
 COPY . /app
 
-RUN uv pip install --system .
+RUN uv sync --frozen --no-dev
 
 ENTRYPOINT [ "uvicorn", "main:app", "--host", "0.0.0.0", "--reload" ]
