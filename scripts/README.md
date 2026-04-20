@@ -1,11 +1,19 @@
 
 install with [`uv`](https://docs.astral.sh/uv/) (recommended)
 
-     uv pip install .
+     uv sync
+
+    To run tests:
+
+        uv sync -extra test
 
 install with `pip3`
 
      pip3 install .
+
+     To run tests:
+
+        pip3 install '.[test]'
 
 on a node with slurm installed, where your user has full admin permissiosn in slurm, run with
 
