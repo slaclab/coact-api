@@ -3,10 +3,6 @@ install with [`uv`](https://docs.astral.sh/uv/) (recommended)
 
      uv sync
 
-    To run tests:
-
-        uv sync -extra test
-
 install with `pip3`
 
      pip3 install .
