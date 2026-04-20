@@ -1,8 +1,9 @@
 """
 Test configuration and fixtures for CoAct API tests.
 """
+from collections.abc import AsyncGenerator
+
 import pytest_asyncio
-from typing import AsyncGenerator
 from coact.client import CoactClient
 
 GRAPHQL_URL = "http://localhost:8001/graphql"
