@@ -1,0 +1,83 @@
+name: CI/CD
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+env:
+  UV_SYSTEM_PYTHON: 1
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.11.7"
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Start MongoDB with initialization
+        run: |
+          # Build MongoDB image with proper initialization
+          docker build -f Dockerfile.mongo --target dev -t coact-mongodb:test .
+
+          # Start MongoDB container
+          docker run -d \
+            --name mongodb-test \
+            -p 27017:27017 \
+            -e MONGO_INITDB_DATABASE=iris \
+            coact-mongodb:test
+
+      - name: Wait for MongoDB to be ready
+        run: bash scripts/healthcheck-mongodb.sh
+
+      - name: Install dependencies
+        run: |
+          uv sync --locked --all-extras --dev
+          uv pip install -e ./client
+
+      - name: Run unit tests
+        run: |
+          uv run pytest tests/unit/ -v
+        env:
+          MONGODB_URL: mongodb://localhost:27017/
+          DB_NAME: iris_test_unit
+          ADMIN_USERNAMES: admin
+          LOG_LEVEL: INFO
+
+      - name: Run integration tests
+        run: |
+          # Start the API server in background
+          uv run uvicorn main:app --host 0.0.0.0 --port 8001 &
+          API_PID=$!
+
+          # Wait for the server to be ready
+          timeout 30 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:8001/docs)" != "200" ]]; do sleep 1; done'
+          echo "✅ API server ready"
+
+          # Run integration tests
+          REMOTE_USER=regular_user uv run pytest tests/integration/ -v --tb=short
+        env:
+          MONGODB_URL: mongodb://localhost:27017/
+          DB_NAME: iris
+          ADMIN_USERNAMES: admin
+          LOG_LEVEL: INFO
+          USERNAME_FIELD: REMOTE_USER
+          COACT_GRAPHQL_ENDPOINT: http://localhost:8001/graphql
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop mongodb-test || true
+          docker rm mongodb-test || true

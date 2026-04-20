@@ -62,7 +62,7 @@ USER_FIELD_IN_HEADER = environ.get('USERNAME_FIELD','REMOTE_USER')
 
 EMAIL_SERVER_HOST = os.getenv( 'COACT_EMAIL_SERVER_HOST', 'smtp.slac.stanford.edu' )
 EMAIL_SERVER_PORT = os.getenv( 'COACT_EMAIL_SERVER_PORT', 25 )
-ADMINS = re.sub( "\s", "", environ.get("ADMIN_USERNAMES",'')).split(',')
+ADMINS = re.sub(r"\s", "", environ.get("ADMIN_USERNAMES",'')).split(',')
 # Assume that we introduce bot users once in a while; so we load these up on startup
 BOT_USERS = [ x["username"] for x in mongo[DB_NAME]["users"].find( { 'isbot': True } ) ]
 
