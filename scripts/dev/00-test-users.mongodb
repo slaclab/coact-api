@@ -18,3 +18,45 @@ db.getSiblingDB("iris").users.insertOne({
   "shell": "/bin/bash",
   "preferredemail": "admin@example.com"
 })
+
+// Create clusters
+db.getSiblingDB("iris").clusters.insertOne({
+  "name": "roma",
+  "nodecpucount": 128,
+  "nodecpucountdivisor": 64,
+  "nodememgb": 512,
+  "chargefactor": 0.8,
+  "nodecpusmt": 1,
+  "members": []
+});
+for(c=0;c<32;c++) {
+  db.getSiblingDB("iris").clusters.updateOne({"name": "roma"}, {"$addToSet": {"members": "sdfrome"+String(c).padStart(4,'0')}});
+}
+
+db.getSiblingDB("iris").clusters.insertOne({
+  "name": "milano",
+  "nodecpucount": 128,
+  "nodecpucountdivisor": 16,
+  "nodememgb": 512,
+  "chargefactor": 0.8,
+  "nodecpusmt": 1,
+  "members": []
+});
+for(c=0;c<28;c++) {
+  db.getSiblingDB("iris").clusters.updateOne({"name": "milano"}, {"$addToSet": {"members": "sdfmilan"+String(c).padStart(4,'0')}});
+}
+
+// Create physical volumes
+db.getSiblingDB("iris").physical_volumes.insertOne({
+  "name": "sdfhome",
+  "storageclass": "ssd",
+  "gigabytes": 2000000000,
+  "inodes": 100000000
+});
+
+db.getSiblingDB("iris").physical_volumes.insertOne({
+  "name": "sdfdata",
+  "storageclass": "ssd",
+  "gigabytes": 4000000000,
+  "inodes": 1000000000
+});

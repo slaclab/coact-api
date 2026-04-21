@@ -12,7 +12,6 @@ from .facilities import Facilities
 from .facilities_i_manage import FacilitiesIManage
 from .facility import Facility
 from .facility_name_descs import FacilityNameDescs
-from .facility_recent_compute_usage import FacilityRecentComputeUsage
 from .get_user_for_eppn import GetUserForEppn
 from .input_types import (
     ClusterInput,
@@ -735,33 +734,3 @@ class CoactClient(AsyncBaseClient):
         )
         data = self.get_data(response)
         return RepoFeatures.model_validate(data)
-
-    async def facility_recent_compute_usage(
-        self,
-        past_minutes: int,
-        skip_qoses: Union[Optional[list[str]], UnsetType] = UNSET,
-        **kwargs: Any
-    ) -> FacilityRecentComputeUsage:
-        query = gql("""
-            query FacilityRecentComputeUsage($pastMinutes: Int!, $skipQoses: [String!]) {
-              facilityRecentComputeUsage(pastMinutes: $pastMinutes, skipQoses: $skipQoses) {
-                facility
-                clustername
-                resourceHours
-                percentUsed
-                purchasedNodes
-              }
-            }
-            """)
-        variables: dict[str, object] = {
-            "pastMinutes": past_minutes,
-            "skipQoses": skip_qoses,
-        }
-        response = await self.execute(
-            query=query,
-            operation_name="FacilityRecentComputeUsage",
-            variables=variables,
-            **kwargs
-        )
-        data = self.get_data(response)
-        return FacilityRecentComputeUsage.model_validate(data)
