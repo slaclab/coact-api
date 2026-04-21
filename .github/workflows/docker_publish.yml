@@ -32,7 +32,7 @@ jobs:
       contents: read
       packages: write
       # This is used to complete the identity challenge
-      # with sigstore/fulcio when running outside of PRs.
+      # with sigstore/fulcio for signing and attestation.
       id-token: write
       # Allow to persist attestations  
       attestations: write
@@ -76,7 +76,7 @@ jobs:
           GITHUB_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
           GITHUB_REF: ${{ github.event_name == 'workflow_run' && format('refs/heads/{0}', github.event.workflow_run.head_branch) || github.ref }}
 
-      # Build and push Docker image with Buildx (don't push on PR)
+      # Build and push Docker image with Buildx
       # https://github.com/docker/build-push-action
       - name: Build and push Docker image
         id: build-and-push
