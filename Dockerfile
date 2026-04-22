@@ -4,6 +4,9 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 # Used to associate the image with a source repository outside GHA
 LABEL org.opencontainers.image.source=https://github.com/slaclab/coact-api
 
+# This avoids needing `uv run`  or venv activation at runtime
+ENV UV_PROJECT_ENVIRONMENT=/usr/local
+
 RUN mkdir -p /app
 WORKDIR /app
 
@@ -15,4 +18,4 @@ COPY . /app
 
 RUN uv sync --frozen --no-dev
 
-ENTRYPOINT [ "/app/.venv/bin/uvicorn", "main:app", "--host", "0.0.0.0", "--reload" ]
+ENTRYPOINT [ "uvicorn", "main:app", "--host", "0.0.0.0", "--reload" ]
