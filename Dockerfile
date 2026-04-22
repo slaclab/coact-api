@@ -15,4 +15,4 @@ COPY . /app
 
 RUN uv sync --frozen --no-dev
 
-ENTRYPOINT [ "uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--reload" ]
+ENTRYPOINT [ "/app/.venv/bin/uvicorn", "main:app", "--host", "0.0.0.0", "--reload" ]
