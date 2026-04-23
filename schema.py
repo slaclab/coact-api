@@ -3,7 +3,6 @@ from auth import IsAuthenticated, \
         IsAdmin, \
         IsValidEPPN, \
         IsFacilityCzarOrAdmin
-import sys
 
 import os
 import signal
