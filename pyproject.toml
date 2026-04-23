@@ -23,8 +23,11 @@ dependencies = [
     "websockets==10.4",
     "gql[requests]>=3.4.1",
     "httpx>=0.24.0",
-    "coact-client @ file://${PROJECT_ROOT}/client",
+    "coact-client",
 ]
+
+[tool.uv.sources]
+coact-client = { path = "client", editable = true }
 
 
 [dependency-groups]

@@ -317,15 +317,18 @@ class Query:
         purs = list(info.context.db.collection("facility_compute_purchases").aggregate([
             { "$lookup": { "from": "clusters", "localField": "clustername", "foreignField": "name", "as": "cluster"}},
             { "$unwind": "$cluster" },
-            { "$project": { "_id": 0, "facility": "$facility", "clustername": "$clustername", "purchasedNodes": { "$multiply": [ "$servers", "$cluster.nodecpucount"  ] } }},
+            { "$project": { "_id": 0, "facility": "$facility", "clustername": "$clustername", "purchasedNodes": { "$toInt": { "$multiply": [ "$servers", "$cluster.nodecpucount"  ] } } }},
         ]))
-        fac2prs = { (x["facility"], x["clustername"]) : x["purchasedNodes"]*(past_minutes/60.0) for x in purs }
+        fac2prs = { (x["facility"], x["clustername"]) : (x["purchasedNodes"] or 0)*(past_minutes/60.0) for x in purs }
+        fac2nodes = { (x["facility"], x["clustername"]) : (x["purchasedNodes"] or 0) for x in purs }
         for usg in aggs:
             adj = fac2prs.get((usg["facility"], usg["clustername"]), 0)
             if adj:
                 usg["percentUsed"] = (usg["resourceHours"]/adj)*100.0
+            # Add purchased nodes to the aggregation data
+            usg["purchasedNodes"] = fac2nodes.get((usg["facility"], usg["clustername"]), 0)
 
-        return [ FacillityPastXUsage(**{k:x.get(k, 0) for k in ["facility", "clustername", "resourceHours", "percentUsed" ] }) for x in aggs ]
+        return [ FacillityPastXUsage(**{k:x.get(k, 0) for k in ["facility", "clustername", "resourceHours", "percentUsed", "purchasedNodes" ] }) for x in aggs ]
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def access_groups(self, info: Info, filter: Optional[AccessGroupInput]={} ) -> List[AccessGroup]:
@@ -628,7 +631,7 @@ class Query:
             { "$unwind": "$cluster" },
             { "$project": { "_id": 0, "facility": "$facility", "clustername": "$clustername", "purchasedNodes": { "$multiply": [ "$servers", "$cluster.nodecpucount"  ] } }},
         ]))
-        fac2prs = { (x["facility"], x["clustername"]) : x["purchasedNodes"]*(past_minutes/60.0) for x in purs}
+        fac2prs = { (x["facility"], x["clustername"]) : (x["purchasedNodes"] or 0)*(past_minutes/60.0) for x in purs}
         for usg in aggs:
             adj = fac2prs.get((usg["facility"], usg["clustername"]), 0)
             if adj:
