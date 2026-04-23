@@ -1643,5 +1643,5 @@ def start_change_stream_queues(db):
                         change_stream.close()
                     except:
                         pass
-                    sys.exit(1)
+                    os.kill(os.getpid(), signal.SIGTERM)
     asyncio.create_task(__watch_requests__())
