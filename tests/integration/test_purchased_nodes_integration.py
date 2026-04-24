@@ -1,33 +1,45 @@
 """
-Integration tests for purchased nodes functionality - requires full stack.
+Integration test to verify CLI can get purchased nodes data from Facility.computepurchases.
 
-Tests that facilityRecentComputeUsage returns the purchasedNodes field.
+Since the CLI now queries purchased nodes via Facility.computepurchases instead of
+facilityRecentComputeUsage, this test ensures that integration works end-to-end.
 Requires: docker compose up (API + MongoDB running)
 """
 from coact.client import CoactClient
 
 
-async def test_facility_recent_compute_usage_purchased_nodes(client: CoactClient):
-    """Test that facilityRecentComputeUsage returns purchasedNodes as an integer field."""
+async def test_facility_computepurchases_provides_cli_data(client: CoactClient):
+    """Test that Facility.computepurchases provides the purchased nodes data CLI needs."""
     response = await client.execute(
         query="""
         query {
-            facilityRecentComputeUsage(pastMinutes: 60) {
-                facility
-                clustername
-                resourceHours
-                percentUsed
-                purchasedNodes
+            facilities {
+                name
+                computepurchases {
+                    clustername
+                    purchased
+                }
             }
         }
         """
     )
     data = client.get_data(response)
-    results = data["facilityRecentComputeUsage"]
+    facilities = data["facilities"]
 
-    assert isinstance(results, list)
+    assert isinstance(facilities, list)
 
-    for record in results:
-        assert "purchasedNodes" in record
-        if record["purchasedNodes"] is not None:
-            assert isinstance(record["purchasedNodes"], int)
+    for facility in facilities:
+        assert "name" in facility
+
+        if facility["computepurchases"] is not None:
+            assert isinstance(facility["computepurchases"], list)
+
+            for purchase in facility["computepurchases"]:
+                # Verify CLI gets the fields it needs for purchased nodes
+                assert "clustername" in purchase
+                assert "purchased" in purchase
+                assert isinstance(purchase["clustername"], str)
+
+                # The "purchased" field is what CLI uses for purchased nodes count
+                if purchase["purchased"] is not None:
+                    assert isinstance(purchase["purchased"], (int, float))
