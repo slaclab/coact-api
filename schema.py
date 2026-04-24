@@ -629,7 +629,7 @@ class Query:
         purs = list(info.context.db.collection("facility_compute_purchases").aggregate([
             { "$lookup": { "from": "clusters", "localField": "clustername", "foreignField": "name", "as": "cluster"}},
             { "$unwind": "$cluster" },
-            { "$project": { "_id": 0, "facility": "$facility", "clustername": "$clustername", "purchasedNodes": { "$multiply": [ "$servers", "$cluster.nodecpucount" ] } }},
+            { "$project": { "_id": 0, "facility": "$facility", "clustername": "$clustername", "purchasedNodes": { "$multiply": [ "$servers", "$cluster.nodecpucount"  ] } }},
         ]))
         fac2prs = { (x["facility"], x["clustername"]) : (x["purchasedNodes"] or 0)*(past_minutes/60.0) for x in purs}
         for usg in aggs:
