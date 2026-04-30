@@ -63,6 +63,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Generate timestamp-based tag in YYYYMMDD-HHMM format (matching DockerHub pattern)
+      - name: Generate Docker tag
+        id: tag
+        run: |
+          TAG=$(date +"%Y%m%d-%H%M")
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "full_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}" >> $GITHUB_OUTPUT
+
       # Extract metadata (tags, labels)
       # https://github.com/docker/metadata-action
       - name: Extract Docker metadata
@@ -70,6 +78,12 @@ jobs:
         uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ steps.tag.outputs.tag }}
+            type=schedule
+            type=ref,event=branch
+            type=ref,event=tag
+            type=ref,event=pr
         env:
           GITHUB_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
           GITHUB_REF: ${{ github.event_name == 'workflow_run' && format('refs/heads/{0}', github.event.workflow_run.head_branch) || github.ref }}
