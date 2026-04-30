@@ -1598,7 +1598,9 @@ class Subscription:
             while True:
                 req = await all_request_subscriptions[clientName].requests_queue.get()
                 yield req
-        except:
+        except (GeneratorExit, asyncio.CancelledError):
+            raise
+        except Exception:
             pass
         if generatedClientName:
             LOG.warn("Removing anonymous subsctiption %s", clientName)
@@ -1630,6 +1632,12 @@ def start_change_stream_queues(db):
                             LOG.exception("Exception processing change")
                         change = change_stream.try_next()
                     await asyncio.sleep(1)
+                    # try_next() silently retries on connection errors (PyMongo change
+                    # stream auto-resume).  An explicit ping is the only reliable way
+                    # to detect that MongoDB is permanently gone.
+                    await asyncio.get_running_loop().run_in_executor(
+                        None, lambda: db.command("ping")
+                    )
                 except Exception as e:
                     LOG.exception("Lost connection to the change stream; exiting the process")
                     continueProcessing = False
@@ -1637,9 +1645,5 @@ def start_change_stream_queues(db):
                         change_stream.close()
                     except:
                         pass
-                    try:
-                        asyncio.get_running_loop().stop()
-                    except:
-                        pass
-                    os.kill(os.getppid(), signal.SIGKILL)
+                    os.kill(os.getpid(), signal.SIGTERM)
     asyncio.create_task(__watch_requests__())
