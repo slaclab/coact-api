@@ -2,10 +2,11 @@
 Behavioral tests for FacilityComputeAllocation request handling in models and schema.
 """
 from unittest.mock import Mock, MagicMock
-from bson import ObjectId
 
 from schema import Mutation
 from models import CoactRequestType, FacilityInput, ClusterInput
+
+FAKE_ID = 'a' * 24  # 24-char hex string accepted wherever an ObjectId str is needed
 
 
 def _make_info(existing_servers=None):
@@ -29,11 +30,11 @@ def _make_info(existing_servers=None):
 
     if existing_servers is not None:
         col.find.return_value.sort.return_value.limit.return_value = [
-            {'_id': ObjectId(), 'servers': existing_servers, 'burst_percent': 0}
+            {'_id': FAKE_ID, 'servers': existing_servers, 'burst_percent': 0}
         ]
     else:
         col.find.return_value.sort.return_value.limit.return_value = []
-        col.insert_one.return_value.inserted_id = ObjectId()
+        col.insert_one.return_value.inserted_id = FAKE_ID
 
     return info
 
