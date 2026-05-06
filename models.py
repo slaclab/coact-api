@@ -112,6 +112,9 @@ class CoactRequestInput:
     publichtml: bool = False
     notes: Optional[str] = UNSET
     dontsendemail: Optional[bool] = False # Tells the ansible scripts that this request is being created by automation and will be approved immediately. No need to notify czars that a request is pending.
+    oldPurchased: Optional[int] = UNSET
+    newPurchased: Optional[int] = UNSET
+    updateStrategy: Optional[str] = UNSET
     approvalstatus: Optional[CoactRequestStatus] = CoactRequestStatus.NotActedOn
 
 @strawberry.type

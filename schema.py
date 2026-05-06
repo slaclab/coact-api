@@ -1021,7 +1021,18 @@ class Mutation:
             if not thereq.computerequirement:
                 raise Exception(f"The new compute requirement was not specified")
             thereq.approve(info)
-            return True            
+            return True
+        elif thereq.reqtype == "FacilityComputeAllocation":
+            if not isAdmin and not isCzar:
+                raise Exception("User is not an admin or a czar")
+            if not thereq.facilityname:
+                raise Exception("FacilityComputeAllocation request without a facility - cannot approve.")
+            if not thereq.clustername:
+                raise Exception("FacilityComputeAllocation request without a cluster name - cannot approve.")
+            if thereq.newPurchased is None or thereq.newPurchased is UNSET:
+                raise Exception("FacilityComputeAllocation request without newPurchased - cannot approve.")
+            thereq.approve(info)
+            return True
         else:
             if not isAdmin and not isCzar:
                 raise Exception("User is not an admin or a czar")
@@ -1448,6 +1459,7 @@ class Mutation:
         todaysdate = datetime.datetime.utcnow()
         cp = list(info.context.db.collection("facility_compute_purchases").find({"facility": facility.name, "clustername": cluster.name, "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }).sort([("start", -1)]).limit(1))
         alloc_id = None
+        old_purchased = int(cp[0]["servers"]) if cp else 0
         if cp:
             alloc_id = cp[0]["_id"]
             info.context.db.collection("facility_compute_purchases").update_one({"_id": alloc_id}, {"$set": {"servers": purchase, "burst_percent": burst_percent}}) 
@@ -1460,6 +1472,9 @@ class Mutation:
         request.clustername = cluster.name
         request.allocated = purchase
         request.allocationid = alloc_id
+        request.oldPurchased = old_purchased
+        request.newPurchased = int(purchase)
+        request.updateStrategy = 'proportional'
         request.requestedby = info.context.username
         request.timeofrequest = todaysdate
         request.approvalstatus = 1
