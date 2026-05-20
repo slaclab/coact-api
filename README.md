@@ -1,41 +1,43 @@
-# new-iris
-SLAC's Scientific User and Resource Management System
+# coact-api
 
-## initialisation
+SLAC's Scientific User and Resource Management System API.
 
-check out code
+## Getting Started
 
-    git clone https://github.com/slaclab/new-iris.git
+Clone the repository:
 
-option 1) create a new virtual env with
+```sh
+git clone https://github.com/slaclab/coact-api.git
+cd coact-api
+cp .env.example .env
+```
 
-    virtualenv new-iris
-    new-iris/bin/pip install -r new-iris/requirements.txt
-    cd new-iris
+Start all services:
 
-option 2) create a new conda environment
+```sh
+docker compose up --build
+```
 
-    sh Miniconda3-latest-Linux-x86_64.sh -f -p new-iris/
-    cd new-iris
-    ./bin/pip -r requirements.txt
+This brings up:
 
-install mongo 
+| Service      | Description                          | Port(s)            |
+|--------------|--------------------------------------|--------------------|
+| `coact-api`  | FastAPI/Strawberry GraphQL server    | `8000`             |
+| `mongo`      | MongoDB 8 (seeded with init scripts) | internal only      |
+| `mailhog`    | Local SMTP + web UI for emails       | `1025` / `8025`    |
 
-option 1) via conda with:
+The API will be available at <http://localhost:8000/graphql> once the services are healthy.
 
-     ./bin/conda install mongodb
+To view caught emails, open the MailHog web UI at <http://localhost:8025>.
 
-option 2) via yum etc.
+## Stopping Services
 
-and start it with
+```sh
+docker compose down
+```
 
-    mkdir mongodb
-    ./bin/mongod --config mongod.conf
+To also remove the persisted MongoDB data volume:
 
-then initiate the uvicorn server with
-
-    ./bin/uvicorn main:app  --reload
-    
-## testing
-
-you can then go to http://localhost:8000/graphql to test the graphql interface and issue queries etc.
+```sh
+docker compose down -v
+```
