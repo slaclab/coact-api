@@ -1,17 +1,17 @@
-from typing import Any, AsyncGenerator
+"""
+Test configuration and fixtures for CoAct API tests.
+"""
+from collections.abc import AsyncGenerator
 
 import pytest_asyncio
-
 from coact.client import CoactClient
 
-
-GRAPHQL_URL = "http://localhost:8000/graphql"
+GRAPHQL_URL = "http://localhost:8001/graphql"
 GRAPHQL_USER = "regular_user"
 GRAPHQL_ADMIN_USER = "admin"
 
-
 @pytest_asyncio.fixture
-async def client() -> AsyncGenerator[CoactClient, Any]:
+async def client() -> AsyncGenerator[CoactClient, None]:
     async with CoactClient(
         url=GRAPHQL_URL,
         headers={"REMOTE_USER": GRAPHQL_USER},
@@ -20,7 +20,7 @@ async def client() -> AsyncGenerator[CoactClient, Any]:
 
 
 @pytest_asyncio.fixture
-async def admin_client() -> AsyncGenerator[CoactClient, Any]:
+async def admin_client() -> AsyncGenerator[CoactClient, None]:
     async with CoactClient(
         url=GRAPHQL_URL,
         headers={"REMOTE_USER": GRAPHQL_ADMIN_USER},
