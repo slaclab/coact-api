@@ -303,6 +303,11 @@ class User(UserInput):
         if not grps:
             return []
         return [ x["name"] for x in grps]
+    
+    @strawberry.field
+    def accessGroupObjs(self, info) -> List['AccessGroup']:
+        return info.context.db.find_access_groups({"members": self.username})
+    
     @strawberry.field
     def storages(self, info) -> List[UserStorage]:
         storages = list(info.context.db.collection("user_storage_allocation").find({"username": self.username}))
