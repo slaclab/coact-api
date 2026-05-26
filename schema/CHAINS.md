@@ -28,12 +28,13 @@ Use these chains as a guide when:
 10. [User Storage Allocation View](#10-user-storage-allocation-view)
 11. [Request Approval](#11-request-approval)
 12. [Request Visibility](#12-request-visibility)
-13. [Facility Membership (Derived)](#13-facility-membership-derived)
-14. [Access Group Edit](#14-access-group-edit)
-15. [Repo Rename](#15-repo-rename)
-16. [Audit Trail Visibility](#16-audit-trail-visibility)
-17. [Server Login via Net Group](#17-server-login-via-net-group)
-18. [Server Login Denied (Netgroup Not in access.conf)](#18-server-login-denied-netgroup-not-in-accessconf)
+13. [Repo Membership](#13-repo-membership)
+14. [Facility Membership (Derived)](#14-facility-membership-derived)
+15. [Access Group Edit](#15-access-group-edit)
+16. [Repo Rename](#16-repo-rename)
+17. [Audit Trail Visibility](#17-audit-trail-visibility)
+18. [Server Login via Net Group](#18-server-login-via-net-group)
+19. [Server Login Denied (Netgroup Not in access.conf)](#19-server-login-denied-netgroup-not-in-accessconf)
 
 ---
 
@@ -543,7 +544,41 @@ There are three paths to viewing a request:
 
 ---
 
-## 13. Facility Membership (Derived)
+## 13. Repo Membership
+
+**Question:** Is `member_dave` a member of repo `slac/default`?
+
+**Check:** `user:member_dave` → `member` → `repo:slac/default`
+
+```
+user:member_dave
+  │
+  │  tuple: user:member_dave | user_member | repo:slac/default
+  ▼
+repo:slac/default → member = user_member or leader or principal
+  │                           ───────────
+  │                           member_dave ✓
+  ▼
+ALLOWED ✓
+```
+
+A user is a `member` of a repo if they hold **any** of the three direct roles:
+
+| Role | Tuple |
+|---|---|
+| `user_member` | `user:member_dave \| user_member \| repo:slac/default` |
+| `leader` | `user:leader_carol \| leader \| repo:slac/default` |
+| `principal` | `user:pi_bob \| principal \| repo:slac/default` |
+
+**Key insight:** `member` is a union — only one of the three role tuples needs
+to exist. This derived `member` relation is the building block for many
+downstream permissions: feature access (Slurm accounts, POSIX groups, net
+groups), facility membership (§14), and repo-level permissions like
+`can_view`, `can_edit`, and `can_manage_users`.
+
+---
+
+## 14. Facility Membership (Derived)
 
 **Question:** Is `member_dave` a member of facility `slac`?
 
@@ -577,7 +612,7 @@ become a facility member through the derived `repo_member` relation.
 
 ---
 
-## 14. Access Group Edit
+## 15. Access Group Edit
 
 **Question:** Can `leader_carol` edit access group `slac/default/mygroup`?
 
@@ -599,7 +634,7 @@ access_group:slac/default/mygroup → can_edit = can_manage_access_groups from r
 
 ---
 
-## 15. Repo Rename
+## 16. Repo Rename
 
 **Question:** Can `leader_carol` rename repo `slac/default`?
 
@@ -632,7 +667,7 @@ leaders cannot do it. Only facility czars have this permission.
 
 ---
 
-## 16. Audit Trail Visibility
+## 17. Audit Trail Visibility
 
 **Question:** Can `czar_alice` view audit trails for facility `slac`?
 
@@ -662,7 +697,7 @@ DENIED ✗
 
 ---
 
-## 17. Server Login via Net Group
+## 18. Server Login via Net Group
 
 **Question:** Can `member_dave` log in to server `sdf-login01`?
 
@@ -728,7 +763,7 @@ that repo, across every server in the fleet.
 
 ---
 
-## 18. Server Login Denied (Netgroup Not in access.conf)
+## 19. Server Login Denied (Netgroup Not in access.conf)
 
 **Question:** Can `member_dave` log in to server `sdf-gpu01` if its `access.conf` doesn't list his netgroup?
 

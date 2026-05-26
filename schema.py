@@ -389,7 +389,7 @@ class Query:
         if isadmin:
             return [ RepoFacilityName(**x) for x in info.context.db.collection("repos").find({}, {"_id": 0, "name": 1, "facility": 1}) ]
         elif isczar:
-            return [ RepoFacilityName(**x) for x in info.context.db.collection("repos").find({"facility": {"$in": myfacs}}, {"_id": 0, "name": 1, "facility": 1}) ]
+            return [ RepoFacilityName(**x) for x in info.context.db.collection("repos").find({"$or": [{"facility": {"$in": myfacs}}, {"users": username}, {"leaders": username}, {"principal": username}]}, {"_id": 0, "name": 1, "facility": 1}) ]
         else:
             return [ RepoFacilityName(**x) for x in info.context.db.collection("repos").find({ '$or': [ { "users": username }, { "leaders": username }, { "principal": username }]}, {"_id": 0, "name": 1, "facility": 1}) ]
 
@@ -404,7 +404,8 @@ class Query:
         if isadmin:
             pass
         elif isczar:
-            search["facility"]= { "$in": myfacs }
+            access_filter = {"$or": [{"facility": {"$in": myfacs}}, {"users": username}, {"leaders": username}, {"principal": username}]}
+            search = {"$and": [search, access_filter]} if search else access_filter
         else:
             search["users"] = username
         LOG.debug(f"searching for repos using {filter} -> {search}")
