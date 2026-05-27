@@ -306,7 +306,7 @@ class User(UserInput):
     
     @strawberry.field
     def accessGroupObjs(self, info) -> List['AccessGroup']:
-        return info.context.db.find_access_groups({"members": self.username})
+        return info.context.db.find_access_groups({"users": self.username})
     
     @strawberry.field
     def storages(self, info) -> List[UserStorage]:
