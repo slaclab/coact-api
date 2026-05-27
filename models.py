@@ -306,7 +306,30 @@ class User(UserInput):
     
     @strawberry.field
     def accessGroupObjs(self, info) -> List['AccessGroup']:
-        return info.context.db.find_access_groups({"users": self.username})
+        """
+        Return all POSIX group objects (with gidnumber, name, etc.) for this user,
+        by scanning all repos where the user is a member and extracting features with gidnumber.
+        """
+        repos = info.context.db.collection("repos").find({
+            "$or": [
+                {"users": self.username},
+                {"leaders": self.username},
+                {"principal": self.username}
+            ]
+        })
+        groups = []
+        for repo in repos:
+            features = repo.get("features", {})
+            for feature_name, feature in features.items():
+                if isinstance(feature, dict) and "gidnumber" in feature:
+                    groups.append(AccessGroup(
+                        gidnumber=feature["gidnumber"],
+                        name=feature.get("name", feature_name),
+                        repoid=repo.get("_id"),
+                        state=feature.get("state"),
+                        members=repo.get("users", [])
+                    ))
+        return groups
     
     @strawberry.field
     def storages(self, info) -> List[UserStorage]:
