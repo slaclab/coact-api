@@ -308,8 +308,9 @@ class User(UserInput):
     def accessGroupObjs(self, info) -> List['AccessGroup']:
         """
         Return all POSIX group objects (with gidnumber, name, etc.) for this user,
-        by scanning all repos where the user is a member and extracting features with gidnumber.
+        by scanning all repos where the user is a member and extracting group info from posixgroup feature options.
         """
+        import json
         repos = info.context.db.collection("repos").find({
             "$or": [
                 {"users": self.username},
@@ -320,15 +321,24 @@ class User(UserInput):
         groups = []
         for repo in repos:
             features = repo.get("features", {})
-            for feature_name, feature in features.items():
-                if isinstance(feature, dict) and "gidnumber" in feature:
-                    groups.append(AccessGroup(
-                        gidnumber=feature["gidnumber"],
-                        name=feature.get("name", feature_name),
-                        repoid=repo.get("_id"),
-                        state=feature.get("state"),
-                        members=repo.get("users", [])
-                    ))
+            posixgroup = features.get("posixgroup")
+            if posixgroup and isinstance(posixgroup, dict):
+                options = posixgroup.get("options", [])
+                for opt in options:
+                    try:
+                        parsed = json.loads(opt) if isinstance(opt, str) else opt
+                        gid = parsed.get("gidNumber")
+                        name = parsed.get("name")
+                        if gid is not None:
+                            groups.append(AccessGroup(
+                                gidnumber=int(gid),
+                                name=name or repo.get("name"),
+                                repoid=repo.get("_id"),
+                                state=posixgroup.get("state"),
+                                members=repo.get("users", [])
+                            ))
+                    except Exception:
+                        continue
         return groups
     
     @strawberry.field
