@@ -303,6 +303,44 @@ class User(UserInput):
         if not grps:
             return []
         return [ x["name"] for x in grps]
+    
+    @strawberry.field
+    def accessGroupObjs(self, info) -> List['AccessGroup']:
+        """
+        Return all POSIX group objects (with gidnumber, name, etc.) for this user,
+        by scanning all repos where the user is a member and extracting group info from posixgroup feature options.
+        """
+        import json
+        repos = info.context.db.collection("repos").find({
+            "$or": [
+                {"users": self.username},
+                {"leaders": self.username},
+                {"principal": self.username}
+            ]
+        })
+        groups = []
+        for repo in repos:
+            features = repo.get("features", {})
+            posixgroup = features.get("posixgroup")
+            if posixgroup and isinstance(posixgroup, dict):
+                options = posixgroup.get("options", [])
+                for opt in options:
+                    try:
+                        parsed = json.loads(opt) if isinstance(opt, str) else opt
+                        gid = parsed.get("gidNumber")
+                        name = parsed.get("name")
+                        if gid is not None:
+                            groups.append(AccessGroup(
+                                gidnumber=int(gid),
+                                name=name or repo.get("name"),
+                                repoid=repo.get("_id"),
+                                state=posixgroup.get("state"),
+                                members=repo.get("users", [])
+                            ))
+                    except Exception:
+                        continue
+        return groups
+    
     @strawberry.field
     def storages(self, info) -> List[UserStorage]:
         storages = list(info.context.db.collection("user_storage_allocation").find({"username": self.username}))
