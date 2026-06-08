@@ -304,13 +304,14 @@ class User(UserInput):
             return []
         return [ x["name"] for x in grps]
     
-    @strawberry.field
-    def accessGroupObjs(self, info) -> List['AccessGroup']:
+    def _posixGroupsForUser(self, info) -> List['AccessGroup']:
         """
-        Return all POSIX group objects (with gidnumber, name, etc.) for this user,
-        by scanning all repos where the user is a member and extracting group info from posixgroup feature options.
+        Scan all repos where the user is a member/leader/principal and extract the
+        POSIX group objects (gidnumber, name, etc.) nested in each repo's posixgroup
+        feature options. This is the single source of truth for the user's groups and
+        is shared by both accessGroupObjs and gidNumbers so the two stay consistent
+        with what is exposed under Repo.features.
         """
-        import json
         repos = info.context.db.collection("repos").find({
             "$or": [
                 {"users": self.username},
@@ -340,7 +341,25 @@ class User(UserInput):
                     except Exception:
                         continue
         return groups
-    
+
+    @strawberry.field
+    def accessGroupObjs(self, info) -> List['AccessGroup']:
+        """
+        Return all POSIX group objects (with gidnumber, name, etc.) for this user,
+        by scanning all repos where the user is a member and extracting group info from posixgroup feature options.
+        """
+        return self._posixGroupsForUser(info)
+
+    @strawberry.field
+    def gidNumbers(self, info) -> List[int]:
+        """
+        Return the deduplicated, sorted list of POSIX gidNumbers this user belongs to.
+        Derived from the same source as accessGroupObjs (the posixgroup feature options
+        nested in each repo the user belongs to), so this view stays consistent with the
+        gids exposed under Repo.features by construction.
+        """
+        return sorted({ g.gidnumber for g in self._posixGroupsForUser(info) if g.gidnumber is not None })
+
     @strawberry.field
     def storages(self, info) -> List[UserStorage]:
         storages = list(info.context.db.collection("user_storage_allocation").find({"username": self.username}))

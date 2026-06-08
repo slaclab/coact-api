@@ -1128,6 +1128,22 @@ class Mutation:
         return group_after_update
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    def accessGroupUpsert(self, repo: RepoInput, accessgroup: AccessGroupInput, info: Info) -> AccessGroup:
+        # Reconcile the canonical access_groups projection with the gidNumber that the
+        # automation (sdf-cli) has provisioned and stored in the repo's posixgroup feature.
+        # Upserts by (repoid, name) so the access_groups collection stays in lockstep with
+        # the gids nested under Repo.features.
+        therepo = info.context.db.find_repo({ "name": repo.name, "facility": repo.facility })
+        if not therepo:
+            raise Exception(f"Cannot find specified repo")
+        accessgroup.repoid = therepo._id
+        if not accessgroup.members:
+            accessgroup.members = []
+        grp = info.context.db.update( 'access_groups', accessgroup, required_fields=[ 'name', 'repoid' ], find_existing={ "name": accessgroup.name, "repoid": therepo._id }, upsert=True )
+        info.context.audit(AuditTrailObjectType.Repo, therepo._id, "accessGroupUpsert", details=accessgroup.name)
+        return info.context.db.find_access_group({ "name": accessgroup.name, "repoid": therepo._id })
+
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
     def repoUpsert(self, repo: RepoInput, info: Info) -> Repo:
         repo = info.context.db.update( 'repos', repo, required_fields=[ 'name', 'facility', 'principal' ], find_existing={ 'name': repo.name, 'facility': repo.facility }, upsert=True )
         info.context.audit(AuditTrailObjectType.Repo, repo._id, "RepoUpsert")
