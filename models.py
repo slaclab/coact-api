@@ -280,6 +280,29 @@ class User(UserInput):
     @strawberry.field
     def facilities(self, info) -> List[str]:
         return sorted(list(set([x["facility"] for x in info.context.db.collection("repos").find({"name": "default", "users": self.username}, {"_id": 0, "facility": 1})])))
+    
+    @strawberry.field
+    def gids(self, info) -> List[int]:
+        """ A view of the gidNumbers this user belongs to, as nested in each Repo's posixgroup feature. """
+        gids = set()
+        repo_filter = {
+            "$or": [
+                {"users": self.username},
+                {"leaders": self.username},
+                {"principal": self.username},
+            ]
+        }
+        for repo in info.context.db.collection("repos").find(repo_filter, {"_id": 0, "features.posixgroup.options": 1}):
+            for opt in repo.get("features", {}).get("posixgroup", {}).get("options", []):
+                try:
+                    parsed = json.loads(opt) if isinstance(opt, str) else opt
+                    gid = parsed.get("gidNumber")
+                    if gid is not None:
+                        gids.add(int(gid))
+                except (ValueError, TypeError, AttributeError):
+                    continue
+        return sorted(gids)
+
     @strawberry.field
     def isAdmin(self, info) -> bool:
         admins = re.sub(r"\s", "", os.environ.get("ADMIN_USERNAMES",'')).split(',')
