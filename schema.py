@@ -122,6 +122,10 @@ class Query:
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def usersLookupFromService(self, info: Info, filter: UserInput ) -> List[User]:
         return info.context.lookupUsersFromService( filter )
+    
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def userGids(self, info: Info, username: str) -> List[int]:
+        return info.context.lookupUserGidsByUsername(username)
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def clusters(self, info: Info, filter: Optional[ClusterInput]={} ) -> List[Cluster]:

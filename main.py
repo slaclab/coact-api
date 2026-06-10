@@ -85,6 +85,18 @@ lookupUser = gql(
     """
 )
 
+lookupUserGids = gql(
+    """
+    query users($filter: UserInput!) {
+        users(filter: $filter) {
+              username
+              gidNumber
+              secondaryGidNumbers
+        }
+    }
+    """
+)
+
 class CustomContext(BaseContext):
 
     LOG = logging.getLogger(__name__)
@@ -269,7 +281,19 @@ class CustomContext(BaseContext):
         except Exception as e:
             LOG.error("Exception looking up user from service")
             return []
-
+    
+    def lookupUserGidsByUsername(self, username: str) -> list[int]:
+        resp = self.userlookup.execute(lookupUserGids, variable_values={"filter": {"username": username}})
+        users = resp.get("users") or []
+        if not users:
+            return []
+        u = users[0]
+        gids = set()
+        if u.get("gidNumber") is not None:
+            gids.add(int(u["gidNumber"]))
+        for g in u.get("secondaryGidNumbers") or []:
+            gids.add(int(g))
+        return sorted(gids)
 
 class DB:
     LOG = logging.getLogger(__name__)
