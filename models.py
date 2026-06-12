@@ -263,6 +263,13 @@ class UserInput:
     isbot: bool = False
 
 @strawberry.type
+class UserGidsInfo:
+    uidnumber: int
+    primaryGid: int
+    secondaryGidNumbers: Optional[List[int]]
+
+
+@strawberry.type
 class User(UserInput):
     # eppnObjs is most likely a call to some external service to get the details of an eppn
     # For now we assume everyone is a SLAC person.

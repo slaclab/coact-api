@@ -41,7 +41,7 @@ from models import \
         AuditTrailObjectType, AuditTrail, AuditTrailInput, \
         NotificationInput, Notification, ComputeRequirement, BulkOpsResult, StatusResult, \
         CoactDatetime, NormalizedJob, FacillityPastXUsage, RepoPastXUsage, \
-        NameDesc, RepoFeature, RepoFeatureInput
+        NameDesc, RepoFeature, RepoFeatureInput, UserGidsInfo
 
 import logging
 LOG = logging.getLogger(__name__)
@@ -124,8 +124,8 @@ class Query:
         return info.context.lookupUsersFromService( filter )
     
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def userGids(self, info: Info, username: str) -> List[int]:
-        return info.context.lookupUserGidsByUsername(username)
+    def myGids(self, info: Info) -> Optional[UserGidsInfo]:
+        return info.context.lookupUserGidsByUsername(info.context.username)
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def clusters(self, info: Info, filter: Optional[ClusterInput]={} ) -> List[Cluster]:
