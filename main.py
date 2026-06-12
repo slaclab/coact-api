@@ -25,7 +25,7 @@ from gql import gql, Client
 from gql.transport.requests import RequestsHTTPTransport
 
 
-from models import User, AccessGroup, Repo, Facility, Cluster, CoactRequest, CoactRequestStatus, AuditTrail, AuditTrailObjectType, CoactDatetime
+from models import User, AccessGroup, Repo, Facility, Cluster, CoactRequest, CoactRequestStatus, AuditTrail, AuditTrailObjectType, CoactDatetime, UserGidsInfo
 from schema import Query, Mutation, Subscription, start_change_stream_queues
 
 import smtplib
@@ -85,6 +85,19 @@ lookupUser = gql(
     """
 )
 
+lookupUserGids = gql(
+    """
+    query users($filter: UserInput!) {
+        users(filter: $filter) {
+              username
+              uidnumber
+              gidNumber
+              secondaryGidNumbers
+        }
+    }
+    """
+)
+
 class CustomContext(BaseContext):
 
     LOG = logging.getLogger(__name__)
@@ -100,7 +113,7 @@ class CustomContext(BaseContext):
     def __init__(self, *args, **kwargs):
         self.db = DB(mongo,DB_NAME)
         self.email = Email(EMAIL_SERVER_HOST, EMAIL_SERVER_PORT)
-        self.userlookup = Client(transport=RequestsHTTPTransport(url=USER_LOOKUP_URL, verify=True, retries=3), fetch_schema_from_transport=True)
+        self.userlookup = Client(transport=RequestsHTTPTransport(url=USER_LOOKUP_URL, verify=True, retries=3), fetch_schema_from_transport=False)
 
     def __str__(self):
         return f"CustomContext User: {self.username} is_admin {self.is_admin}"
@@ -269,7 +282,18 @@ class CustomContext(BaseContext):
         except Exception as e:
             LOG.error("Exception looking up user from service")
             return []
-
+    
+    def lookupUserGidsByUsername(self, username: str) -> Optional[UserGidsInfo]:
+        resp = self.userlookup.execute(lookupUserGids, variable_values={"filter": {"username": username}})
+        users = resp.get("users") or []
+        if not users:
+            return None
+        u = users[0]
+        return UserGidsInfo(
+            uidnumber=int(u["uidnumber"]),
+            primaryGid=int(u["gidNumber"]) if u.get("gidNumber") is not None else None,
+            secondaryGidNumbers=u.get("secondaryGidNumbers") or []
+        )
 
 class DB:
     LOG = logging.getLogger(__name__)
