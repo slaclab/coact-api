@@ -1276,6 +1276,25 @@ class Mutation:
         clustername = repocompute.clustername
         if not info.context.db.find_clusters({"name": clustername}):
             raise Exception("Cannot find cluster with name " + clustername)
+
+        # Validate facility has purchased resources on this cluster
+        facility_name = repo.facility
+        todaysdate = datetime.utcnow()
+
+        purchase = info.context.db.collection("facility_compute_purchases").find_one({
+            "facility": facility_name,
+            "clustername": clustername,
+            "start": {"$lte": todaysdate},
+            "end": {"$gt": todaysdate},
+            "servers": {"$gt": 0}
+        })
+
+        if not purchase:
+            raise Exception(
+                f"Cannot create allocation for cluster '{clustername}': "
+                f"Facility '{facility_name}' has not purchased compute resources on this cluster. "
+                f"Please contact your facility administrator to purchase resources first."
+            )
         
         rc["clustername"] = clustername
         rc["start"] = repocompute.start.astimezone(pytz.utc)
