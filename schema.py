@@ -1293,7 +1293,6 @@ class Mutation:
             raise Exception(
                 f"Cannot create allocation for cluster '{clustername}': "
                 f"Facility '{facility_name}' has not purchased compute resources on this cluster. "
-                f"Please contact your facility administrator to purchase resources first."
             )
         
         rc["clustername"] = clustername
