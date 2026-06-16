@@ -1,0 +1,640 @@
+$cardinal: rgb(140,21,21);
+$digitalred: rgb(177,4,14);
+$digitalredlight: rgb(229,8,8);
+
+$white: rgb(255,255,255);
+$stanfordblack: rgb(46,45,41);
+$coolgrey: rgb(83,86,90);
+$trueblack: rgb(0,0,0);
+$black10: rgb(234,234,234);
+$black20: rgb(213,213,212);
+$black30: rgb(192,192,191);
+$black40: rgb(171,171,169);
+$black50: rgb(151,150,148);
+$black60: rgb(118,118,116);
+$black70: rgb(109,108,105);
+$black80: rgb(88,87,84);
+$black90: rgb(67,66,62);
+
+$lagunita: rgb(0,124,146);
+$paloverde: rgb(39,153,137);
+$bay: rgb(111,162,135);
+$lime: rgb(139,199,81);
+$purple: rgb(83,40,79);
+$clay: rgb(95,87,79);
+$sky: rgb(103,175,210);
+$paloalto: rgb(23,94,84);
+$lightsage: rgb(199,209,197);
+$illuminating: rgb(254,221,92);
+$lavender: rgb(118,94,153);
+$stone: rgb(146,139,129);
+$teal: rgb(0,80,92);
+$poppy: rgb(233,131,0);
+$spirited: rgb(224,79,57);
+$fog: rgb(218,215,203);
+
+$mainbg: $digitalred;
+$lightbg: $illuminating;
+$contrastbg: $spirited;
+$dangerbg: $digitalred;
+$selected: $lagunita;
+$coact_success: $paloverde;
+$coact_becareful: $illuminating;
+
+$primary: $mainbg;
+$secondary: $lightbg;
+
+$zebrabg: rgb(244,244,244);
+
+$theme-colors: (
+  "primary": $primary,
+  "secondary": $secondary,
+  "warning": $contrastbg,
+  "danger": $dangerbg,
+  "info": $sky,
+  "light": $black10
+);
+
+$nav-pills-link-active-bg: $contrastbg;
+
+
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  src: local('Lato'), url(./fonts/Lato/Lato-Regular.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: bold;
+  src: local('Lato'), url(./fonts/Lato/Lato-Bold.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Lato';
+  font-style: italic;
+  src: local('Lato'), url(./fonts/Lato/Lato-Italic.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Merriweather';
+  src: local('Merriweather'), url(./fonts/Merriweather/Merriweather-Regular.ttf) format('truetype');
+}
+
+@import '../node_modules/bootstrap/scss/bootstrap';
+
+@mixin navbg {
+  .nav-item .active {
+    background-color: $nav-pills-link-active-bg;
+    color: $white;
+  }
+}
+
+body {
+  font: 14px Lato, Merriweather, sans-serif;
+}
+
+#mainContainer {
+  @include navbg;
+}
+
+#coactnav {
+  background-color: $primary;
+  .nav-link {
+    color: $white;
+  }
+  .nav-item:hover {
+    background-color: $contrastbg;
+    color: $white;
+  }
+  .dropdown-item:hover {
+    background-color: $contrastbg;
+    color: $white;
+  }
+}
+
+ol, ul {
+  padding-left: 30px;
+}
+
+.midchart {
+  width: 100rem;
+}
+
+.modal-title {
+  font-size: 1.1rem;
+}
+
+.modal-header {
+  background-color: $primary;
+  color: $white;
+  .em {
+    color: $secondary;
+  }
+}    
+
+.stringlistmgr {
+  .item:nth-child(even) {
+    background: $zebrabg;
+  }
+  .item {
+    padding: 0.25rem;
+    margin-top: 0;
+    margin-bottom: 0;  
+  }
+}
+
+.srchadd {
+  .btns { 
+    display: inline-grid;
+    grid-template-columns: repeat(100, 1fr);
+    .btn:nth-of-type(1) {
+      grid-column: 2 / span 10;
+    }
+    .btn:nth-of-type(2) {
+      grid-column: 75 / span 10;
+    }
+    .btn:nth-of-type(3) {
+      grid-column: 90 / span 10;
+    }
+    .btn {
+      margin-top: 0.75rem;
+    }
+  }
+}
+
+.tbl-selectable {
+  tr.selected {
+    background-color: $selected;
+    color: $white;
+  }
+  tr:nth-of-type(even) tr:not(.selected) {
+    background-color: $black10;
+    color: $black;
+  }
+}
+
+.vmid {
+  vertical-align: middle;
+}
+
+#repocomputetbl {
+  .vmid {
+    vertical-align: middle;
+  }
+  :nth-child(odd of tr.reporow) {
+    td.vmid {
+      background-color: $zebrabg;
+    }
+  }
+  tr:nth-child(odd) {
+    td:not(.vmid) {
+      background-color: $zebrabg;
+    }
+  }
+}
+
+.sectiontitle {
+  font-size: 1.1rem;
+  .ref {
+    font-weight: bold;
+    color: $primary;
+  }
+  padding-bottom: 0.25rem;
+}
+
+.brdcrmb {
+  font-size: 0.9rem;
+}
+
+#root{
+  margin: 0;
+  padding: 0;
+}
+
+#mainContainer {
+  min-width: 100vw;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin: 0;
+  padding: 0;
+  .header {
+    margin-left: 0;
+    margin-right: 1.0em;
+    padding: 0;
+    width: 100%;
+  }
+  .footer {
+    width: 100%;
+    margin: 1.0em;
+    .partner {
+      float: right;
+      margin-right: 1.0em;
+    }
+  }
+  .subsection1 {
+    text-align: left;
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    span {
+      border-bottom: solid 2px $primary;
+      padding-left: 0.25rem;
+      padding-right: 0.25rem;
+      margin-bottom: 0.25rem;
+    }
+  }
+}
+
+.tlbrbtn {
+  margin-right: 0.25rem;
+}
+
+.registeruser {
+  min-height: 100vh;
+  width: 100vw;
+  button {
+    margin-left: 0.25em;
+  }
+  .footer {
+    margin-left: 0.1em;
+    margin-right: 0.1em;
+    margin-bottom: 0.5em;
+  }
+}
+
+.registerMdl {
+  .facdesc {
+    color: $primary;
+    font-size: 0.8rem;
+  }
+}
+
+.nonavheader {
+  margin-left: 0;
+  padding: 0;
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+  width: 100%;
+  background-color: $primary;
+  .nslogo {
+    padding-left: 1.0em;
+  }
+  .napplogo {
+    padding-left: 1.0em;
+    font-size: 2.5em;
+    color: $white;
+  }
+  .nsppname {
+    padding-left: 0.15em;
+    font-size: 2.5em;
+    color: $white;
+  }
+}
+
+.navtxt {
+  color: $white;
+}
+
+.navtoggle {
+  color: $primary;
+}
+
+.tbllbl {
+  font-weight: bold;
+}
+
+#facilities {
+  @include navbg;
+
+  .card-header {
+    background-color: $black10;
+    font-weight: bold;
+  }
+
+  .card-body > .row:nth-child(even) {
+    background: $zebrabg;
+  }
+  .card-body {
+    padding-left: 0;
+    margin-left: 0;
+    padding-right: 0;
+    margin-right: 0;
+    .hdr {
+      background: $zebrabg;
+    }  
+    .fcprnt {
+      display: grid;
+      grid-template-columns: repeat(100, 1fr);
+    }
+    .fcprnt.subtitle {
+      font-weight: bold;
+      text-align: center;
+      background: $zebrabg;
+      .blnk {
+        grid-column: 0 / 30;
+      }
+      .used {
+        grid-column: 41 / 100;
+      }
+    }
+    .title {
+      font-weight: bold;
+      text-align: center;
+    }
+    .title .past {
+      color: $coolgrey;
+    }
+    .fcrow:nth-child(even) {
+      background: $zebrabg;
+    }
+    .fcrow {
+      .cluster {
+        grid-column: 1 / span 9;
+        text-align: left;
+        padding-left: 0.5rem;
+      }
+      .purchased {
+        grid-column: 10 / span 7;
+        text-align: right;
+      }
+      .burst {
+        grid-column: 18 / span 7;
+        text-align: right;
+      }
+      .allocated {
+        grid-column: 30 / span 9;
+        text-align: right;
+      }
+      .hour {
+        grid-column: 40 / span 9;
+        text-align: right;
+      }
+      .day {
+        grid-column: 50 / span 9;
+        text-align: right;
+      }
+      .week {
+        grid-column: 60 / span 9;
+        text-align: right;
+      }
+      .month {
+        grid-column: 70 / span 9;
+        text-align: right;
+      }
+      .year {
+        grid-column: 80 / span 9;
+        text-align: right;
+      }
+      .ytd {
+        grid-column: 90 / span 9;
+        text-align: right;
+        padding-right: 0.5rem;
+      }
+    }
+    .fsprnt {
+      display: grid;
+      grid-template-columns: repeat(100, 1fr);
+    }
+    .fsprnt.subtitle {
+      font-weight: bold;
+      text-align: center;
+      background: $zebrabg;
+      .blnk {
+        grid-column: 0 / 30;
+      }
+      .intb {
+        grid-column: 31 / 100;
+      }
+    }
+    .fsrow:nth-child(even) {
+      background: $zebrabg;
+    }
+    .fsrow {
+      .sclass {
+        grid-column: 1 / span 15;
+        text-align: left;
+        padding-left: 0.5rem;
+      }
+      .purpose {
+        grid-column: 16 / span 15;
+        text-align: right;        
+      }
+      .acquired {
+        grid-column: 31 / span 20;
+        text-align: right;        
+      }
+      .allocated {
+        grid-column: 51 / span 20;
+        text-align: right;        
+      }
+      .used {
+        grid-column: 71 / span 20;
+        text-align: right;        
+      }
+    }
+  }
+}
+
+.btmtbl {
+  .hdr {
+    font-weight: bold;
+    font-size: 0.9rem;
+  }
+  .col {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+    border-right: thin $black20 solid;
+  }
+  .col:first-child {
+    border-left: thin $black20 solid;
+  }
+  .row:nth-child(even) {
+    background: $zebrabg;
+  }
+  .row:first-child {
+    border-top: thin $black20 solid;
+  }
+  .row:last-child {
+    border-bottom: thin $black20 solid;
+  }
+  .usrcmpalc {
+    width: 5.0rem;
+  }
+
+  margin: 0.5rem;
+}
+
+#requesttypes {
+  @include navbg;
+}
+
+#requests {
+  .rqsttbl {
+    .row {
+      border-bottom: thin $black20 solid;
+    }
+    .row:first-child {
+      border-top: thin $black20 solid;
+      padding-top: 0.25rem;
+      padding-bottom: 0.25rem;
+      font-weight: bold;
+    }
+    .row:nth-child(odd) {
+      background: $zebrabg;
+    }
+    .row > div {
+      border-left: thin $black20 solid;
+    }
+    .row > div:last-child {
+      border-right: thin $black20 solid;
+    }
+    button {
+      margin-top: 0.25rem;
+      margin-bottom: 0.25rem;
+    }
+  }
+  .rqAuto {
+    background-color: $coact_success;
+    border: none;
+  }
+  .rqManual {
+    background-color: $coact_becareful;
+    border: none;
+  }
+}
+
+#repotabs {
+  @include navbg;
+  .statusbar {
+    .item {
+      vertical-align: text-bottom;
+    }
+  }
+}
+
+@keyframes inPlaceSuccessAnimation {
+    0% {
+        background-color: $selected;
+    }
+    100% {
+        background-color: inherit;
+    }
+}
+
+@keyframes inPlaceErrorAnimation {
+    0% {
+        background-color: $mainbg;
+    }
+    100% {
+        background-color: inherit;
+    }
+}
+
+#repocompute-popover {
+  max-width: 80vw;
+  font: 14px Lato, Merriweather, sans-serif;
+  th {
+    font-size: 12px;
+  }
+  .popover-header {
+    background-color: $mainbg;
+    color: $white;
+    .em {
+      color: $secondary;
+    }  
+  }
+}
+
+.inplacesuccess {
+  animation-name: inPlaceSuccessAnimation;
+  animation-duration: 3s;
+}
+.inplaceerror {
+  animation-name: inPlaceErrorAnimation;
+  animation-duration: 3s;
+}
+
+#clusterreports {
+  @include navbg;
+}
+
+.partner {
+  float: right;
+  margin-right: 1.0em;
+}
+
+#myprofile {
+  .card {
+    margin-top: 0.5rem;
+  }
+  .card-header {
+    background-color: $black10;
+    color: $black;
+    font-weight: bold;
+  }
+  .card-subtitle {
+    font-size: 14px;
+    font-weight: bold;
+  }
+  
+  ul {
+    list-style: none;
+  }
+    
+  li::before {
+    content: "\0021AA";
+    padding-right: 8px;
+    font-weight: bold;
+    color: $primary;
+  }
+
+  .sshkey.header {
+    font-weight: bold;
+    padding-bottom: 0.5rem;
+  }
+  .sshkey:nth-child(even) {
+    background-color: $zebrabg;
+  }
+  .sshkey {
+    display: grid;
+    grid-template-columns: repeat(100, 1fr);
+    align-items: center;
+    padding: 0.25rem;
+
+    .fp {
+      grid-column: 1 / span 29;
+    }
+    .ac {
+      grid-column: 30 / span 4;
+    }
+    .ca {
+      grid-column: 40 / span 14;
+    }
+    .vu {
+      grid-column: 55 / span 14;
+    }
+    .ea {
+      grid-column: 70 / span 14;
+    }
+    .actions {
+      grid-column: 85 / span 14;
+    }
+  }
+}
+
+.sshkeymodal {
+  .codeinstructions {
+    .comment {
+      padding-bottom: 0.25rem;
+    }
+    code {
+      padding-bottom: 0.25rem;
+      display: block;
+    }
+  }
+  textarea {
+    font-size: 0.8rem;
+    font-family: monospace;
+  }
+}
