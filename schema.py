@@ -414,6 +414,8 @@ class Query:
             search["users"] = username
         LOG.debug(f"searching for repos using {filter} -> {search}")
         theRepo = info.context.db.collection("repos").find_one(search)
+        if theRepo is None:
+            raise RuntimeError(f"Repo with facility={filter.facility} and name={filter.name} does not exist")
         return info.context.db.cursor_to_objlist([theRepo], Repo, exclude_fields=["access_groups", "features"])[0]
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
