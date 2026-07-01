@@ -152,6 +152,17 @@ class Query:
         return info.context.db.find_facilities( filter)
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def myManagedFacilities(self, info: Info ) -> List[Facility]:
+        """Return facilities managed by the current user. Admins get all facilities.
+
+        Identical to facilitiesIManage, but with a different name injected.
+        """
+        filter = { "czars" : info.context.username }
+        if info.context.is_admin:
+            filter = {}        
+        return info.context.db.find_facilities( filter)
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def facilitiesIManage(self, info: Info ) -> List[Facility]:
         filter = { "czars" : info.context.username }
         if info.context.is_admin:
