@@ -310,6 +310,15 @@ query ReportFacilityComputeByUser($clustername: String!, $range: ReportRangeInpu
   }
 }
 
+query ReportFacilityComputeByUserToDate($clustername: String!, $range: ReportRangeInput!) {
+  reportFacilityComputeByUserToDate(clustername: $clustername, range: $range) {
+    facility
+    repo
+    username
+    resourceHours
+  }
+}
+
 query ReportFacilityComputeOverall($clustername: String!, $group: String!) {
   reportFacilityComputeOverall(clustername: $clustername, group: $group) {
     facility

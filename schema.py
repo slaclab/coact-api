@@ -516,6 +516,40 @@ class Query:
         ])
         return info.context.db.cursor_to_objlist(usgs, PerUserUsage, {})
 
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def reportFacilityComputeByUserToDate( self, info: Info, clustername: str, range: ReportRangeInput ) -> List[PerUserUsage]:
+        if not range.start:
+            raise Exception("A report start time is required")
+
+        endtime = range.end or datetime.datetime.now(datetime.timezone.utc)
+        if range.start >= endtime:
+            raise Exception("Report start time must be before report end time")
+
+        LOG.debug("Getting raw compute user data for cluster %s from %s to %s", clustername, range.start, endtime)
+        allocation_ids = [
+            allocation["_id"]
+            for allocation in info.context.db.collection("repo_compute_allocations").find(
+                {"clustername": clustername}, {"_id": 1}
+            )
+        ]
+        if not allocation_ids:
+            return []
+
+        usgs = info.context.db.collection("jobs").aggregate([
+            { "$match": { "allocationId": { "$in": allocation_ids }, "startTs": { "$gte": range.start, "$lt": endtime } } },
+            { "$group": { "_id": { "allocationId": "$allocationId", "username": "$username" }, "resourceHours": { "$sum": "$resourceHours" }} },
+            { "$project": { "_id": 0, "allocationId": "$_id.allocationId", "username": "$_id.username", "resourceHours": 1 }},
+            { "$lookup": { "from": "repo_compute_allocations", "localField": "allocationId", "foreignField": "_id", "as": "allocation"}},
+            { "$unwind": "$allocation" },
+            { "$group": { "_id": { "repoid": "$allocation.repoid", "username": "$username" }, "resourceHours": { "$sum": "$resourceHours" }} },
+            { "$project": { "_id": 0, "repoid": "$_id.repoid", "username": "$_id.username", "resourceHours": 1 }},
+            { "$lookup": { "from": "repos", "localField": "repoid", "foreignField": "_id", "as": "repo"}},
+            { "$unwind": "$repo" },
+            { "$project": { "_id": 0, "repo": "$repo.name", "facility": "$repo.facility", "username": 1, "resourceHours": 1 }},
+            { "$sort": { "resourceHours": -1 }}
+        ])
+        return info.context.db.cursor_to_objlist(usgs, PerUserUsage, {})
+
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin  ] )
     def reportFacilityComputeOverall( self, info: Info, clustername: str, group: str) -> List[PerDateUsage]:
