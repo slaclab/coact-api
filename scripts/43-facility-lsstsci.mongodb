@@ -1,0 +1,56 @@
+// To create a new facility; please create the facility object; the default repo and some zero purchaes.
+
+db.getSiblingDB("iris").facilities.insertOne({
+  "name" : "lsstsci",
+  "description" : "LSST Science",
+  "resources": ["compute", "storage"],
+  "serviceaccount": "", // set primary uid on all volumes
+  "servicegroup": "", // set primary gid on all volumes
+  "czars": [ "jchiang", "sierrav", "abolton", "atani" ]
+})
+
+db.getSiblingDB("iris").facility_compute_purchases.insertOne({
+  "facility" : "lsstsci",
+  "clustername" : "roma",
+  "start" : ISODate("2026-08-24T00:00:00Z"),
+  "end" : ISODate("2100-01-01T00:00:00Z"),
+  "servers" : 0
+});
+
+db.getSiblingDB("iris").repos.insertOne({
+  "facility": "lsstsci",
+  "name" : "default",
+  "leaders" : [ "jchiang" ],
+  "principal" : "jchiang",
+  "users" : [ "jchiang", "sierrav", "abolton", "atani" ]
+})
+
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility" : "lsstsci",
+  "storagename" : "sdfdata",
+  "purpose" : "data",
+  "start" : ISODate("2026-08-24T00:00:00Z"),
+  "end" : ISODate("2100-01-01T00:00:00Z"),
+  "gigabytes" : 0,
+  "inodes" : 100000000
+});
+
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility" : "lsstsci",
+  "storagename" : "sdfhome",
+  "purpose" : "group",
+  "start" : ISODate("2026-08-24T00:00:00Z"),
+  "end" : ISODate("2100-01-01T00:00:00Z"),
+  "gigabytes" : 0,
+  "inodes" : 100000
+})
+
+db.getSiblingDB("iris").facility_storage_purchases.insertOne({
+  "facility" : "lsstsci",
+  "storagename" : "sdfhome",
+  "purpose" : "scratch",
+  "start" : ISODate("2026-08-24T00:00:00Z"),
+  "end" : ISODate("2100-01-01T00:00:00Z"),
+  "gigabytes" : 0,
+  "inodes" : 100000
+})
