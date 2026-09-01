@@ -1023,8 +1023,8 @@ class Mutation:
             thereq.approve(info)
             return True
         elif thereq.reqtype == "FacilityComputeAllocation":
-            if not isAdmin and not isCzar:
-                raise Exception("User is not an admin or a czar")
+            if not isAdmin:
+                raise Exception("Only an admin can approve a facility compute purchase")
             if not thereq.facilityname:
                 raise Exception("FacilityComputeAllocation request without a facility - cannot approve.")
             if not thereq.clustername:
@@ -1477,9 +1477,10 @@ class Mutation:
         request.updateStrategy = 'proportional'
         request.requestedby = info.context.username
         request.timeofrequest = todaysdate
-        request.approvalstatus = 1
+        request.approvalstatus = CoactRequestStatus.Approved
         info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
-        
+        info.context.audit(AuditTrailObjectType.Facility, facility._id, "facilityAddUpdateComputePurchase", details=cluster.name+": "+str(old_purchased)+" -> "+str(purchase))
+
         return info.context.db.find_facility(facility)
 
     @strawberry.field( permission_classes=[ IsAdmin ] )
