@@ -1074,7 +1074,16 @@ class Mutation:
             if not thereq.computerequirement:
                 raise Exception(f"The new compute requirement was not specified")
             thereq.approve(info)
-            return True            
+            return True
+        elif thereq.reqtype == "FacilityComputeAllocation":
+            if not isAdmin:
+                raise Exception("Only an admin can approve a facility compute purchase")
+            if not thereq.facilityname:
+                raise Exception("FacilityComputeAllocation request without a facility - cannot approve.")
+            if not thereq.clustername:
+                raise Exception("FacilityComputeAllocation request without a cluster name - cannot approve.")
+            thereq.approve(info)
+            return True
         else:
             if not isAdmin and not isCzar:
                 raise Exception("User is not an admin or a czar")
@@ -1501,6 +1510,7 @@ class Mutation:
         todaysdate = datetime.datetime.utcnow()
         cp = list(info.context.db.collection("facility_compute_purchases").find({"facility": facility.name, "clustername": cluster.name, "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }).sort([("start", -1)]).limit(1))
         alloc_id = None
+        old_purchased = int(cp[0]["servers"]) if cp else 0
         if cp:
             alloc_id = cp[0]["_id"]
             info.context.db.collection("facility_compute_purchases").update_one({"_id": alloc_id}, {"$set": {"servers": purchase, "burst_percent": burst_percent}}) 
@@ -1515,9 +1525,10 @@ class Mutation:
         request.allocationid = alloc_id
         request.requestedby = info.context.username
         request.timeofrequest = todaysdate
-        request.approvalstatus = 1
+        request.approvalstatus = CoactRequestStatus.Approved
         info.context.db.create( 'requests', request, required_fields=[ 'reqtype' ], find_existing=None )
-        
+        info.context.audit(AuditTrailObjectType.Facility, facility._id, "facilityAddUpdateComputePurchase", details=cluster.name+": "+str(old_purchased)+" -> "+str(purchase))
+
         return info.context.db.find_facility(facility)
 
     @strawberry.field( permission_classes=[ IsAdmin ] )
