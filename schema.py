@@ -1029,8 +1029,6 @@ class Mutation:
                 raise Exception("FacilityComputeAllocation request without a facility - cannot approve.")
             if not thereq.clustername:
                 raise Exception("FacilityComputeAllocation request without a cluster name - cannot approve.")
-            if thereq.newPurchased is None or thereq.newPurchased is UNSET:
-                raise Exception("FacilityComputeAllocation request without newPurchased - cannot approve.")
             thereq.approve(info)
             return True
         else:
@@ -1472,9 +1470,6 @@ class Mutation:
         request.clustername = cluster.name
         request.allocated = purchase
         request.allocationid = alloc_id
-        request.oldPurchased = old_purchased
-        request.newPurchased = int(purchase)
-        request.updateStrategy = 'proportional'
         request.requestedby = info.context.username
         request.timeofrequest = todaysdate
         request.approvalstatus = CoactRequestStatus.Approved
