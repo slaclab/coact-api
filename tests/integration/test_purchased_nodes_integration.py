@@ -18,7 +18,6 @@ async def test_facility_computepurchases_provides_cli_data(client: CoactClient):
                 computepurchases {
                     clustername
                     purchased
-                    burstNodes
                 }
             }
         }
@@ -40,11 +39,6 @@ async def test_facility_computepurchases_provides_cli_data(client: CoactClient):
                 assert "clustername" in purchase
                 assert "purchased" in purchase
                 assert isinstance(purchase["clustername"], str)
-
-                # burstNodes is the field the repo-registration and overage daemons
-                assert "burstNodes" in purchase
-                if purchase["burstNodes"] is not None:
-                    assert isinstance(purchase["burstNodes"], (int, float))
 
                 # The "purchased" field is what CLI uses for purchased nodes count
                 if purchase["purchased"] is not None:

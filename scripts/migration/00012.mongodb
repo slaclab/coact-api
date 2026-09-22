@@ -1,7 +1,0 @@
-// burst was a percentage of the purchase and was never populated; it is now an
-// absolute node count, so drop the stale field and start everyone at zero.
-if(db.getSiblingDB("iris").versions.findOne({dbschema: "0.0.12"})) {
-    db.getSiblingDB("iris").facility_compute_purchases.updateMany( {}, {"$set": { "burst_nodes": 0}});
-    db.getSiblingDB("iris").facility_compute_purchases.updateMany( {}, {"$unset": { "burst_percent": 1}});
-    db.getSiblingDB("iris").versions.updateOne({}, {"$set": {"dbschema": "0.0.13"}})
-}

@@ -18,7 +18,7 @@ def test_facility_computepurchases_aggregates_purchased_nodes():
 
     # Mock aggregation results for compute purchases (what CLI needs)
     mock_purchases_result = [
-        {"_id": {"clustername": "ada"}, "servers": 256, "burst_nodes": 26}
+        {"_id": {"clustername": "ada"}, "servers": 256, "burst_percent": 20}
     ]
 
     # Mock aggregation results for allocations
@@ -44,5 +44,5 @@ def test_facility_computepurchases_aggregates_purchased_nodes():
     ada_purchase = result[0]
     assert ada_purchase.clustername == "ada"
     assert ada_purchase.purchased == 256  # This is what CLI queries for purchased nodes
-    assert ada_purchase.burst_nodes == 26
+    assert ada_purchase.burst_percent == 20
     assert ada_purchase.allocated == 75.0
