@@ -409,7 +409,7 @@ class Query:
             return [ RepoFacilityName(**x) for x in info.context.db.collection("repos").find({ '$or': [ { "users": username }, { "leaders": username }, { "principal": username }]}, {"_id": 0, "name": 1, "facility": 1}) ]
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def repo(self, filter: RepoInput, info: Info) -> Optional[Repo]:
+    def repo(self, filter: RepoInput, info: Info) -> Repo:
         username = info.context.username
         assert username != None
         myfacs = list(x.name for x in info.context.db.find_facilities({"czars": username}))
@@ -426,8 +426,7 @@ class Query:
         LOG.debug(f"searching for repos using {filter} -> {search}")
         theRepo = info.context.db.collection("repos").find_one(search)
         if theRepo is None:
-            # not found (or not accessible to this user) - callers rely on null to mean "no repo yet"
-            return None
+            raise RuntimeError(f"Repo with facility={filter.facility} and name={filter.name} does not exist")
         return info.context.db.cursor_to_objlist([theRepo], Repo, exclude_fields=["access_groups", "features"])[0]
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
@@ -1488,7 +1487,7 @@ class Mutation:
         return info.context.db.find_facility(filter)
 
     @strawberry.field( permission_classes=[ IsAdmin ] )
-    def facilityAddUpdateComputePurchase(self, facility: FacilityInput, cluster: ClusterInput, purchase: float, info: Info, burst_percent: float=0.0) -> Facility:
+    def facilityAddUpdateComputePurchase(self, facility: FacilityInput, cluster: ClusterInput, purchase: float, info: Info, burst_nodes: float=0.0) -> Facility:
         facility = info.context.db.find_facility(filter=facility)
         if not facility:
             raise Exception("Cannot find requested facility " + str(facility))
@@ -1497,15 +1496,17 @@ class Mutation:
             raise Exception("Cannot find requested cluster " + str(cluster))
         if purchase and purchase < 0.0:
             raise Exception("Invalid purchase amount " + str(purchase))
+        if burst_nodes and burst_nodes < 0.0:
+            raise Exception("Invalid burst node count " + str(burst_nodes))
 
         todaysdate = datetime.datetime.utcnow()
         cp = list(info.context.db.collection("facility_compute_purchases").find({"facility": facility.name, "clustername": cluster.name, "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }).sort([("start", -1)]).limit(1))
         alloc_id = None
         if cp:
             alloc_id = cp[0]["_id"]
-            info.context.db.collection("facility_compute_purchases").update_one({"_id": alloc_id}, {"$set": {"servers": purchase, "burst_percent": burst_percent}}) 
+            info.context.db.collection("facility_compute_purchases").update_one({"_id": alloc_id}, {"$set": {"servers": purchase, "burst_nodes": burst_nodes}}) 
         else:
-            alloc_id = info.context.db.collection("facility_compute_purchases").insert_one({ "facility": facility.name, "clustername": cluster.name, "start": todaysdate, "end": datetime.datetime.fromisoformat("2100-01-01T00:00:00").replace(tzinfo=datetime.timezone.utc), "servers": purchase, "burst_percent": burst_percent }).inserted_id
+            alloc_id = info.context.db.collection("facility_compute_purchases").insert_one({ "facility": facility.name, "clustername": cluster.name, "start": todaysdate, "end": datetime.datetime.fromisoformat("2100-01-01T00:00:00").replace(tzinfo=datetime.timezone.utc), "servers": purchase, "burst_nodes": burst_nodes }).inserted_id
 
         request: CoactRequestInput = CoactRequestInput()
         request.reqtype = CoactRequestType.FacilityComputeAllocation
