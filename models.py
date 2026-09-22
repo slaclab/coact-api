@@ -447,7 +447,7 @@ class FacilityStorageAllocation(StorageAllocationInput):
 class FacilityComputePurchases:
     clustername: Optional[str] = UNSET
     purchased: Optional[float] = UNSET
-    burst_percent: Optional[float] = UNSET
+    burst_nodes: Optional[float] = UNSET
     allocated: Optional[float] = UNSET
 @strawberry.type
 class FacilityStoragePurchases:
@@ -482,9 +482,9 @@ class Facility( FacilityInput ):
         aggs = info.context.db.collection("facility_compute_purchases").aggregate([
             { "$match": { "facility": self.name, "start": {"$lte": todaysdate}, "end": {"$gt": todaysdate} }},
             { "$sort": { "end": -1 }},
-            { "$group": { "_id": {"clustername": "$clustername"}, "servers": {"$sum": "$servers"}, "burst_percent": {"$max": "$burst_percent"}}},
+            { "$group": { "_id": {"clustername": "$clustername"}, "servers": {"$sum": "$servers"}, "burst_nodes": {"$max": "$burst_nodes"}}},
         ])
-        purchases = { x["_id"]["clustername"]: { "purchased": x["servers"], "burst_percent": x.get("burst_percent", 0) if x["burst_percent"] else 0 } for x in aggs }
+        purchases = { x["_id"]["clustername"]: { "purchased": x["servers"], "burst_nodes": x.get("burst_nodes") or 0 } for x in aggs }
         aaggs = info.context.db.collection("repos").aggregate([
             { "$match": { "facility": self.name}},
             { "$lookup": { "from": "repo_compute_allocations", "localField": "_id", "foreignField": "repoid", "as": "allocation"}},
@@ -498,7 +498,7 @@ class Facility( FacilityInput ):
         for k,v in purchases.items():
             v["clustername"] = k
             v["allocated"] = allocs.get(k, 0)
-        return [ FacilityComputePurchases(**{k:x.get(k, 0) for k in ["clustername", "purchased", "burst_percent", "allocated"] }) for x in purchases.values()]
+        return [ FacilityComputePurchases(**{k:x.get(k, 0) for k in ["clustername", "purchased", "burst_nodes", "allocated"] }) for x in purchases.values()]
     @strawberry.field
     def computeallocations(self, info) -> Optional[List[FacilityComputeAllocation]]:
         # More complex; we want to return the "current" per resource type.
