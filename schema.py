@@ -409,9 +409,9 @@ class Query:
             return [ RepoFacilityName(**x) for x in info.context.db.collection("repos").find({ '$or': [ { "users": username }, { "leaders": username }, { "principal": username }]}, {"_id": 0, "name": 1, "facility": 1}) ]
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
-    def repo(self, filter: RepoInput, info: Info) -> Repo:
+    def repo(self, filter: RepoInput, info: Info) -> Repo | None:
         username = info.context.username
-        assert username != None
+        assert username is not None
         myfacs = list(x.name for x in info.context.db.find_facilities({"czars": username}))
         isczar = len(myfacs) != 0
         isadmin = info.context.is_admin and not info.context.is_impersonating
@@ -426,7 +426,7 @@ class Query:
         LOG.debug(f"searching for repos using {filter} -> {search}")
         theRepo = info.context.db.collection("repos").find_one(search)
         if theRepo is None:
-            raise RuntimeError(f"Repo with facility={filter.facility} and name={filter.name} does not exist")
+            return None
         return info.context.db.cursor_to_objlist([theRepo], Repo, exclude_fields=["access_groups", "features"])[0]
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
