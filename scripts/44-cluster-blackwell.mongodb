@@ -1,0 +1,12 @@
+db.getSiblingDB("iris").clusters.insertOne({
+  "name": "blackwell",
+  "nodecpucount": 204,
+  "nodecpucountdivisor": 8,
+  "nodememgb": 2015,
+	"nodegpucount" : 8,
+	"nodegpumemgb" : 180,
+  "chargefactor": 1.0,
+  "nodecpusmt": 2,
+  "memberprefixes": [ "sdfblackwell" ],
+  "members": [ ]
+})
