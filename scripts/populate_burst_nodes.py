@@ -28,14 +28,18 @@ def compute_burst_nodes(purchased: float) -> int:
     return int(4 * (1 + sqrt(purchased)))
 
 
-def current_purchases(db):
+def current_purchases(db, facilities=None):
     """
     Current purchases grouped by facility:cluster, matching Facility.computepurchases
     in models.py: servers are summed and burst_nodes is the max across the current docs.
+    Limited to the named facilities when given.
     """
     now = datetime.datetime.now(datetime.timezone.utc)
+    match = {"start": {"$lte": now}, "end": {"$gt": now}}
+    if facilities:
+        match["facility"] = {"$in": list(facilities)}
     return list(db["facility_compute_purchases"].aggregate([
-        {"$match": {"start": {"$lte": now}, "end": {"$gt": now}}},
+        {"$match": match},
         {"$group": {
             "_id": {"facility": "$facility", "clustername": "$clustername"},
             "servers": {"$sum": "$servers"},
@@ -50,6 +54,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Compute and store burst_nodes for current facility compute purchases.")
     parser.add_argument("-v", "--verbose", action='store_true', help="Turn on verbose logging")
     parser.add_argument("--dry-run", action='store_true', help="Only report what would change; do not write to Mongo")
+    parser.add_argument("--facility", action='append', help="Only act on this facility; repeat for more than one (default: all facilities)")
     args = parser.parse_args()
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
 
@@ -59,9 +64,20 @@ if __name__ == '__main__':
         password=os.environ.get("MONGODB_PASSWORD", None))
     db = mongo[DB_NAME]
 
+    # facility names are matched exactly, so a typo or wrong case would otherwise silently match nothing
+    if args.facility:
+        known = set(db["facilities"].distinct("name"))
+        unknown = [f for f in args.facility if f not in known]
+        if unknown:
+            for name in unknown:
+                similar = [k for k in known if k.lower() == name.lower()]
+                hint = f"; did you mean {', '.join(similar)}?" if similar else ""
+                logger.error(f"Unknown facility {name}{hint}")
+            sys.exit(1)
+
     changes = []
     print(f"{'facility':<16} {'cluster':<12} {'purchased':>10} {'current':>8} {'new':>8}")
-    for grp in current_purchases(db):
+    for grp in current_purchases(db, args.facility):
         facility, clustername = grp["_id"]["facility"], grp["_id"]["clustername"]
         purchased = grp["servers"] or 0
         current = grp["burst_nodes"] or 0
