@@ -6,6 +6,7 @@ from typing import Any
 
 from bson import ObjectId
 
+import os
 import logging
 
 LOG = logging.getLogger(__name__)
@@ -157,4 +158,17 @@ class IsAdmin(BasePermission):
         user = info.context.authn()
         if info.context.is_admin:
             return True
+        return False
+
+class IsPosixSyncAccount(BasePermission):
+    """ Only the service account(s) that push LDAP posix snapshots may call the bulk sync mutation.
+    Configured via POSIX_SYNC_USERNAMES (comma separated). Admins are deliberately not included. """
+    LOG = logging.getLogger(__name__)
+    message = "User is not a posix sync service account"
+    def has_permission(self, source: Any, info: Info, **kwargs) -> bool:
+        user = info.context.authn()
+        allowed = [ u.strip() for u in os.environ.get("POSIX_SYNC_USERNAMES", "").split(",") if u.strip() ]
+        if user and user in allowed:
+            return True
+        self.LOG.warning(f"user {user} is not permitted to run posix sync (allowed: {allowed})")
         return False

@@ -264,9 +264,44 @@ class UserInput:
 
 @strawberry.type
 class UserGidsInfo:
-    uidnumber: int
-    primaryGid: int
-    secondaryGidNumbers: Optional[List[int]]
+    """ LDAP-effective POSIX identity for a user, served from the synced users collection.
+    syncedAt is when the sync last wrote it; null means it was not synced (live user-lookup fallback). """
+    uidnumber: Optional[int] = None
+    primaryGid: Optional[int] = None
+    secondaryGidNumbers: List[int] = dataclasses.field(default_factory=list)
+    syncedAt: Optional[datetime] = None
+
+@strawberry.input
+class UserPosixInput:
+    """ One user's POSIX identity as observed in LDAP; the payload of usersPosixSync. """
+    username: str
+    uidnumber: Optional[int] = None
+    gidnumber: Optional[int] = None
+    secondarygids: List[int] = dataclasses.field(default_factory=list)
+
+@strawberry.type
+class PosixSyncResult:
+    dryRun: bool
+    total: int                      # entries in the LDAP snapshot
+    matched: int                    # coact users found in the snapshot
+    changed: int                    # coact users whose gid data differs (would be / were written)
+    unknownUsers: List[str]         # coact users absent from the snapshot; left untouched
+    uidMismatches: List[str]        # coact users whose uidnumber differs from LDAP; reported, never written
+    aborted: bool
+    reason: Optional[str] = None
+    syncedAt: Optional[datetime] = None
+
+@strawberry.type
+class PosixSyncStatus:
+    lastrun: Optional[datetime] = None
+    lastsuccess: Optional[datetime] = None
+    dryRun: bool = False
+    total: int = 0
+    matched: int = 0
+    changed: int = 0
+    unknownUsers: int = 0
+    aborted: bool = False
+    reason: Optional[str] = None
 
 
 @strawberry.type

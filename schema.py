@@ -2,7 +2,8 @@ from auth import IsAuthenticated, \
         IsRepoPrincipalOrLeader, \
         IsAdmin, \
         IsValidEPPN, \
-        IsFacilityCzarOrAdmin
+        IsFacilityCzarOrAdmin, \
+        IsPosixSyncAccount
 
 import os
 import signal
@@ -41,7 +42,8 @@ from models import \
         AuditTrailObjectType, AuditTrail, AuditTrailInput, \
         NotificationInput, Notification, ComputeRequirement, BulkOpsResult, StatusResult, \
         CoactDatetime, NormalizedJob, FacillityPastXUsage, RepoPastXUsage, \
-        NameDesc, RepoFeature, RepoFeatureInput, UserGidsInfo
+        NameDesc, RepoFeature, RepoFeatureInput, UserGidsInfo, \
+        UserPosixInput, PosixSyncResult, PosixSyncStatus
 
 import logging
 LOG = logging.getLogger(__name__)
@@ -103,12 +105,12 @@ class Query:
     @strawberry.field
     def getuserforeppn(self, info: Info, eppn: str) -> Optional[User]:
         user = info.context.db.collection("users").find_one( {"eppns": eppn} )
-        return User(**user) if user else None
-    
+        return info.context.db.cursor_to_objlist([user], User)[0] if user else None
+
     @strawberry.field
     def usersMatchingUserName(self, info: Info, regex: str) -> Optional[List[User]]:
         users = info.context.db.collection("users").find( {"username": {"$regex": regex}} )
-        return [ User(**user) for user in users ] if users else []
+        return info.context.db.cursor_to_objlist(users, User)
 
     @strawberry.field
     def usersMatchingUserNames(self, info: Info, regexes: List[str]) -> Optional[List[User]]:
@@ -117,7 +119,7 @@ class Query:
             LOG.info("Searching for users matching %s", regex)
             users = info.context.db.collection("users").find( {"username": {"$regex": regex}} )
             userlist.update({x["username"]: x for x in users})
-        return [ User(**user) for user in userlist.values() ] if userlist else []
+        return info.context.db.cursor_to_objlist(userlist.values(), User)
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def usersLookupFromService(self, info: Info, filter: UserInput ) -> List[User]:
@@ -125,7 +127,17 @@ class Query:
     
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def myGids(self, info: Info) -> Optional[UserGidsInfo]:
-        return info.context.lookupUserGidsByUsername(info.context.username)
+        """ LDAP-effective uid/gids for the calling user, served from the synced users collection. """
+        return info.context.userGids(info.context.username)
+
+    @strawberry.field( permission_classes=[ IsAuthenticated ] )
+    def posixSyncStatus(self, info: Info) -> Optional[PosixSyncStatus]:
+        """ Outcome of the most recent LDAP posix sync run. """
+        doc = info.context.db.collection("sync_status").find_one({"_id": "posix_ldap"})
+        if not doc:
+            return None
+        del doc["_id"]
+        return PosixSyncStatus(**doc)
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def clusters(self, info: Info, filter: Optional[ClusterInput]={} ) -> List[Cluster]:
@@ -767,6 +779,17 @@ class Mutation:
         info.context.db.collection("users").update_one({"username": logged_in_user}, {"$set": { "eppns": eppns }})
         info.context.audit(AuditTrailObjectType.User, info.context._id, "userUpdateEppn", details=",".join(eppns))
         return info.context.db.find_user( {"username": logged_in_user} )
+
+    @strawberry.field( permission_classes=[ IsPosixSyncAccount ] )
+    def usersPosixSync(self, entries: List[UserPosixInput], info: Info, dryRun: bool = False, force: bool = False) -> PosixSyncResult:
+        """ Reconcile users' gidnumber/secondarygids against a full LDAP snapshot pushed by the sync job.
+        Aborts without writing if the snapshot looks truncated or would change too many users, unless force is set. """
+        return info.context.usersPosixSync(entries, dry_run=dryRun, force=force)
+
+    @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
+    def userPosixRefresh(self, username: str, info: Info) -> UserGidsInfo:
+        """ Re-read one user's uid/gids from LDAP (via user-lookup) and store them; used by coactd after it changes LDAP. """
+        return info.context.refreshUserPosix(username)
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def userChangeShell(self, newshell: str, info: Info) -> User:
