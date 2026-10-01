@@ -1487,7 +1487,7 @@ class Mutation:
         return info.context.db.find_facility(filter)
 
     @strawberry.field( permission_classes=[ IsAdmin ] )
-    def facilityAddUpdateComputePurchase(self, facility: FacilityInput, cluster: ClusterInput, purchase: float, info: Info, burst_nodes: float=0.0) -> Facility:
+    def facilityAddUpdateComputePurchase(self, facility: FacilityInput, cluster: ClusterInput, purchase: float, info: Info, burst_nodes: Optional[float]=None) -> Facility:
         facility = info.context.db.find_facility(filter=facility)
         if not facility:
             raise Exception("Cannot find requested facility " + str(facility))
@@ -1496,7 +1496,7 @@ class Mutation:
             raise Exception("Cannot find requested cluster " + str(cluster))
         if purchase and purchase < 0.0:
             raise Exception("Invalid purchase amount " + str(purchase))
-        if burst_nodes and burst_nodes < 0.0:
+        if burst_nodes is not None and burst_nodes < 0.0:
             raise Exception("Invalid burst node count " + str(burst_nodes))
 
         todaysdate = datetime.datetime.utcnow()
@@ -1504,9 +1504,11 @@ class Mutation:
         alloc_id = None
         if cp:
             alloc_id = cp[0]["_id"]
-            info.context.db.collection("facility_compute_purchases").update_one({"_id": alloc_id}, {"$set": {"servers": purchase, "burst_nodes": burst_nodes}}) 
+            # an omitted burst_nodes keeps the current burst rather than resetting it
+            update = {"servers": purchase} if burst_nodes is None else {"servers": purchase, "burst_nodes": burst_nodes}
+            info.context.db.collection("facility_compute_purchases").update_one({"_id": alloc_id}, {"$set": update})
         else:
-            alloc_id = info.context.db.collection("facility_compute_purchases").insert_one({ "facility": facility.name, "clustername": cluster.name, "start": todaysdate, "end": datetime.datetime.fromisoformat("2100-01-01T00:00:00").replace(tzinfo=datetime.timezone.utc), "servers": purchase, "burst_nodes": burst_nodes }).inserted_id
+            alloc_id = info.context.db.collection("facility_compute_purchases").insert_one({ "facility": facility.name, "clustername": cluster.name, "start": todaysdate, "end": datetime.datetime.fromisoformat("2100-01-01T00:00:00").replace(tzinfo=datetime.timezone.utc), "servers": purchase, "burst_nodes": burst_nodes or 0.0 }).inserted_id
 
         request: CoactRequestInput = CoactRequestInput()
         request.reqtype = CoactRequestType.FacilityComputeAllocation
