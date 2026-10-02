@@ -21,14 +21,18 @@ from .input_types import (
     RepoInput,
     ReportRangeInput,
     UserInput,
+    UserPosixInput,
 )
+from .my_gids import MyGids
 from .my_repos import MyRepos
 from .my_repos_and_facility import MyReposAndFacility
+from .posix_sync_status import PosixSyncStatus
 from .repo_audit_trails import RepoAuditTrails
 from .repo_compute_jobs import RepoComputeJobs
 from .repo_features import RepoFeatures
 from .report_facility_compute_by_day import ReportFacilityComputeByDay
 from .report_facility_compute_by_user import ReportFacilityComputeByUser
+from .report_facility_compute_by_user_to_date import ReportFacilityComputeByUserToDate
 from .report_facility_compute_overall import ReportFacilityComputeOverall
 from .report_facility_storage import ReportFacilityStorage
 from .repos import Repos
@@ -36,10 +40,12 @@ from .request_statuses import RequestStatuses
 from .request_types import RequestTypes
 from .requests import Requests
 from .user_audit_trails import UserAuditTrails
+from .user_posix_group_update import UserPosixGroupUpdate
 from .users import Users
 from .users_lookup_from_service import UsersLookupFromService
 from .users_matching_user_name import UsersMatchingUserName
 from .users_matching_user_names import UsersMatchingUserNames
+from .users_posix_sync import UsersPosixSync
 from .whoami import Whoami
 
 
@@ -430,6 +436,111 @@ class CoactClient(AsyncBaseClient):
         data = self.get_data(response)
         return UsersLookupFromService.model_validate(data)
 
+    async def my_gids(self, **kwargs: Any) -> MyGids:
+        query = gql("""
+            query MyGids {
+              myGids {
+                uidnumber
+                primaryGid
+                secondaryGidNumbers
+                syncedAt
+              }
+            }
+            """)
+        variables: dict[str, object] = {}
+        response = await self.execute(
+            query=query, operation_name="MyGids", variables=variables, **kwargs
+        )
+        data = self.get_data(response)
+        return MyGids.model_validate(data)
+
+    async def posix_sync_status(self, **kwargs: Any) -> PosixSyncStatus:
+        query = gql("""
+            query PosixSyncStatus {
+              posixSyncStatus {
+                lastrun
+                lastsuccess
+                dryRun
+                total
+                matched
+                changed
+                unknownUsers
+                aborted
+                reason
+              }
+            }
+            """)
+        variables: dict[str, object] = {}
+        response = await self.execute(
+            query=query, operation_name="PosixSyncStatus", variables=variables, **kwargs
+        )
+        data = self.get_data(response)
+        return PosixSyncStatus.model_validate(data)
+
+    async def users_posix_sync(
+        self,
+        entries: list[UserPosixInput],
+        dry_run: Union[Optional[bool], UnsetType] = UNSET,
+        force: Union[Optional[bool], UnsetType] = UNSET,
+        **kwargs: Any
+    ) -> UsersPosixSync:
+        query = gql("""
+            mutation UsersPosixSync($entries: [UserPosixInput!]!, $dryRun: Boolean, $force: Boolean) {
+              usersPosixSync(entries: $entries, dryRun: $dryRun, force: $force) {
+                dryRun
+                total
+                matched
+                changed
+                unknownUsers
+                uidMismatches
+                aborted
+                reason
+                syncedAt
+              }
+            }
+            """)
+        variables: dict[str, object] = {
+            "entries": entries,
+            "dryRun": dry_run,
+            "force": force,
+        }
+        response = await self.execute(
+            query=query, operation_name="UsersPosixSync", variables=variables, **kwargs
+        )
+        data = self.get_data(response)
+        return UsersPosixSync.model_validate(data)
+
+    async def user_posix_group_update(
+        self, username: str, gidnumber: int, present: bool, **kwargs: Any
+    ) -> UserPosixGroupUpdate:
+        query = gql("""
+            mutation UserPosixGroupUpdate($username: String!, $gidnumber: Int!, $present: Boolean!) {
+              userPosixGroupUpdate(
+                username: $username
+                gidnumber: $gidnumber
+                present: $present
+              ) {
+                uidnumber
+                primaryGid
+                secondaryGidNumbers
+                syncedAt
+              }
+            }
+            """)
+        variables: dict[str, object] = {
+            "username": username,
+            "gidnumber": gidnumber,
+            "present": present,
+        }
+        response = await self.execute(
+            query=query,
+            operation_name="UserPosixGroupUpdate",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return UserPosixGroupUpdate.model_validate(data)
+
     async def repos(
         self, filter_: Union[Optional[RepoInput], UnsetType] = UNSET, **kwargs: Any
     ) -> Repos:
@@ -631,6 +742,29 @@ class CoactClient(AsyncBaseClient):
         )
         data = self.get_data(response)
         return ReportFacilityComputeByUser.model_validate(data)
+
+    async def report_facility_compute_by_user_to_date(
+        self, clustername: str, range_: ReportRangeInput, **kwargs: Any
+    ) -> ReportFacilityComputeByUserToDate:
+        query = gql("""
+            query ReportFacilityComputeByUserToDate($clustername: String!, $range: ReportRangeInput!) {
+              reportFacilityComputeByUserToDate(clustername: $clustername, range: $range) {
+                facility
+                repo
+                username
+                resourceHours
+              }
+            }
+            """)
+        variables: dict[str, object] = {"clustername": clustername, "range": range_}
+        response = await self.execute(
+            query=query,
+            operation_name="ReportFacilityComputeByUserToDate",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return ReportFacilityComputeByUserToDate.model_validate(data)
 
     async def report_facility_compute_overall(
         self, clustername: str, group: str, **kwargs: Any
