@@ -40,7 +40,7 @@ from .request_statuses import RequestStatuses
 from .request_types import RequestTypes
 from .requests import Requests
 from .user_audit_trails import UserAuditTrails
-from .user_posix_refresh import UserPosixRefresh
+from .user_posix_group_update import UserPosixGroupUpdate
 from .users import Users
 from .users_lookup_from_service import UsersLookupFromService
 from .users_matching_user_name import UsersMatchingUserName
@@ -510,12 +510,16 @@ class CoactClient(AsyncBaseClient):
         data = self.get_data(response)
         return UsersPosixSync.model_validate(data)
 
-    async def user_posix_refresh(
-        self, username: str, **kwargs: Any
-    ) -> UserPosixRefresh:
+    async def user_posix_group_update(
+        self, username: str, gidnumber: int, present: bool, **kwargs: Any
+    ) -> UserPosixGroupUpdate:
         query = gql("""
-            mutation UserPosixRefresh($username: String!) {
-              userPosixRefresh(username: $username) {
+            mutation UserPosixGroupUpdate($username: String!, $gidnumber: Int!, $present: Boolean!) {
+              userPosixGroupUpdate(
+                username: $username
+                gidnumber: $gidnumber
+                present: $present
+              ) {
                 uidnumber
                 primaryGid
                 secondaryGidNumbers
@@ -523,15 +527,19 @@ class CoactClient(AsyncBaseClient):
               }
             }
             """)
-        variables: dict[str, object] = {"username": username}
+        variables: dict[str, object] = {
+            "username": username,
+            "gidnumber": gidnumber,
+            "present": present,
+        }
         response = await self.execute(
             query=query,
-            operation_name="UserPosixRefresh",
+            operation_name="UserPosixGroupUpdate",
             variables=variables,
             **kwargs
         )
         data = self.get_data(response)
-        return UserPosixRefresh.model_validate(data)
+        return UserPosixGroupUpdate.model_validate(data)
 
     async def repos(
         self, filter_: Union[Optional[RepoInput], UnsetType] = UNSET, **kwargs: Any

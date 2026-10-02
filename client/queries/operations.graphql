@@ -245,8 +245,8 @@ mutation UsersPosixSync($entries: [UserPosixInput!]!, $dryRun: Boolean, $force: 
   }
 }
 
-mutation UserPosixRefresh($username: String!) {
-  userPosixRefresh(username: $username) {
+mutation UserPosixGroupUpdate($username: String!, $gidnumber: Int!, $present: Boolean!) {
+  userPosixGroupUpdate(username: $username, gidnumber: $gidnumber, present: $present) {
     uidnumber
     primaryGid
     secondaryGidNumbers

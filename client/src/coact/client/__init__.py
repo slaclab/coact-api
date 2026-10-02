@@ -92,7 +92,10 @@ from .request_statuses import RequestStatuses
 from .request_types import RequestTypes
 from .requests import Requests, RequestsRequests
 from .user_audit_trails import UserAuditTrails, UserAuditTrailsUserAuditTrails
-from .user_posix_refresh import UserPosixRefresh, UserPosixRefreshUserPosixRefresh
+from .user_posix_group_update import (
+    UserPosixGroupUpdate,
+    UserPosixGroupUpdateUserPosixGroupUpdate,
+)
 from .users import Users, UsersUsers
 from .users_lookup_from_service import (
     UsersLookupFromService,
@@ -191,9 +194,9 @@ __all__ = [
     "UserAuditTrails",
     "UserAuditTrailsUserAuditTrails",
     "UserInput",
+    "UserPosixGroupUpdate",
+    "UserPosixGroupUpdateUserPosixGroupUpdate",
     "UserPosixInput",
-    "UserPosixRefresh",
-    "UserPosixRefreshUserPosixRefresh",
     "UserStorageInput",
     "Users",
     "UsersLookupFromService",

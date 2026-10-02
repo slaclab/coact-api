@@ -89,11 +89,26 @@ async def test_uid_mismatch_is_reported_not_written(sync_client: CoactClient, cl
     assert gids.uidnumber == 99001
 
 
-async def test_user_posix_refresh_requires_admin(client: CoactClient):
+async def test_user_posix_group_update_requires_admin(client: CoactClient):
     with pytest.raises(GraphQLClientGraphQLMultiError, match="not an admin"):
-        await client.user_posix_refresh(username="regular_user")
+        await client.user_posix_group_update(username="regular_user", gidnumber=5000, present=True)
 
 
-async def test_user_posix_refresh_unknown_user(admin_client: CoactClient):
+async def test_user_posix_group_update_unknown_user(admin_client: CoactClient):
     with pytest.raises(GraphQLClientGraphQLMultiError, match="does not exist in coact"):
-        await admin_client.user_posix_refresh(username="no-such-user")
+        await admin_client.user_posix_group_update(username="no-such-user", gidnumber=5000, present=True)
+
+
+async def test_user_posix_group_update_is_idempotent(admin_client: CoactClient, client: CoactClient):
+    before = (await client.my_gids()).my_gids.secondary_gid_numbers
+    assert 5000 not in before
+
+    for _ in range(2):
+        res = (await admin_client.user_posix_group_update(username="regular_user", gidnumber=5000, present=True)).user_posix_group_update
+        assert res.secondary_gid_numbers == sorted(set(before) | {5000})
+    assert (await client.my_gids()).my_gids.secondary_gid_numbers == sorted(set(before) | {5000})
+
+    for _ in range(2):
+        res = (await admin_client.user_posix_group_update(username="regular_user", gidnumber=5000, present=False)).user_posix_group_update
+        assert res.secondary_gid_numbers == before
+    assert (await client.my_gids()).my_gids.secondary_gid_numbers == before

@@ -19,7 +19,7 @@ from strawberry import Schema
 from strawberry.schema.config import StrawberryConfig
 from strawberry.arguments import UNSET
 
-from pymongo import MongoClient, UpdateOne
+from pymongo import MongoClient, UpdateOne, ReturnDocument
 from pymongo.errors import BulkWriteError
 from bson import ObjectId
 
@@ -326,17 +326,26 @@ class CustomContext(BaseContext):
         self.LOG.info(f"user {username} has no synced posix data; falling back to user-lookup")
         return self.lookupUserGidsByUsername(username)
 
-    def refreshUserPosix(self, username: str) -> UserGidsInfo:
-        """ Re-read one user's posix identity from LDAP (via user-lookup) and store it. """
-        if not self.db.collection("users").find_one({"username": username}, {"_id": 1}):
+    def userPosixGroupUpdate(self, username: str, gidnumber: int, present: bool) -> UserGidsInfo:
+        """ Record that coactd just added/removed this user from the posixGroup with this gid in LDAP.
+        No LDAP read: the caller is the thing that made the change. Idempotent ($addToSet / $pull). """
+        if present:
+            op = {"$addToSet": {"secondarygids": int(gidnumber)}}
+        else:
+            op = {"$pull": {"secondarygids": int(gidnumber)}}
+        doc = self.db.collection("users").find_one_and_update(
+            {"username": username}, op, return_document=ReturnDocument.AFTER,
+            projection={"_id": 1, "uidnumber": 1, "gidnumber": 1, "secondarygids": 1, "ldapsyncedat": 1})
+        if not doc:
             raise Exception(f"user {username} does not exist in coact")
-        info = self.lookupUserGidsByUsername(username)
-        if not info:
-            raise Exception(f"user {username} not found in LDAP via user-lookup; not updating")
-        now = datetime.now(timezone.utc)
-        self.db.set_user_posix(username, info.primaryGid, info.secondaryGidNumbers, now)
-        info.syncedAt = now
-        return info
+        self.audit(AuditTrailObjectType.User, doc["_id"], "userPosixGroupUpdate",
+                   details=f"gid {gidnumber} {'present' if present else 'absent'}")
+        return UserGidsInfo(
+            uidnumber=doc.get("uidnumber"),
+            primaryGid=doc.get("gidnumber"),
+            secondaryGidNumbers=sorted(doc.get("secondarygids") or []),
+            syncedAt=doc.get("ldapsyncedat"),
+        )
 
     def usersPosixSync(self, entries: List[UserPosixInput], dry_run: bool, force: bool) -> PosixSyncResult:
         """ Reconcile the users collection against a full LDAP posix snapshot. Only gidnumber / secondarygids /

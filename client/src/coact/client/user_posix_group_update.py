@@ -8,17 +8,17 @@ from pydantic import Field
 from .base_model import BaseModel
 
 
-class UserPosixRefresh(BaseModel):
-    user_posix_refresh: "UserPosixRefreshUserPosixRefresh" = Field(
-        alias="userPosixRefresh"
+class UserPosixGroupUpdate(BaseModel):
+    user_posix_group_update: "UserPosixGroupUpdateUserPosixGroupUpdate" = Field(
+        alias="userPosixGroupUpdate"
     )
 
 
-class UserPosixRefreshUserPosixRefresh(BaseModel):
+class UserPosixGroupUpdateUserPosixGroupUpdate(BaseModel):
     uidnumber: Optional[int]
     primary_gid: Optional[int] = Field(alias="primaryGid")
     secondary_gid_numbers: list[int] = Field(alias="secondaryGidNumbers")
     synced_at: Optional[Any] = Field(alias="syncedAt")
 
 
-UserPosixRefresh.model_rebuild()
+UserPosixGroupUpdate.model_rebuild()

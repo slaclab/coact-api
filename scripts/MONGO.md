@@ -20,8 +20,8 @@ db.requests.remove( { "reqtype": "UserAccount", "eppn": "pav@slac.stanford.edu" 
 
 `users.gidnumber`, `users.secondarygids` and `users.ldapsyncedat` mirror LDAP (primary gid from AD, secondary
 gids from SDF LDAP posixGroup membership). They are written only by the `usersPosixSync` mutation (bulk
-snapshot pushed by `user-lookup/sync_posix.py`) and `userPosixRefresh` (single user, called by coactd after it
-changes LDAP). They are deliberately not on `UserInput`, so `userUpsert`/`userUpdate` never touch them. Do not
+snapshot pushed by `user-lookup/sync_posix.py`) and `userPosixGroupUpdate` (single user + gid, called by coactd
+right after its posixGroup playbook changes LDAP; no LDAP read). They are deliberately not on `UserInput`, so `userUpsert`/`userUpdate` never touch them. Do not
 edit them by hand; re-run the sync instead. `uidnumber` is owned by coactd provisioning and is only *reported*
 by the sync when it disagrees with LDAP.
 

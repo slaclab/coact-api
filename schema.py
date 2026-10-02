@@ -787,9 +787,10 @@ class Mutation:
         return info.context.usersPosixSync(entries, dry_run=dryRun, force=force)
 
     @strawberry.field( permission_classes=[ IsAuthenticated, IsAdmin ] )
-    def userPosixRefresh(self, username: str, info: Info) -> UserGidsInfo:
-        """ Re-read one user's uid/gids from LDAP (via user-lookup) and store them; used by coactd after it changes LDAP. """
-        return info.context.refreshUserPosix(username)
+    def userPosixGroupUpdate(self, username: str, gidnumber: int, present: bool, info: Info) -> UserGidsInfo:
+        """ Record a single posixGroup membership change for a user; called by coactd right after its
+        posixGroup playbook has changed LDAP. Idempotent; the periodic usersPosixSync reconciles any drift. """
+        return info.context.userPosixGroupUpdate(username, gidnumber, present)
 
     @strawberry.field( permission_classes=[ IsAuthenticated ] )
     def userChangeShell(self, newshell: str, info: Info) -> User:
