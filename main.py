@@ -28,9 +28,10 @@ from gql.transport.requests import RequestsHTTPTransport
 
 
 from models import User, AccessGroup, Repo, Facility, Cluster, CoactRequest, CoactRequestStatus, AuditTrail, AuditTrailObjectType, CoactDatetime, \
-        UserGidsInfo, UserPosixInput, PosixSyncResult, PosixSyncStatus
+        UserGidsInfo, UserPosixInput, UserSecondaryGidsInput, PosixSyncResult, PosixSyncStatus
 from schema import Query, Mutation, Subscription, start_change_stream_queues
 from utils.posix_sync import compute_posix_sync
+from utils.posix_init import posix_init_set, uidnumber_differs
 
 import smtplib
 #import aiosmtplib #
@@ -72,9 +73,12 @@ BOT_USERS = [ x["username"] for x in mongo[DB_NAME]["users"].find( { 'isbot': Tr
 
 USER_LOOKUP_URL = os.getenv( 'USER_LOOKUP_URL', 'https://coact-dev-userlookup.slac.stanford.edu/graphql' )
 
-# guards for the bulk LDAP posix sync: refuse to write if the snapshot looks truncated or would change too many users
-POSIX_SYNC_MIN_ENTRIES = int(os.getenv('POSIX_SYNC_MIN_ENTRIES', 1000))
+# guards for the bulk LDAP posix sync: refuse to write if the snapshot misses too many coact users (incomplete
+# LDAP read) or would change too many users
+POSIX_SYNC_MIN_COVERAGE = float(os.getenv('POSIX_SYNC_MIN_COVERAGE', 0.95))
 POSIX_SYNC_MAX_CHURN = float(os.getenv('POSIX_SYNC_MAX_CHURN', 0.20))
+# secondary sync: abort if fewer posixGroups were read than (1 - this) x the last successful run
+POSIX_SYNC_MAX_GROUP_DROP = float(os.getenv('POSIX_SYNC_MAX_GROUP_DROP', 0.10))
 
 REQUEST_STREAM = os.getenv( 'REQUEST_STREAM', False )
 
@@ -326,6 +330,35 @@ class CustomContext(BaseContext):
         self.LOG.info(f"user {username} has no synced posix data; falling back to user-lookup")
         return self.lookupUserGidsByUsername(username)
 
+    def userPosixInit(self, username: str) -> UserGidsInfo:
+        """ Initialise (or refresh) a coact user's posix data from user-lookup: primary gid, secondary gids and
+        ldapsyncedat, in a single write. Called by coactd right after it provisions a new user so the user is
+        served from the users collection (and picked up by the periodic sync) instead of the live fallback.
+        Idempotent; admins can re-run it to fix gaps. Never writes uidnumber (owned by userUpsert). """
+        doc = self.db.collection("users").find_one({"username": username}, {"_id": 1, "uidnumber": 1, "ldapsyncedat": 1})
+        if not doc:
+            raise Exception(f"user {username} does not exist in coact")
+        try:
+            looked_up = self.lookupUserGidsByUsername(username)
+        except Exception as e:
+            raise Exception(f"user-lookup query failed for user {username}; posix data not written: {e}") from e
+        now = datetime.now(timezone.utc)
+        posix = posix_init_set(username, looked_up, now)  # raises before any write if the lookup is unusable
+        if uidnumber_differs(doc.get("uidnumber"), looked_up.uidnumber):
+            self.LOG.warning(f"userPosixInit: user-lookup uidnumber differs from coact for user {username}; coact uidnumber left unchanged")
+        res = self.db.collection("users").update_one({"username": username}, {"$set": posix})
+        if res.matched_count == 0:
+            raise Exception(f"user {username} does not exist in coact")
+        self.audit(AuditTrailObjectType.User, doc["_id"], "userPosixInit",
+                   details=f"{'refreshed' if doc.get('ldapsyncedat') else 'initialised'}: gid {posix['gidnumber']}, "
+                           f"{len(posix['secondarygids'])} secondary gids")
+        return UserGidsInfo(
+            uidnumber=doc.get("uidnumber"),
+            primaryGid=posix["gidnumber"],
+            secondaryGidNumbers=posix["secondarygids"],
+            syncedAt=now,
+        )
+
     def userPosixGroupUpdate(self, username: str, gidnumber: int, present: bool) -> UserGidsInfo:
         """ Record that coactd just added/removed this user from the posixGroup with this gid in LDAP.
         No LDAP read: the caller is the thing that made the change. Idempotent ($addToSet / $pull). """
@@ -347,15 +380,24 @@ class CustomContext(BaseContext):
             syncedAt=doc.get("ldapsyncedat"),
         )
 
+    def posixSyncUsernames(self, include_unsynced: bool = False) -> List[str]:
+        """ The non-bot users the LDAP posix sync should read. Usernames only. By default only users that have
+        been initialised (ldapsyncedat set): the periodic sync never handles new users, registration does.
+        include_unsynced=True lists every non-bot user, for the one-time migration. """
+        flt = {"isbot": {"$ne": True}}
+        if not include_unsynced:
+            flt["ldapsyncedat"] = {"$exists": True}
+        return sorted(d["username"] for d in self.db.collection("users").find(flt, {"_id": 0, "username": 1}))
+
     def usersPosixSync(self, entries: List[UserPosixInput], dry_run: bool, force: bool) -> PosixSyncResult:
-        """ Reconcile the users collection against a full LDAP posix snapshot. Only gidnumber / secondarygids /
-        ldapsyncedat are ever written, and only for users that already exist in coact. """
+        """ Reconcile the users collection against an LDAP posix snapshot of the coact users. Only gidnumber /
+        secondarygids / ldapsyncedat are ever written, and only for users that already exist in coact. """
         now = datetime.now(timezone.utc)
         current = { d["username"]: d for d in self.db.collection("users").find(
             {}, {"_id": 0, "username": 1, "uidnumber": 1, "gidnumber": 1, "secondarygids": 1, "isbot": 1}) }
         result, updates = compute_posix_sync(
             current, entries, dry_run=dry_run, force=force,
-            min_entries=POSIX_SYNC_MIN_ENTRIES, max_churn=POSIX_SYNC_MAX_CHURN)
+            min_coverage=POSIX_SYNC_MIN_COVERAGE, max_churn=POSIX_SYNC_MAX_CHURN)
         result.syncedAt = now
 
         if not dry_run and not result.aborted and updates:
@@ -366,25 +408,62 @@ class CustomContext(BaseContext):
                 result.reason = f"bulk write failed: {e.details.get('writeErrors', [])[:5]}"
                 self.LOG.error(result.reason)
 
+        self._record_posix_sync("usersPosixSync", "full", result, dry_run, now, extra={"groupCount": None, "unsynced": None})
+        return result
+
+    def usersSecondaryGidsSync(self, entries: List[UserSecondaryGidsInput], group_count: int, dry_run: bool, force: bool) -> PosixSyncResult:
+        """ Reconcile only secondarygids of already-initialised users (ldapsyncedat set) against SDF LDAP posixGroups.
+        gidnumber and uidnumber are never written; users without ldapsyncedat are never touched (registration owns
+        them) and only counted. Guards: coverage, posixGroup count vs the last successful run, churn. """
+        now = datetime.now(timezone.utc)
+        users = self.db.collection("users")
+        current = { d["username"]: d for d in users.find(
+            {"ldapsyncedat": {"$exists": True}}, {"_id": 0, "username": 1, "gidnumber": 1, "secondarygids": 1, "isbot": 1}) }
+        status = self.db.collection("sync_status").find_one({"_id": "posix_ldap"}, {"lastGroupCount": 1}) or {}
+        result, updates = compute_posix_sync(
+            current, entries, dry_run=dry_run, force=force,
+            min_coverage=POSIX_SYNC_MIN_COVERAGE, max_churn=POSIX_SYNC_MAX_CHURN, include_primary=False,
+            group_count=group_count, last_group_count=status.get("lastGroupCount"), max_group_drop=POSIX_SYNC_MAX_GROUP_DROP)
+        result.syncedAt = now
+        result.unsynced = users.count_documents({"isbot": {"$ne": True}, "ldapsyncedat": {"$exists": False}})
+
+        if not dry_run and not result.aborted and updates:
+            try:
+                self.db.bulk_set_user_secondarygids(updates, now)
+            except BulkWriteError as e:
+                result.aborted = True
+                result.reason = f"bulk write failed: {e.details.get('writeErrors', [])[:5]}"
+                self.LOG.error(result.reason)
+
+        succeeded = not dry_run and not result.aborted
+        self._record_posix_sync("usersSecondaryGidsSync", "secondary", result, dry_run, now, extra={
+            "groupCount": group_count, "unsynced": result.unsynced,
+            **({"lastGroupCount": group_count} if succeeded else {}),
+        })
+        return result
+
+    def _record_posix_sync(self, name: str, kind: str, result: PosixSyncResult, dry_run: bool, now: datetime, extra: dict = None):
+        """ Shared bookkeeping for both sync mutations: sync_status (counts only), a log line and one audit row. """
         self.db.collection("sync_status").update_one(
             {"_id": "posix_ldap"},
             {"$set": {
-                "lastrun": now, "dryRun": dry_run, "total": result.total, "matched": result.matched,
+                "lastrun": now, "kind": kind, "dryRun": dry_run, "total": result.total, "matched": result.matched,
                 "changed": result.changed, "unknownUsers": len(result.unknownUsers),
                 "aborted": result.aborted, "reason": result.reason,
                 **({"lastsuccess": now} if not dry_run and not result.aborted else {}),
+                **(extra or {}),
             }},
             upsert=True)
         summary = (f"total={result.total} matched={result.matched} changed={result.changed} "
                    f"unknown={len(result.unknownUsers)} uidMismatches={len(result.uidMismatches)} "
-                   f"aborted={result.aborted} reason={result.reason}")
-        self.LOG.info(f"usersPosixSync dry_run={dry_run}: {summary}")
+                   + (f"unsynced={result.unsynced} " if result.unsynced is not None else "")
+                   + f"aborted={result.aborted} reason={result.reason}")
+        self.LOG.info(f"{name} dry_run={dry_run}: {summary}")
         if not dry_run:
             # one audit row per run, recorded against the sync account itself (actedon must reference a user)
             actor = self.db.collection("users").find_one({"username": self.username}, {"_id": 1})
             if actor:
-                self.audit(AuditTrailObjectType.User, actor["_id"], "usersPosixSync", details=summary)
-        return result
+                self.audit(AuditTrailObjectType.User, actor["_id"], name, details=summary)
 
 class DB:
     LOG = logging.getLogger(__name__)
@@ -566,6 +645,12 @@ class DB:
     def bulk_set_user_posix(self, updates: List[tuple], now: datetime):
         """ updates: list of (username, gidnumber, secondarygids). Unordered so one failure does not stop the batch. """
         ops = [ UpdateOne({"username": u}, self._posix_set(g, s, now)) for u, g, s in updates ]
+        return self.collection("users").bulk_write(ops, ordered=False)
+
+    def bulk_set_user_secondarygids(self, updates: List[tuple], now: datetime):
+        """ updates: list of (username, _, secondarygids); gidnumber is never written. Only already-initialised users. """
+        ops = [ UpdateOne({"username": u, "ldapsyncedat": {"$exists": True}},
+                          {"$set": {"secondarygids": sorted(s or []), "ldapsyncedat": now}}) for u, _, s in updates ]
         return self.collection("users").bulk_write(ops, ordered=False)
 
     def email_for( self, username: List[str] ) -> List[str]:
