@@ -208,6 +208,52 @@ query UsersLookupFromService($filter: UserInput!) {
   }
 }
 
+query MyGids {
+  myGids {
+    uidnumber
+    primaryGid
+    secondaryGidNumbers
+    syncedAt
+  }
+}
+
+query PosixSyncStatus {
+  posixSyncStatus {
+    lastrun
+    lastsuccess
+    dryRun
+    total
+    matched
+    changed
+    unknownUsers
+    aborted
+    reason
+  }
+}
+
+mutation UsersPosixSync($entries: [UserPosixInput!]!, $dryRun: Boolean, $force: Boolean) {
+  usersPosixSync(entries: $entries, dryRun: $dryRun, force: $force) {
+    dryRun
+    total
+    matched
+    changed
+    unknownUsers
+    uidMismatches
+    aborted
+    reason
+    syncedAt
+  }
+}
+
+mutation UserPosixGroupUpdate($username: String!, $gidnumber: Int!, $present: Boolean!) {
+  userPosixGroupUpdate(username: $username, gidnumber: $gidnumber, present: $present) {
+    uidnumber
+    primaryGid
+    secondaryGidNumbers
+    syncedAt
+  }
+}
+
 query Repos($filter: RepoInput) {
   repos(filter: $filter) {
     Id

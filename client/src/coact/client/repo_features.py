@@ -9,7 +9,7 @@ from .base_model import BaseModel
 
 
 class RepoFeatures(BaseModel):
-    repo: "RepoFeaturesRepo"
+    repo: Optional["RepoFeaturesRepo"]
     whoami: "RepoFeaturesWhoami"
 
 

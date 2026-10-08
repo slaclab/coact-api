@@ -44,13 +44,16 @@ from .input_types import (
     StorageDailyUsageInput,
     UserAllocationInput,
     UserInput,
+    UserPosixInput,
     UserStorageInput,
 )
+from .my_gids import MyGids, MyGidsMyGids
 from .my_repos import MyRepos, MyReposMyRepos
 from .my_repos_and_facility import (
     MyReposAndFacility,
     MyReposAndFacilityMyreposandfacility,
 )
+from .posix_sync_status import PosixSyncStatus, PosixSyncStatusPosixSyncStatus
 from .repo_audit_trails import RepoAuditTrails, RepoAuditTrailsRepoAuditTrails
 from .repo_compute_jobs import RepoComputeJobs, RepoComputeJobsRepoComputeJobs
 from .repo_features import (
@@ -66,6 +69,10 @@ from .report_facility_compute_by_day import (
 from .report_facility_compute_by_user import (
     ReportFacilityComputeByUser,
     ReportFacilityComputeByUserReportFacilityComputeByUser,
+)
+from .report_facility_compute_by_user_to_date import (
+    ReportFacilityComputeByUserToDate,
+    ReportFacilityComputeByUserToDateReportFacilityComputeByUserToDate,
 )
 from .report_facility_compute_overall import (
     ReportFacilityComputeOverall,
@@ -85,6 +92,10 @@ from .request_statuses import RequestStatuses
 from .request_types import RequestTypes
 from .requests import Requests, RequestsRequests
 from .user_audit_trails import UserAuditTrails, UserAuditTrailsUserAuditTrails
+from .user_posix_group_update import (
+    UserPosixGroupUpdate,
+    UserPosixGroupUpdateUserPosixGroupUpdate,
+)
 from .users import Users, UsersUsers
 from .users_lookup_from_service import (
     UsersLookupFromService,
@@ -98,6 +109,7 @@ from .users_matching_user_names import (
     UsersMatchingUserNames,
     UsersMatchingUserNamesUsersMatchingUserNames,
 )
+from .users_posix_sync import UsersPosixSync, UsersPosixSyncUsersPosixSync
 from .whoami import Whoami, WhoamiWhoami
 
 __all__ = [
@@ -136,11 +148,15 @@ __all__ = [
     "GraphQLClientHttpError",
     "GraphQLClientInvalidResponseError",
     "Job",
+    "MyGids",
+    "MyGidsMyGids",
     "MyRepos",
     "MyReposAndFacility",
     "MyReposAndFacilityMyreposandfacility",
     "MyReposMyRepos",
     "NotificationInput",
+    "PosixSyncStatus",
+    "PosixSyncStatusPosixSyncStatus",
     "RepoAuditTrails",
     "RepoAuditTrailsRepoAuditTrails",
     "RepoComputeAllocationInput",
@@ -157,6 +173,8 @@ __all__ = [
     "ReportFacilityComputeByDayReportFacilityComputeByDay",
     "ReportFacilityComputeByUser",
     "ReportFacilityComputeByUserReportFacilityComputeByUser",
+    "ReportFacilityComputeByUserToDate",
+    "ReportFacilityComputeByUserToDateReportFacilityComputeByUserToDate",
     "ReportFacilityComputeOverall",
     "ReportFacilityComputeOverallReportFacilityComputeOverall",
     "ReportFacilityStorage",
@@ -176,6 +194,9 @@ __all__ = [
     "UserAuditTrails",
     "UserAuditTrailsUserAuditTrails",
     "UserInput",
+    "UserPosixGroupUpdate",
+    "UserPosixGroupUpdateUserPosixGroupUpdate",
+    "UserPosixInput",
     "UserStorageInput",
     "Users",
     "UsersLookupFromService",
@@ -184,6 +205,8 @@ __all__ = [
     "UsersMatchingUserNameUsersMatchingUserName",
     "UsersMatchingUserNames",
     "UsersMatchingUserNamesUsersMatchingUserNames",
+    "UsersPosixSync",
+    "UsersPosixSyncUsersPosixSync",
     "UsersUsers",
     "Whoami",
     "WhoamiWhoami",

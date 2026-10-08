@@ -264,9 +264,62 @@ class UserInput:
 
 @strawberry.type
 class UserGidsInfo:
-    uidnumber: int
-    primaryGid: int
-    secondaryGidNumbers: Optional[List[int]]
+    """ LDAP-effective POSIX identity for a user, served from the synced users collection.
+    syncedAt is when the sync last wrote it; null means it was not synced (live user-lookup fallback). """
+    uidnumber: Optional[int] = None
+    primaryGid: Optional[int] = None
+    secondaryGidNumbers: List[int] = dataclasses.field(default_factory=list)
+    syncedAt: Optional[datetime] = None
+
+def gid_list(info: Optional["UserGidsInfo"]) -> List[int]:
+    """ Flatten a UserGidsInfo to [primary gid, *sorted supplemental gids], without duplicates; [] when unknown. """
+    if info is None:
+        return []
+    primary = [int(info.primaryGid)] if info.primaryGid is not None else []
+    return primary + sorted({ int(g) for g in (info.secondaryGidNumbers or []) } - set(primary))
+
+@strawberry.input
+class UserPosixInput:
+    """ One user's POSIX identity as observed in LDAP; the payload of usersPosixSync. """
+    username: str
+    uidnumber: Optional[int] = None
+    gidnumber: Optional[int] = None
+    secondarygids: List[int] = dataclasses.field(default_factory=list)
+
+@strawberry.input
+class UserSecondaryGidsInput:
+    """ One user's supplemental gids as observed in SDF LDAP posixGroups; the payload of usersSecondaryGidsSync. """
+    username: str
+    secondarygids: List[int] = dataclasses.field(default_factory=list)
+
+@strawberry.type
+class PosixSyncResult:
+    dryRun: bool
+    total: int                      # entries in the LDAP snapshot
+    matched: int                    # coact users found in the snapshot
+    changed: int                    # coact users whose gid data differs (would be / were written)
+    unknownUsers: List[str]         # coact users absent from the snapshot; left untouched
+    uidMismatches: List[str]        # coact users whose uidnumber differs from LDAP; reported, never written
+    aborted: bool
+    reason: Optional[str] = None
+    syncedAt: Optional[datetime] = None
+    unsynced: Optional[int] = None  # secondary sync only: non-bot coact users never initialised (left to registration)
+
+@strawberry.type
+class PosixSyncStatus:
+    lastrun: Optional[datetime] = None
+    lastsuccess: Optional[datetime] = None
+    dryRun: bool = False
+    total: int = 0
+    matched: int = 0
+    changed: int = 0
+    unknownUsers: int = 0
+    aborted: bool = False
+    reason: Optional[str] = None
+    kind: Optional[str] = None            # "full" (usersPosixSync) or "secondary" (usersSecondaryGidsSync)
+    groupCount: Optional[int] = None      # posixGroups read by the last secondary run
+    lastGroupCount: Optional[int] = None  # posixGroups read by the last successful secondary run (guard baseline)
+    unsynced: Optional[int] = None
 
 
 @strawberry.type
@@ -290,25 +343,10 @@ class User(UserInput):
     
     @strawberry.field
     def gids(self, info) -> List[int]:
-        """ A view of the gidNumbers this user belongs to, as nested in each Repo's posixgroup feature. """
-        gids = set()
-        repo_filter = {
-            "$or": [
-                {"users": self.username},
-                {"leaders": self.username},
-                {"principal": self.username},
-            ]
-        }
-        for repo in info.context.db.collection("repos").find(repo_filter, {"_id": 0, "features.posixgroup.options": 1}):
-            for opt in repo.get("features", {}).get("posixgroup", {}).get("options", []):
-                try:
-                    parsed = json.loads(opt) if isinstance(opt, str) else opt
-                    gid = parsed.get("gidNumber")
-                    if gid is not None:
-                        gids.add(int(gid))
-                except (ValueError, TypeError, AttributeError):
-                    continue
-        return sorted(gids)
+        """ The user's LDAP-effective gidNumbers.
+        Same source as myGids: the synced users collection, or the live user-lookup fallback for users not yet
+        synced. (Previously derived from the repos' posixgroup features, which misses gids not managed by coact.) """
+        return gid_list(info.context.userGids(self.username))
 
     @strawberry.field
     def isAdmin(self, info) -> bool:

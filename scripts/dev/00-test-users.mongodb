@@ -18,6 +18,24 @@ db.getSiblingDB("iris").users.insertOne({
   "shell": "/bin/bash",
   "preferredemail": "admin@example.com"
 })
+// "user-lookup-bot" is the posix sync service account (POSIX_SYNC_USERNAMES must include it). As in the real
+// deployments it is a plain user, not isbot: bots are implicit admins, which IsPosixSyncAccount deliberately avoids.
+db.getSiblingDB("iris").users.insertOne({
+  "username": "user-lookup-bot",
+  "uidnumber": 99003,
+  "eppns": [ "user-lookup-bot@example.com" ],
+  "shell": "/bin/bash",
+  "preferredemail": "user-lookup-bot@example.com"
+})
+// "test-bot" is a bot user, used to check that bots are excluded from the posix sync.
+db.getSiblingDB("iris").users.insertOne({
+  "username": "test-bot",
+  "uidnumber": 99004,
+  "eppns": [ "test-bot@example.com" ],
+  "shell": "/bin/bash",
+  "preferredemail": "test-bot@example.com",
+  "isbot": true
+})
 
 // Create clusters
 db.getSiblingDB("iris").clusters.insertOne({
