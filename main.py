@@ -295,12 +295,15 @@ class CustomContext(BaseContext):
             LOG.error("Exception looking up user from service")
             return []
     
-    def lookupUserGidsByUsername(self, username: str) -> Optional[UserGidsInfo]:
+    def lookupUserGidsByUsername(self, username: str, strict: bool = False) -> Optional[UserGidsInfo]:
         resp = self.userlookup.execute(lookupUserGids, variable_values={"filter": {"username": username}})
         users = resp.get("users") or []
         if not users:
             return None
         u = users[0]
+        # user-lookup returns [] for "no groups" and null when its SDF LDAP read failed
+        if strict and u.get("secondaryGidNumbers") is None:
+            raise Exception(f"user-lookup could not read secondary gids for user {username}")
         return UserGidsInfo(
             uidnumber=int(u["uidnumber"]) if u.get("uidnumber") is not None else None,
             primaryGid=int(u["gidNumber"]) if u.get("gidNumber") is not None else None,
@@ -339,7 +342,7 @@ class CustomContext(BaseContext):
         if not doc:
             raise Exception(f"user {username} does not exist in coact")
         try:
-            looked_up = self.lookupUserGidsByUsername(username)
+            looked_up = self.lookupUserGidsByUsername(username, strict=True)
         except Exception as e:
             raise Exception(f"user-lookup query failed for user {username}; posix data not written: {e}") from e
         now = datetime.now(timezone.utc)
