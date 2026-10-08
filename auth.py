@@ -1,4 +1,7 @@
 from strawberry.permission import BasePermission
+from strawberry.extensions import SchemaExtension
+from strawberry.types.graphql import OperationType
+from graphql import ExecutionResult, GraphQLError
 
 from strawberry.types import Info
 from functools import wraps
@@ -172,3 +175,17 @@ class IsPosixSyncAccount(BasePermission):
             return True
         self.LOG.warning(f"user {user} is not permitted to run posix sync (allowed: {allowed})")
         return False
+
+class ReadOnlyGuard(SchemaExtension):
+    """ Rejects every mutation from the accounts in READONLY_USERNAMES (comma separated), whatever the resolver's
+    permission classes say. It keys on the username the ingress asserts in USERNAME_FIELD, not the identity authn() resolves. """
+    LOG = logging.getLogger(__name__)
+    def on_execute(self):
+        ctx = self.execution_context
+        if ctx.operation_type == OperationType.MUTATION:
+            user = ctx.context.request.headers.get(os.environ.get("USERNAME_FIELD", "REMOTE_USER"))
+            readonly = [ u.strip() for u in os.environ.get("READONLY_USERNAMES", "").split(",") if u.strip() ]
+            if user and user in readonly:
+                self.LOG.warning(f"read-only user {user} attempted a mutation")
+                ctx.result = ExecutionResult(data=None, errors=[GraphQLError("read-only account")])
+        yield
