@@ -3,8 +3,10 @@ Integration tests for the LDAP posix sync mutations and myGids read path.
 Requires: API + MongoDB running (see conftest.py) with
   POSIX_SYNC_USERNAMES=user-lookup-bot  POSIX_SYNC_MIN_COVERAGE=0  ADMIN_USERNAMES includes "admin"
 (the hand-built snapshot covers only a few of the test database's users, so the coverage guard is disabled)
-and a users document {username: "user-lookup-bot", isbot: true}.
-No LDAP or user-lookup service is needed: the snapshot is hand-built.
+and the seeded users in scripts/dev/00-test-users.mongodb: "user-lookup-bot" (a plain user, as in the real
+deployments) and "test-bot" (isbot).
+No LDAP is needed: the snapshot is hand-built. user-lookup (myGids fallback, userPosixInit) is served by
+tests/stubs/user_lookup_stub.py via the API's USER_LOOKUP_URL; never point it at a real service.
 """
 
 from collections.abc import AsyncGenerator
@@ -45,8 +47,9 @@ async def test_admin_cannot_sync(admin_client: CoactClient):
 
 
 POSIX_SYNC_USERNAMES = "query { posixSyncUsernames(includeUnsynced: true) }"
+# force: with only two synced test users, changing one is 50% churn, above the default max churn guard
 SECONDARY_SYNC = """mutation S($entries: [UserSecondaryGidsInput!]!, $groupCount: Int!, $dryRun: Boolean!) {
-  usersSecondaryGidsSync(entries: $entries, groupCount: $groupCount, dryRun: $dryRun) { changed aborted reason unsynced }
+  usersSecondaryGidsSync(entries: $entries, groupCount: $groupCount, dryRun: $dryRun, force: true) { changed aborted reason unsynced }
 }"""
 
 
@@ -58,7 +61,8 @@ async def test_regular_user_cannot_list_sync_usernames(client: CoactClient):
 async def test_sync_usernames_are_non_bot_coact_users(sync_client: CoactClient):
     names = sync_client.get_data(await sync_client.execute(query=POSIX_SYNC_USERNAMES))["posixSyncUsernames"]
     assert {"regular_user", "admin"} <= set(names)
-    assert SYNC_USER not in names  # bots are never read from LDAP
+    assert "test-bot" not in names  # bots are never read from LDAP
+    assert SYNC_USER in names  # the sync account is a plain user, not a bot
     assert names == sorted(names)
 
 
@@ -155,8 +159,8 @@ async def test_user_posix_group_update_is_idempotent(admin_client: CoactClient, 
 # userPosixInit: coactd initialises a newly provisioned user's posix data from user-lookup.
 # The generated client has no method for it yet (regenerating needs a running API), so use raw execute/get_data.
 # The permission and unknown-user tests need nothing extra. The success test needs the API's USER_LOOKUP_URL to
-# resolve "regular_user" with a primary gid and skips otherwise; it is last because it overwrites regular_user's
-# gid data with whatever user-lookup returns.
+# resolve "regular_user" with a primary gid (the stub does) and skips otherwise; it is last because it overwrites
+# regular_user's gid data with whatever user-lookup returns.
 
 USER_POSIX_INIT = """
 mutation userPosixInit($username: String!) {

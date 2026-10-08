@@ -59,6 +59,10 @@ jobs:
 
       - name: Run integration tests
         run: |
+          # Stub user-lookup (canned synthetic data) so CI never calls a real SLAC service
+          python tests/stubs/user_lookup_stub.py 8099 &
+          timeout 30 bash -c 'until curl -s -o /dev/null localhost:8099/; do sleep 1; done'
+
           # Start the API server in background
           uv run uvicorn main:app --host 0.0.0.0 --port 8001 &
           API_PID=$!
@@ -76,6 +80,9 @@ jobs:
           LOG_LEVEL: INFO
           USERNAME_FIELD: REMOTE_USER
           COACT_GRAPHQL_ENDPOINT: http://localhost:8001/graphql
+          USER_LOOKUP_URL: http://localhost:8099/graphql
+          POSIX_SYNC_USERNAMES: user-lookup-bot
+          POSIX_SYNC_MIN_COVERAGE: "0"
 
       - name: Cleanup
         if: always()
