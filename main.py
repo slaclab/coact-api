@@ -30,6 +30,7 @@ from gql.transport.requests import RequestsHTTPTransport
 from models import User, AccessGroup, Repo, Facility, Cluster, CoactRequest, CoactRequestStatus, AuditTrail, AuditTrailObjectType, CoactDatetime, \
         UserGidsInfo, UserPosixInput, UserSecondaryGidsInput, PosixSyncResult, PosixSyncStatus
 from schema import Query, Mutation, Subscription, start_change_stream_queues
+from auth import ReadOnlyGuard
 from utils.posix_sync import compute_posix_sync
 from utils.posix_init import posix_init_set, uidnumber_differs
 
@@ -748,7 +749,7 @@ if REQUEST_STREAM:
   start_change_stream_queues(mongo[DB_NAME])
 
 # normal graphql api
-schema = Schema(query=Query, mutation=Mutation, scalar_overrides={ datetime: CoactDatetime }, config=StrawberryConfig(auto_camel_case=True))
+schema = Schema(query=Query, mutation=Mutation, extensions=[ReadOnlyGuard], scalar_overrides={ datetime: CoactDatetime }, config=StrawberryConfig(auto_camel_case=True))
 graphql_app = GraphQLRouter(
   schema,
   context_getter=get_context
@@ -757,7 +758,7 @@ graphql_app = GraphQLRouter(
 graphql_service_app = None
 if REQUEST_STREAM:
   # duplicate api at different endpoint for service accounts
-  service_schema = Schema(query=Query, mutation=Mutation, subscription=Subscription, scalar_overrides={ datetime: CoactDatetime }, config=StrawberryConfig(auto_camel_case=True))
+  service_schema = Schema(query=Query, mutation=Mutation, subscription=Subscription, extensions=[ReadOnlyGuard], scalar_overrides={ datetime: CoactDatetime }, config=StrawberryConfig(auto_camel_case=True))
   graphql_service_app = GraphQLRouter(
     service_schema,
     context_getter=get_context
