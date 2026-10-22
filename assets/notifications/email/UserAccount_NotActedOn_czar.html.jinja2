@@ -1,0 +1,8 @@
+{% extends "_layouts/base.html.jinja2" %}
+{% import "_partials/macros.html.jinja2" as m with context %}
+{% block greeting %}Hello {% if facility %}{{ facility }} {% endif %}czars,{% endblock %}
+{% block body %}
+{% call m.p() %}There is a new S3DF account request{% if facility %} in {{ facility }}{% endif %} from <strong>{{ display_name }}</strong>. Please approve or reject the request in Coact.{% endcall %}
+{{ m.request_details() }}
+{{ m.button(requests_url, "Review request") }}
+{% endblock %}

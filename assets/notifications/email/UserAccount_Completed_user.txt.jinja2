@@ -1,0 +1,20 @@
+{% extends "_layouts/base.txt.jinja2" %}
+{% block subject %}Your S3DF account is ready{% endblock %}
+{% block body %}
+Your S3DF account{% if facility %} in the {{ facility }} facility{% endif %} is ready to use.
+{% if username %}
+
+  Your username: {{ username }}
+{% endif %}
+
+Next steps:
+
+  1. Connect to S3DF. How to log in, plus the available hosts:
+     {{ access_url }}
+  2. Manage your SSH keys and account details on your Coact profile:
+     {{ profile_url }}
+  3. {% if facility %}You've been added to the {{ facility }} default repo. {% endif %}To work on a specific project, ask to join its repo in Coact:
+     {{ repos_url }}
+
+The full S3DF documentation is at {{ docs_url }}.
+{% endblock %}

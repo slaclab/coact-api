@@ -1,0 +1,15 @@
+{% block greeting %}{% if fullname %}Hi {{ fullname }},{% else %}Hello,{% endif %}{% endblock %}
+
+
+{% block body %}{% endblock %}
+
+{% block help %}
+Questions? Email {{ help_email }} or ask in #comp-sdf on SLAC Slack:
+{{ slack_url }}
+
+{% endblock %}
+Thanks,
+The S3DF Team
+
+--
+This message was sent automatically by Coact ({{ coact_url }}). Please do not reply to it.

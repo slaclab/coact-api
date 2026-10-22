@@ -1,0 +1,7 @@
+{% extends "_layouts/base.html.jinja2" %}
+{% import "_partials/macros.html.jinja2" as m %}
+{% block body %}
+{% call m.p() %}You've been pre-approved for an S3DF account{% if facility %} in the <strong>{{ facility }}</strong> facility{% endif %}. To activate it, sign in to Coact with {% if eppn %}<strong>{{ eppn }}</strong>{% else %}your institutional account{% endif %} and complete your registration.{% endcall %}
+{{ m.button(coact_url ~ "/register", "Complete registration") }}
+{% call m.p() %}Once you've registered we'll set up your account and email you when it's ready.{% endcall %}
+{% endblock %}

@@ -1,0 +1,11 @@
+{% extends "_layouts/base.txt.jinja2" %}
+{% import "_partials/macros.txt.jinja2" as m with context %}
+{% block subject %}Approval needed: S3DF account for {{ username or eppn }}{% if facility %} ({{ facility }}){% endif %}{% endblock %}
+{% block greeting %}Hello {% if facility %}{{ facility }} {% endif %}czars,{% endblock %}
+{% block body %}
+There is a new S3DF account request{% if facility %} in {{ facility }}{% endif %} from {{ display_name }}. Please approve or reject the request in Coact:
+
+{{ requests_url }}
+
+{{ m.request_details() }}
+{% endblock %}

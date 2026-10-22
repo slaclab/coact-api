@@ -1,0 +1,9 @@
+{% extends "_layouts/base.txt.jinja2" %}
+{% block subject %}You're pre-approved for an S3DF account{% if facility %} ({{ facility }}){% endif %}{% endblock %}
+{% block body %}
+You've been pre-approved for an S3DF account{% if facility %} in the {{ facility }} facility{% endif %}. To activate it, sign in to Coact with {{ eppn or "your institutional account" }} and complete your registration:
+
+{{ coact_url }}/register
+
+Once you've registered we'll set up your account and email you when it's ready.
+{% endblock %}

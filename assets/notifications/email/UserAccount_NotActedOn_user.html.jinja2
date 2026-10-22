@@ -1,0 +1,7 @@
+{% extends "_layouts/base.html.jinja2" %}
+{% import "_partials/macros.html.jinja2" as m %}
+{% block body %}
+{% call m.p() %}Thanks for registering for S3DF. Your account request{% if facility %} for the <strong>{{ facility }}</strong> facility{% endif %} is now waiting for approval by the facility's czars. We'll email you again as soon as your account is ready.{% endcall %}
+{{ m.details([("Username", username), ("EPPN", eppn), ("Facility", facility)]) }}
+{{ m.button(coact_url, "Check your request in Coact") }}
+{% endblock %}

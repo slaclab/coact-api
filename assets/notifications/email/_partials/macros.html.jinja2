@@ -1,0 +1,21 @@
+{% macro p() %}<p style="margin:0 0 16px;">{{ caller() }}</p>{% endmacro %}
+
+{% macro button(url, label) %}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 20px;"><tr><td style="background-color:#8c1515;border-radius:4px;"><a href="{{ url }}" style="display:inline-block;padding:10px 20px;color:#ffffff;text-decoration:none;font-weight:bold;">{{ label }}</a></td></tr></table>
+{% endmacro %}
+
+{% macro details(rows) %}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 16px;font-size:14px;">
+{% for label, value in rows if value %}
+<tr><td style="padding:3px 16px 3px 0;color:#6b778c;white-space:nowrap;vertical-align:top;">{{ label }}</td><td style="padding:3px 0;vertical-align:top;">{{ value }}</td></tr>
+{% endfor %}
+</table>
+{% endmacro %}
+
+{% macro notes_block(notes) %}
+{% if notes %}
+<div style="white-space:pre-line;background-color:#f4f5f7;border-left:3px solid #8c1515;padding:12px 16px;margin:0 0 16px;">{{ notes }}</div>
+{% endif %}
+{% endmacro %}
+{# the standard who/what/where rows; needs the template context, so import this file "with context" #}
+{% macro request_details() %}{{ details([("Name", fullname), ("Username", username), ("EPPN", eppn), ("Facility", facility), ("Request", request_id)]) }}{% endmacro %}
