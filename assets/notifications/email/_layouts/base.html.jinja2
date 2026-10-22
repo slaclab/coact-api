@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ request_type_label }} {{ status_label }}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f5f7;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f5f7;">
+<tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background-color:#ffffff;border:1px solid #dfe1e6;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.5;color:#172b4d;">
+<tr><td style="background-color:#8c1515;color:#ffffff;padding:16px 24px;font-size:18px;font-weight:bold;">S3DF <span style="font-weight:normal;font-size:14px;">&middot; SLAC Shared Science Data Facility</span></td></tr>
+<tr><td style="padding:24px;">
+<p style="margin:0 0 16px;">{% block greeting %}{% if fullname %}Hi {{ fullname }},{% else %}Hello,{% endif %}{% endblock %}</p>
+{% block body %}{% endblock %}
+<p style="margin:24px 0 0;">Thanks,<br>The S3DF Team</p>
+</td></tr>
+<tr><td style="padding:16px 24px;border-top:1px solid #dfe1e6;font-size:13px;line-height:1.4;color:#6b778c;">
+{% block help %}Questions? Email <a href="mailto:{{ help_email }}" style="color:#8c1515;">{{ help_email }}</a> or ask in <a href="{{ slack_url }}" style="color:#8c1515;">#comp-sdf</a> on SLAC Slack.<br>{% endblock %}
+This message was sent automatically by <a href="{{ coact_url }}" style="color:#6b778c;">Coact</a>. Please do not reply to it.
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>

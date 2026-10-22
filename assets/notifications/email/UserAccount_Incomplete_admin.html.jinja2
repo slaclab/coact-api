@@ -1,0 +1,14 @@
+{% extends "_layouts/base.html.jinja2" %}
+{% import "_partials/macros.html.jinja2" as m with context %}
+{% block greeting %}Hello S3DF admins,{% endblock %}
+{% block body %}
+{% call m.p() %}CoactD could not finish setting up the S3DF account for <strong>{{ display_name }}</strong>. The request is now marked <strong>Incomplete</strong>.{% endcall %}
+{% if notes %}
+<p style="margin:0 0 8px;font-weight:bold;">Error</p>
+{{ m.notes_block(notes) }}
+{% endif %}
+{{ m.request_details() }}
+{{ m.button(requests_url, "Refire in Coact") }}
+{% call m.p() %}Refire the request once the cause is fixed.{% endcall %}
+{% endblock %}
+{% block help %}{% endblock %}

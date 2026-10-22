@@ -1,0 +1,15 @@
+{% extends "_layouts/base.html.jinja2" %}
+{% import "_partials/macros.html.jinja2" as m %}
+{% block body %}
+{% call m.p() %}Your S3DF account{% if facility %} in the <strong>{{ facility }}</strong> facility{% endif %} is ready to use.{% endcall %}
+{% if username %}
+<p style="margin:0 0 20px;padding:12px 16px;background-color:#f4f5f7;font-size:16px;">Your username: <strong style="font-family:Menlo,Consolas,monospace;">{{ username }}</strong></p>
+{% endif %}
+<p style="margin:0 0 8px;font-weight:bold;">Next steps</p>
+<ol style="margin:0 0 16px;padding-left:20px;">
+<li style="margin:0 0 8px;"><a href="{{ access_url }}" style="color:#8c1515;">Connect to S3DF</a>. How to log in, plus the available hosts.</li>
+<li style="margin:0 0 8px;">Manage your SSH keys and account details on your <a href="{{ profile_url }}" style="color:#8c1515;">Coact profile</a>.</li>
+<li style="margin:0 0 8px;">{% if facility %}You've been added to the {{ facility }} default repo. {% endif %}To work on a specific project, <a href="{{ repos_url }}" style="color:#8c1515;">ask to join its repo</a> in Coact.</li>
+</ol>
+{% call m.p() %}The full S3DF documentation is at <a href="{{ docs_url }}" style="color:#8c1515;">{{ docs_url }}</a>.{% endcall %}
+{% endblock %}

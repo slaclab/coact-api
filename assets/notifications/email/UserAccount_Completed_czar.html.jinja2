@@ -1,0 +1,7 @@
+{% extends "_layouts/base.html.jinja2" %}
+{% import "_partials/macros.html.jinja2" as m with context %}
+{% block greeting %}Hello {% if facility %}{{ facility }} {% endif %}czars,{% endblock %}
+{% block body %}
+{% call m.p() %}The S3DF account{% if facility %} in {{ facility }}{% endif %} for <strong>{{ display_name }}</strong> is ready, and they have been added to the facility's default repo.{% endcall %}
+{{ m.request_details() }}
+{% endblock %}

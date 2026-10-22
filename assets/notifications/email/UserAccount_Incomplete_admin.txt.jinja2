@@ -1,0 +1,18 @@
+{% extends "_layouts/base.txt.jinja2" %}
+{% import "_partials/macros.txt.jinja2" as m with context %}
+{% block subject %}Action needed: S3DF account setup failed for {{ username or eppn }}{% if facility %} ({{ facility }}){% endif %}{% endblock %}
+{% block greeting %}Hello S3DF admins,{% endblock %}
+{% block body %}
+CoactD could not finish setting up the S3DF account for {{ display_name }}. The request is now marked Incomplete.
+{% if notes %}
+
+Error:
+
+{{ m.notes_block(notes) }}
+{% endif %}
+
+{{ m.request_details() }}
+
+Once the cause is fixed, refire the request from {{ requests_url }}
+{% endblock %}
+{% block help %}{% endblock %}

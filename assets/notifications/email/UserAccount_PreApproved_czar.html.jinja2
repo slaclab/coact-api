@@ -1,0 +1,7 @@
+{% extends "_layouts/base.html.jinja2" %}
+{% import "_partials/macros.html.jinja2" as m with context %}
+{% block greeting %}Hello {% if facility %}{{ facility }} {% endif %}czars,{% endblock %}
+{% block body %}
+{% call m.p() %}An S3DF account for <strong>{{ display_name }}</strong> has been pre-approved{% if facility %} in {{ facility }}{% endif %}. We've asked them to complete their registration in Coact, and we'll let you know once their account is ready.{% endcall %}
+{{ m.request_details() }}
+{% endblock %}
