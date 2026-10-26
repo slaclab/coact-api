@@ -1,0 +1,9 @@
+{% extends "_layouts/base.txt.jinja2" %}
+{% import "_partials/macros.txt.jinja2" as m with context %}
+{% block subject %}S3DF account ready: {{ username or eppn }}{% if facility %} ({{ facility }}){% endif %}{% endblock %}
+{% block greeting %}Hello {% if facility %}{{ facility }} {% endif %}czars,{% endblock %}
+{% block body %}
+The S3DF account{% if facility %} in {{ facility }}{% endif %} for {{ display_name }} is ready, and they have been added to the facility's default repo.
+
+{{ m.request_details() }}
+{% endblock %}

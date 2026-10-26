@@ -1,0 +1,5 @@
+{# single-line macros so callers control the surrounding blank lines #}
+{% macro details(rows) %}{% for label, value in rows if value %}{{ "\n" if not loop.first }}  {{ (label ~ ":").ljust(11) }} {{ value }}{% endfor %}{% endmacro %}
+{% macro notes_block(notes) %}{% if notes %}{% for line in notes.splitlines() %}{{ "\n" if not loop.first }}  > {{ line }}{% endfor %}{% endif %}{% endmacro %}
+{# the standard who/what/where rows; needs the template context, so import this file "with context" #}
+{% macro request_details() %}{{ details([("Name", fullname), ("Username", username), ("EPPN", eppn), ("Facility", facility), ("Request", request_id)]) }}{% endmacro %}

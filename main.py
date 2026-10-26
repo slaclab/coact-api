@@ -34,10 +34,7 @@ from auth import ReadOnlyGuard
 from utils.posix_sync import compute_posix_sync
 from utils.posix_init import posix_init_set, uidnumber_differs
 
-import smtplib
-#import aiosmtplib #
-from email.message import EmailMessage
-import jinja2
+from utils.notifications import Email, pick_fullname
 import os
 import inspect
 
@@ -240,6 +237,7 @@ class CustomContext(BaseContext):
         czars = []
         czar_emails = []
         skip_czar_emails = True
+        luobj = None
         try:
             if request.preferredUserName:
                 luobj = self.lookupUserInService(request.preferredUserName)
@@ -258,8 +256,20 @@ class CustomContext(BaseContext):
             skip_czar_emails = request.dontsendemail
         except Exception as e:
             LOG.exception(f"could not parse certain notification fields: {e}")
+        fullname = self.notification_fullname(request, luobj)
         LOG.info(f">>> TEMPLATE: {template_prefix}, FACILITY: {facility}, CZARS: {czars}, CZAR EMAIL: {czar_emails}, USER: {user}, EMAIL: {user_email}, DATA: {self.db.to_dict(request)}")
-        return self.email.notify( request_type=request_type, request_status=request_status, data=self.db.to_dict(request), template_prefix=template_prefix, user=user_email, czars=czar_emails, skip_czar_emails=skip_czar_emails )
+        return self.email.notify( request_type=request_type, request_status=request_status, data=self.db.to_dict(request), template_prefix=template_prefix, user=user_email, czars=czar_emails, skip_czar_emails=skip_czar_emails, fullname=fullname )
+
+    def notification_fullname(self, request: CoactRequest, luobj) -> Optional[str]:
+        """ Only used for the email greeting, so a failed lookup just means a generic greeting. """
+        stored = None
+        try:
+            if request.preferredUserName:
+                users = self.db.find_users( { "username": request.preferredUserName } )
+                stored = users[0].fullname if users else None
+        except Exception as e:
+            LOG.exception(f"could not find user {request.preferredUserName} for notification: {e}")
+        return pick_fullname(stored, luobj.get("fullname") if luobj else None)
 
 
     def dict_diffs(self, prev, curr):
@@ -661,82 +671,6 @@ class DB:
         l = [ { "username": n } for n in username ]
         return [ e['preferredemail'] for e in self.collection('users').find({"$or": l}) ]
         
-
-class Email:
-    LOG = logging.getLogger(__name__)
-    assets_path=None
-    template_extension = '.jinja2'
-    def __init__(self, server, port, fm='no-reply-s3df-help@slac.stanford.edu', subject_prefix='[Coact] ', assets_path='./assets/notifications/email/'):
-        # smtplib.SMTP(host=...) connects eagerly; an Email is created per request, so defer until send()
-        self._server = server
-        self._port = port
-        self._smtp = None
-        self.fm = fm
-        self.subject_prefix = subject_prefix
-        self.assets_path = assets_path
-        template_loader = jinja2.FileSystemLoader(searchpath=self.assets_path)
-        self.j2 = jinja2.Environment(loader=template_loader)
-
-    def render(self, template_file, params):
-        t = self.j2.get_template( template_file )
-        self.LOG.debug(f"rendering {template_file} with vars {params}")
-        return t.render(**params)
-        
-    def create(self, to: List[str], subject: str, body: str, cc: List[str] = [], bcc: List[str] = []) -> EmailMessage:
-        email = EmailMessage()
-        email["From"] = self.fm
-        email["To"] = ', '.join(to)
-        if len(cc):
-            email["Cc"] = ', '.join(cc)
-        if len(bcc):
-            email["Bcc"] = ', '.join(bcc)
-        email["Subject"] = self.subject_prefix + subject
-        email.set_content(body)
-        return email
-
-    def send(self, email: EmailMessage) -> bool:
-        if self._smtp is None:
-            self._smtp = smtplib.SMTP(host=self._server, port=self._port)
-        self._smtp.send_message(email)
-        return True
-
-    def notify(self, request_type: str, request_status: str, data: dict, template_prefix: str, user: str, czars: List[str] = [], skip_czar_emails = False, admins: List[str] = [ 'sdf-help@slac.stanford.edu', ], dry_run: bool = False ) -> bool:
-        # one request may need to inform multiple parties, so we
-        # assume that any files with the prefix template_prefix should be
-        # send to the parties in the template file name's suffix
-        # get list of files matching
-        templates = [ f for f in os.listdir(self.assets_path) if f.startswith(template_prefix) and f.endswith(self.template_extension) ]
-        self.LOG.info(f"Found templates {templates}")
-        for t in templates:
-            to = []
-            cc = []
-            bcc = []
-            email = None
-            if t.endswith( '_czar' + self.template_extension ):
-                if skip_czar_emails:
-                    continue
-                to = czars
-            elif t.endswith( '_user' + self.template_extension ):
-                to = user
-                if not skip_czar_emails:
-                    cc = czars
-            elif t.endswith( '_admin' + self.template_extension ):
-                to = admins
-            body = self.render( t, data ) 
-
-            # format subject line nice
-            req_type = re.sub(r"(\w)([A-Z])", r"\1 \2", request_type)
-            status = request_status
-            if status == 'NotActedOn':
-                status = 'Pending'
-            elif status == 'PreApproved':
-                status = 'Pre-Approved'
-            email = self.create( to, f'{req_type} {status}', body, cc=cc, bcc=bcc )
-            LOG.debug(f"sending email from template {t}: {email}")
-            if not dry_run:
-                self.send( email )
-        return False
-    
 
 def custom_context_dependency() -> CustomContext:
     return CustomContext()
